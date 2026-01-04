@@ -1,0 +1,175 @@
+site_name: Buddy AI - Comprehensive AI Agent Framework
+site_description: Advanced Python framework for building intelligent AI agents with multi-model support
+site_author: Sriram Sangeeth Mantha
+site_url: https://esasrir91.github.io/buddy-ai
+
+repo_name: esasrir91/buddy-ai
+repo_url: https://github.com/esasrir91/buddy-ai
+edit_uri: blob/main/docs/
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Quick Start: getting-started/quickstart.md
+    - Configuration: getting-started/configuration.md
+    - Examples: getting-started/examples.md
+  - Core Concepts:
+    - Agent System: core/agents.md
+    - Models: core/models.md
+    - Memory: core/memory.md
+    - Tools: core/tools.md
+    - Knowledge: core/knowledge.md
+  - Agent Framework:
+    - Agent Class: agents/agent-class.md
+    - Agent Configuration: agents/configuration.md
+    - Agent Lifecycle: agents/lifecycle.md
+    - Agent Metrics: agents/metrics.md
+    - Agent Evolution: agents/evolution.md
+    - Agent Personality: agents/personality.md
+  - Model Providers:
+    - Overview: models/overview.md
+    - OpenAI: models/openai.md
+    - Anthropic: models/anthropic.md
+    - Google: models/google.md
+    - AWS Bedrock: models/aws.md
+    - Azure OpenAI: models/azure.md
+    - Cohere: models/cohere.md
+    - Ollama: models/ollama.md
+    - Custom Models: models/custom.md
+  - Tools & Functions:
+    - Tool System: tools/overview.md
+    - Built-in Tools: tools/builtin.md
+    - Custom Tools: tools/custom.md
+    - Function Calling: tools/functions.md
+    - Tool Execution: tools/execution.md
+  - Memory System:
+    - Memory Overview: memory/overview.md
+    - Agent Memory: memory/agent-memory.md
+    - Session Management: memory/sessions.md
+    - User Memories: memory/user-memories.md
+    - Memory Storage: memory/storage.md
+  - Knowledge Management:
+    - Knowledge System: knowledge/overview.md
+    - Document Processing: knowledge/documents.md
+    - Vector Databases: knowledge/vectordb.md
+    - RAG Implementation: knowledge/rag.md
+    - Knowledge Sources: knowledge/sources.md
+  - Team Collaboration:
+    - Team Overview: team/overview.md
+    - Multi-Agent Systems: team/multi-agent.md
+    - Team Orchestration: team/orchestration.md
+    - Communication: team/communication.md
+  - Workflows:
+    - Workflow System: workflows/overview.md
+    - Workflow Definition: workflows/definition.md
+    - Workflow Execution: workflows/execution.md
+    - Workflow Templates: workflows/templates.md
+  - Advanced Features:
+    - Multi-Modal AI: advanced/multimodal.md
+    - Reasoning Engine: advanced/reasoning.md
+    - Planning System: advanced/planning.md
+    - Security Framework: advanced/security.md
+    - Evaluation System: advanced/evaluation.md
+  - Training & Fine-tuning:
+    - Training Overview: training/overview.md
+    - Data Preparation: training/data-prep.md
+    - Model Training: training/training.md
+    - Evaluation Metrics: training/evaluation.md
+  - Deployment:
+    - Deployment Options: deployment/overview.md
+    - FastAPI Apps: deployment/fastapi.md
+    - Docker: deployment/docker.md
+    - Kubernetes: deployment/kubernetes.md
+    - Cloud Platforms: deployment/cloud.md
+  - CLI Reference:
+    - CLI Overview: cli/overview.md
+    - Workspace Management: cli/workspace.md
+    - Agent Commands: cli/agents.md
+    - Training Commands: cli/training.md
+    - Configuration: cli/configuration.md
+  - API Reference:
+    - API Overview: api/overview.md
+    - Agent API: api/agent-api.md
+    - Team API: api/team-api.md
+    - Knowledge API: api/knowledge-api.md
+    - Workflow API: api/workflow-api.md
+  - Examples & Tutorials:
+    - Basic Examples: examples/basic.md
+    - Advanced Examples: examples/advanced.md
+    - Use Cases: examples/use-cases.md
+    - Integration Examples: examples/integrations.md
+  - Troubleshooting:
+    - Common Issues: troubleshooting/common-issues.md
+    - Debugging: troubleshooting/debugging.md
+    - Performance: troubleshooting/performance.md
+    - FAQ: troubleshooting/faq.md
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue
+      accent: light blue
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue
+      accent: light blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.path
+    - navigation.top
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.code.annotate
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_source: false
+            docstring_style: google
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - attr_list
+  - md_in_html
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/esasrir91/buddy-ai
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/buddy-ai/
+  version:
+    provider: mike
+
+copyright: Copyright &copy; 2024 - 2026 Sriram Sangeeth Mantha

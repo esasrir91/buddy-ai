@@ -1,0 +1,123 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "buddy-ai"
+version = "1.0.5"
+description = "A comprehensive Python framework for building and deploying AI agents with multi-model support and advanced capabilities"
+readme = "README.md"
+license = "MIT"
+authors = [
+    {name = "Sriram Sangeeth Mantha", email = "sriram.sangeet@gmail.com"}
+]
+maintainers = [
+    {name = "Sriram Sangeeth Mantha", email = "sriram.sangeet@gmail.com"}
+]
+keywords = [
+    "ai", "agents", "llm", "chatbot", "artificial-intelligence", 
+    "machine-learning", "nlp", "openai", "anthropic", "rag",
+    "multi-agent", "workflow", "automation", "ai-framework",
+    "conversational-ai", "intelligent-agents", "ai-assistant"
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "Environment :: Console",
+    "Environment :: Web Environment",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    "httpx>=0.24.0",
+    "fastapi>=0.100.0",
+    "uvicorn>=0.23.0",
+    "typer>=0.9.0",
+    "rich>=13.0.0",
+    "python-multipart>=0.0.6",
+    "starlette>=0.27.0",
+    "docstring-parser>=0.15",
+    "packaging>=23.0",
+    "openai>=1.0.0",
+    "streamlit>=1.28.0",
+    # Streamlined iRAG dependencies - efficient NLP ontology mapping
+    "spacy>=3.4.0",
+    "numpy>=1.21.0", 
+    "scikit-learn>=1.1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "flake8>=6.0.0",
+    "mypy>=1.5.0",
+]
+openai = ["openai>=1.0.0"]
+anthropic = ["anthropic>=0.25.0"]
+google = ["google-generativeai>=0.3.0"]
+cohere = ["cohere>=4.0.0"]
+aws = ["boto3>=1.34.0"]
+azure = ["openai>=1.0.0"]
+irag = [
+    # Streamlined iRAG dependencies - NLP ontology mapping + cosine similarity
+    "spacy>=3.4.0",
+    "numpy>=1.21.0",
+    "scikit-learn>=1.1.0",
+]
+all = [
+    "openai>=1.0.0",
+    "anthropic>=0.25.0", 
+    "google-generativeai>=0.3.0",
+    "cohere>=4.0.0",
+    "boto3>=1.34.0",
+    # Streamlined iRAG dependencies
+    "spacy>=3.4.0",
+    "numpy>=1.21.0",
+    "scikit-learn>=1.1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/esasrir91/buddy-ai"
+Documentation = "https://github.com/esasrir91/buddy-ai#readme"
+Repository = "https://github.com/esasrir91/buddy-ai"
+"Bug Reports" = "https://github.com/esasrir91/buddy-ai/issues"
+"Discussions" = "https://github.com/esasrir91/buddy-ai/discussions"
+"Release Notes" = "https://github.com/esasrir91/buddy-ai/releases"
+
+[project.scripts]
+buddy = "buddy.cli.entrypoint:main"
+
+[tool.setuptools]
+packages = {find = {}}
+package-dir = {"" = "."}
+
+[tool.setuptools.package-data]
+buddy = ["py.typed"]
+
+[tool.black]
+line-length = 120
+target-version = ["py310", "py311", "py312", "py313"]
+
+[tool.isort]
+profile = "black"
+line_length = 120
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true

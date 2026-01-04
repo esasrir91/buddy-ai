@@ -1,0 +1,16 @@
+from fastapi.routing import APIRouter
+
+from buddy.app.base import BaseAPIApp
+from buddy.app.whatsapp.async_router import get_async_router
+from buddy.app.whatsapp.sync_router import get_sync_router
+
+
+class WhatsappAPI(BaseAPIApp):
+    type = "whatsapp"
+
+    def get_router(self) -> APIRouter:
+        return get_sync_router(agent=self.agent, team=self.team)
+
+    def get_async_router(self) -> APIRouter:
+        return get_async_router(agent=self.agent, team=self.team)
+

@@ -1,0 +1,20 @@
+include README.md
+include LICENSE
+include MANIFEST.in
+include pyproject.toml
+include buddy/py.typed
+
+recursive-include buddy *.py
+recursive-include buddy/app/agui *.html *.css *.js
+recursive-include buddy/app/playground *.html *.css *.js *.ico
+recursive-include buddy/app/streamlit *.py
+
+global-exclude *.pyc
+global-exclude *.pyo  
+global-exclude __pycache__
+global-exclude .DS_Store
+global-exclude *.so
+global-exclude .git*
+global-exclude .vscode
+global-exclude .idea
+global-exclude *.log
