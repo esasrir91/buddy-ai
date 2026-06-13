@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [2.1.3] — 2026-06-14
+
+### Fixed
+- **Seamless employee recovery** — `EmployeeValidator` now silently re-registers the employee from `lastKnownProfile` (persisted in localStorage) instead of dropping to onboarding when the server restarts; the onboarding wizard is shown only on first-ever use
+- **`lastKnownProfile`** added to Zustand store — survives `clearEmployee()` so recovery is always possible even if the active session was cleared by older code
+
+### Added
+- **Full URL crawling for KT** — `KTSourceType.URL` now BFS-crawls the entire same-domain site (up to 20 pages, 3 link-hops deep, 30 k chars fed to LLM) instead of fetching a single page
+- **KT knowledge injected into chat** — chat WebSocket endpoint now prepends all committed KT summaries to the prompt so PULSE can answer questions from its learned knowledge
+- **Task completion notes** — moving a task to `done` triggers an AI-generated first-person completion note displayed directly on the Kanban card
+- **Employee persistence** — employees are saved to `~/.pulse_data/employees.json` on create/update and restored automatically on server startup
+
+### Changed
+- Docs CI workflow: removed `--strict` flag and added `pip install buddy-ai` so the MkDocs build reliably deploys to GitHub Pages on every push
+- Updated PULSE documentation to reflect all v2.1.x features
+
+---
+
 ## [2.1.2] — 2026-06-14
 
 ### Fixed
@@ -139,6 +157,7 @@ Docker support, full documentation, and a comprehensive examples library.
 - 14 vector database integrations
 - Local model training pipeline
 
+[2.1.3]: https://github.com/esasrir91/buddy-ai/compare/v2.1.2...v2.1.3
 [2.1.2]: https://github.com/esasrir91/buddy-ai/compare/v2.1.1...v2.1.2
 [2.1.1]: https://github.com/esasrir91/buddy-ai/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/esasrir91/buddy-ai/compare/v2.0.0...v2.1.0
