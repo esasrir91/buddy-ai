@@ -224,10 +224,31 @@ class KTSession:
     def _read_source(self, source: Union[str, Path, bytes]) -> str:
         if isinstance(source, bytes):
             return source.decode("utf-8", errors="replace")
-        path = Path(source) if not isinstance(source, Path) else source
+        source_str = str(source) if not isinstance(source, Path) else str(source)
+
+        # Fetch URL content
+        if source_str.startswith(("http://", "https://")):
+            try:
+                import re
+                import httpx
+                resp = httpx.get(source_str, timeout=20, follow_redirects=True)
+                resp.raise_for_status()
+                content_type = resp.headers.get("content-type", "")
+                if "html" in content_type:
+                    # Strip HTML tags for cleaner text
+                    text = re.sub(r"<style[^>]*>.*?</style>", " ", resp.text, flags=re.S)
+                    text = re.sub(r"<script[^>]*>.*?</script>", " ", text, flags=re.S)
+                    text = re.sub(r"<[^>]+>", " ", text)
+                    text = re.sub(r"\s+", " ", text).strip()
+                    return text[:12000]
+                return resp.text[:12000]
+            except Exception as e:
+                return f"[Could not fetch URL: {e}]\nURL: {source_str}"
+
+        path = Path(source_str)
         if path.exists():
             return path.read_text(encoding="utf-8")
-        return str(source)
+        return source_str
 
     # --------------------------------------------------------------- Live KT
     def human_explains(self, text: str) -> KTTurn:

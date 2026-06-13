@@ -23,7 +23,56 @@ from buddy.pulse.work import TaskPriority
 router = APIRouter(prefix="/api/pulse", tags=["PULSE"])
 
 # ---------------------------------------------------------------------------
-# In-memory employee registry (replace with DB-backed store in production)
+# Employee persistence — survives server restarts
+# ---------------------------------------------------------------------------
+import os
+import pathlib
+
+_PULSE_DATA_DIR = pathlib.Path(os.environ.get("PULSE_DATA_DIR", pathlib.Path.home() / ".pulse_data"))
+_EMPLOYEES_FILE = _PULSE_DATA_DIR / "employees.json"
+
+
+def _save_employees() -> None:
+    """Persist all employee profiles to disk."""
+    _PULSE_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    records = {}
+    for eid, emp in _employees.items():
+        p = emp.employee_profile
+        records[eid] = {
+            "full_name": p.full_name,
+            "role": p.role,
+            "department": p.department,
+            "team": p.team,
+            "skills": p.skills,
+            "timezone": p.timezone,
+            "reporting_to": p.reporting_to,
+            "company_name": p.company_name,
+            "bio": p.bio,
+        }
+    _EMPLOYEES_FILE.write_text(json.dumps(records, indent=2), encoding="utf-8")
+
+
+def _load_employees() -> None:
+    """Restore persisted employees on startup using the current LLM config."""
+    if not _EMPLOYEES_FILE.exists():
+        return
+    try:
+        records = json.loads(_EMPLOYEES_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return
+    for eid, data in records.items():
+        if eid in _employees:
+            continue  # already live (shouldn't happen at startup)
+        try:
+            model = _build_model(_llm_config["provider"], _llm_config["model_id"], None)
+            profile = EmployeeProfile(**{k: v for k, v in data.items() if v is not None})
+            _employees[eid] = PulseEmployee(employee_profile=profile, model=model)
+        except Exception:
+            pass  # skip bad records silently
+
+
+# ---------------------------------------------------------------------------
+# In-memory employee registry
 # ---------------------------------------------------------------------------
 _employees: Dict[str, PulseEmployee] = {}
 _kt_sessions: Dict[str, KTSession] = {}
@@ -147,6 +196,7 @@ async def create_employee(req: CreateEmployeeRequest) -> Dict[str, Any]:
     employee_id = str(uuid4())[:8]
     emp = PulseEmployee(employee_profile=profile, model=model)
     _employees[employee_id] = emp
+    _save_employees()
     return {"employee_id": employee_id, "profile": profile.model_dump()}
 
 
@@ -173,6 +223,7 @@ async def update_employee(employee_id: str, req: UpdateEmployeeRequest) -> Dict[
         emp.employee_profile.reporting_to = req.reporting_to
     if req.company_name is not None:
         emp.employee_profile.company_name = req.company_name
+    _save_employees()
     return {"employee_id": employee_id, "updated": True}
 
 
@@ -349,7 +400,24 @@ async def update_task(employee_id: str, task_id: str, updates: Dict[str, Any]) -
         raise HTTPException(status_code=404, detail=f"Task '{task_id}' not found")
     if "status" in updates:
         from buddy.pulse.work import TaskStatus
-        task.status = TaskStatus(updates["status"])
+        new_status = TaskStatus(updates["status"])
+        task.status = new_status
+        # When a task is completed, have PULSE generate a brief completion note
+        if new_status == TaskStatus.DONE and not any("✅" in n for n in task.progress_notes):
+            try:
+                prompt = (
+                    f"You are {emp.employee_profile.full_name} ({emp.employee_profile.role}).\n"
+                    f"You just completed the following task:\n\n"
+                    f"Title: {task.title}\n"
+                    f"Description: {task.description or 'No description'}\n\n"
+                    f"Write a brief (2-4 sentences) first-person completion note summarising "
+                    f"what you did, the outcome, and any relevant observations."
+                )
+                resp = emp.run(prompt, stream=False)
+                note = resp.content if hasattr(resp, "content") else str(resp)
+                task.add_note(f"✅ {note.strip()}")
+            except Exception:
+                task.add_note("✅ Task marked as done.")
     if "note" in updates:
         task.add_note(updates["note"])
     return task.model_dump()
@@ -387,7 +455,27 @@ async def chat_stream(websocket: WebSocket, employee_id: str) -> None:
             data = await websocket.receive_text()
             payload = json.loads(data)
             message = payload.get("message", "")
-            for chunk in emp.run(message, stream=True):
+
+            # Inject KT knowledge into the prompt so the employee can answer from it
+            kt_summaries = emp.kt_manager.all_summaries()
+            if kt_summaries:
+                knowledge_block = "\n\n".join(
+                    f"[KT: {s.session_name} | confidence {s.confidence_score:.0%}]\n"
+                    f"{s.mental_model}\n"
+                    f"Key concepts: {', '.join(s.key_concepts)}"
+                    for s in kt_summaries[:15]
+                )
+                augmented = (
+                    f"KNOWLEDGE BASE (things you have learned from KT sessions):\n"
+                    f"{knowledge_block}\n\n"
+                    f"---\n"
+                    f"User message: {message}\n\n"
+                    f"Answer using your knowledge above when relevant. Speak in first person as a knowledgeable employee."
+                )
+            else:
+                augmented = message
+
+            for chunk in emp.run(augmented, stream=True):
                 content = chunk.content if hasattr(chunk, "content") else str(chunk)
                 if content:
                     await websocket.send_json({"chunk": content, "done": False})

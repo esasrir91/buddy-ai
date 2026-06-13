@@ -181,6 +181,10 @@ function TaskCard({ task, onMove, onGetUpdate }: {
     in_review: ['done', 'in_progress'],
   }
 
+  const completionNote = task.status === 'done'
+    ? task.progress_notes?.find((n) => n.startsWith('✅'))?.replace(/^✅\s*/, '')
+    : null
+
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 space-y-2 hover:border-slate-700 transition-colors group">
       <div className="flex items-start gap-2">
@@ -188,6 +192,16 @@ function TaskCard({ task, onMove, onGetUpdate }: {
         <p className="text-sm text-slate-200 leading-snug">{task.title}</p>
       </div>
       {task.deadline && <p className="text-[10px] text-slate-600 pl-3.5">{task.deadline}</p>}
+
+      {/* Always visible completion note for done tasks */}
+      {completionNote && (
+        <div className="pl-3.5 mt-1">
+          <p className="text-[11px] text-green-400/80 leading-relaxed border-l-2 border-green-600/30 pl-2">
+            {completionNote}
+          </p>
+        </div>
+      )}
+
       <div className="flex items-center gap-1 pl-3.5 opacity-0 group-hover:opacity-100 transition-opacity">
         {(NEXT[task.status] ?? []).map((s) => (
           <button key={s} onClick={() => onMove(task.task_id, s)}

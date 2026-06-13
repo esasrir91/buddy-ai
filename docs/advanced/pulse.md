@@ -281,15 +281,33 @@ PulseApp().serve()
 ```
 
 The UI provides:
+
 - **Onboarding Wizard** — set up a PULSE employee without writing code
 - **Dashboard** — today's tasks, meetings, and activity feed
-- **KT Center** — manage async and live KT sessions
+- **KT Center** — submit URLs, documents, or start a live KT session
 - **Live KT Chat** — real-time interactive KT dialogue with confidence meter
 - **Meeting Room** — process meeting transcripts and review action items
-- **Task Board** — Kanban-style task management
-- **Chat** — direct conversation with the PULSE employee
-- **Knowledge Explorer** — search and browse what PULSE knows
-- **Settings** — profile, integrations, storage configuration
+- **Task Board** — Kanban-style task management with AI-generated completion notes
+- **Chat** — streaming WebSocket conversation with the PULSE employee; answers from its learned KT knowledge
+- **Knowledge Explorer** — search and browse what PULSE has learned
+- **Settings** — configure LLM provider, model ID, and API key directly in the UI (no environment variables needed)
+
+### Employee persistence
+
+Employees created through the UI are saved to `~/.pulse_data/employees.json` and **automatically restored on every server restart** — no need to go through onboarding again.
+
+### In-app LLM configuration
+
+Open **Settings → LLM Settings** to configure which model PULSE uses:
+
+| Field | Description |
+|---|---|
+| Provider | `openai`, `anthropic`, `google`, `ollama`, or custom OpenAI-compatible |
+| Model ID | e.g. `gpt-4o`, `claude-3-5-sonnet-20241022`, `gemma3:27b` |
+| API Key | Stored securely in the server process environment |
+| Base URL | For Ollama or custom OpenAI-compatible endpoints |
+
+Changes take effect immediately — all active employees are re-wired to the new model.
 
 ---
 

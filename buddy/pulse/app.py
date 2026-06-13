@@ -67,6 +67,12 @@ class PulseApp:
         # Mount PULSE API router
         self.app.include_router(router)
 
+        # Restore persisted employees on startup
+        from buddy.pulse.router import _load_employees
+        @self.app.on_event("startup")
+        async def _startup() -> None:
+            _load_employees()
+
         # Mount React static build if it exists
         self._mount_ui()
 
