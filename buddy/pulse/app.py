@@ -72,11 +72,10 @@ class PulseApp:
 
     def _mount_ui(self) -> None:
         """Mount the compiled React frontend at / if the build exists."""
-        # Look for the built UI relative to this file
         here = Path(__file__).parent
-        # Could be: <project_root>/pulse-ui/dist
         candidates = [
-            here.parent.parent / "pulse-ui" / "dist",
+            here / "ui",                                      # bundled inside installed package
+            here.parent.parent / "pulse-ui" / "dist",        # project root (dev / editable install)
             here.parent / "pulse-ui" / "dist",
             Path(os.getcwd()) / "pulse-ui" / "dist",
         ]

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [2.1.2] — 2026-06-14
+
+### Fixed
+- **PULSE Chat WebSocket flood loop** — `usePulseChat` hook now uses exponential backoff (max 5 retries) instead of infinite 300 ms retries; receiving a server error frame stops all reconnects immediately
+- **Stale employee after server restart** — `EmployeeValidator` component checks the stored employee ID against the live server on every app load; if the server has restarted and lost state the app auto-redirects to onboarding instead of getting stuck
+- Simplified `Chat.tsx` `handleSend` — removed dead code branch that called `sendMessage` twice
+
+---
+
 ## [2.1.1] — 2026-06-14
 
 ### Changed
@@ -130,6 +139,8 @@ Docker support, full documentation, and a comprehensive examples library.
 - 14 vector database integrations
 - Local model training pipeline
 
+[2.1.2]: https://github.com/esasrir91/buddy-ai/compare/v2.1.1...v2.1.2
+[2.1.1]: https://github.com/esasrir91/buddy-ai/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/esasrir91/buddy-ai/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/esasrir91/buddy-ai/compare/v1.0.5...v2.0.0
 [1.0.5]: https://github.com/esasrir91/buddy-ai/compare/v1.0.0...v1.0.5

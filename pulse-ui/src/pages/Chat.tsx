@@ -14,17 +14,11 @@ export default function Chat() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [chat.messages])
 
-  const handleSend = async () => {
+  const handleSend = () => {
     const text = input.trim()
     if (!text || !employeeId) return
     setInput('')
-
-    if (chat.isConnected) {
-      chat.sendMessage(text)
-    } else {
-      // Fallback: REST
-      chat.sendMessage(text)
-    }
+    chat.sendMessage(text)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

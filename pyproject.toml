@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "buddy-ai"
-version = "2.1.1"
+version = "2.1.2"
 description = "A comprehensive Python framework for building and deploying AI agents with multi-model support and advanced capabilities"
 readme = "README.md"
 license = "MIT"
@@ -134,7 +134,7 @@ packages = {find = {}}
 package-dir = {"" = "."}
 
 [tool.setuptools.package-data]
-buddy = ["py.typed"]
+buddy = ["py.typed", "pulse/ui/**/*"]
 
 [tool.black]
 line-length = 120
