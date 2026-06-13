@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { usePulseStore } from './hooks/usePulseStore'
 import { getEmployee, createEmployee } from './api/pulse'
+import type { EmployeeProfile, Employee } from './types/pulse'
 import { Layout } from './components/layout/Layout'
 import OnboardingWizard from './pages/OnboardingWizard'
 import Dashboard from './pages/Dashboard'
@@ -24,38 +25,50 @@ function RequireEmployee({ children }: { children: React.ReactNode }) {
  *  employee from the profile already in localStorage — the user never sees
  *  the onboarding wizard again after their first setup. */
 function EmployeeValidator() {
-  const { employeeId, employee, setEmployee, clearEmployee } = usePulseStore()
+  const { employeeId, employee, lastKnownProfile, setEmployee, clearEmployee } = usePulseStore()
 
   useEffect(() => {
-    if (!employeeId) return
-
-    getEmployee(employeeId).catch(async () => {
-      // Server doesn't know this employee (e.g. restarted).
-      // Try to silently re-register using the profile we already have in state.
-      if (employee?.profile) {
-        try {
-          const result = await createEmployee({
-            full_name:    employee.profile.full_name,
-            role:         employee.profile.role,
-            department:   employee.profile.department,
-            skills:       employee.profile.skills,
-            timezone:     employee.profile.timezone,
-            reporting_to: employee.profile.reporting_to ?? undefined,
-            company_name: employee.profile.company_name ?? undefined,
-            bio:          employee.profile.bio ?? undefined,
-          })
-          // Update store with the new server-assigned ID
-          setEmployee(result.employee_id, { ...employee, profile: result.profile })
-        } catch {
-          // Re-registration also failed — server might be down, don't clear state yet
-          // so the user sees a meaningful error in the UI rather than a blank onboarding form
+    // Helper: register from a profile object
+    const reRegister = async (profile: EmployeeProfile) => {
+      try {
+        const result = await createEmployee({
+          full_name:    profile.full_name,
+          role:         profile.role,
+          department:   profile.department,
+          skills:       profile.skills,
+          timezone:     profile.timezone,
+          reporting_to: profile.reporting_to ?? undefined,
+          company_name: profile.company_name ?? undefined,
+          bio:          profile.bio ?? undefined,
+        })
+        const emp: Employee = {
+          employee_id:    result.employee_id,
+          profile:        result.profile,
+          memory_summary: { kt_sessions_completed: 0, kt_domains: [], colleagues_known: 0, decisions_logged: 0, projects_tracked: [] },
+          task_summary:   {},
+          kt_domains:     [],
         }
-      } else {
-        // No profile data at all — must go through onboarding
-        clearEmployee()
+        setEmployee(result.employee_id, emp)
+      } catch {
+        // Server down or config missing — don't clear, just wait
       }
-    })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    }
+
+    if (employeeId) {
+      // Employee ID exists — verify it's still alive on the server
+      getEmployee(employeeId).catch(async () => {
+        const profile = employee?.profile ?? lastKnownProfile
+        if (profile) {
+          await reRegister(profile)
+        } else {
+          clearEmployee()
+        }
+      })
+    } else if (lastKnownProfile) {
+      // ID was cleared (e.g. by old code) but we still have profile data — re-register silently
+      reRegister(lastKnownProfile)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return null
