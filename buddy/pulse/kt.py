@@ -226,29 +226,101 @@ class KTSession:
             return source.decode("utf-8", errors="replace")
         source_str = str(source) if not isinstance(source, Path) else str(source)
 
-        # Fetch URL content
+        # Crawl URL and all internal links
         if source_str.startswith(("http://", "https://")):
-            try:
-                import re
-                import httpx
-                resp = httpx.get(source_str, timeout=20, follow_redirects=True)
-                resp.raise_for_status()
-                content_type = resp.headers.get("content-type", "")
-                if "html" in content_type:
-                    # Strip HTML tags for cleaner text
-                    text = re.sub(r"<style[^>]*>.*?</style>", " ", resp.text, flags=re.S)
-                    text = re.sub(r"<script[^>]*>.*?</script>", " ", text, flags=re.S)
-                    text = re.sub(r"<[^>]+>", " ", text)
-                    text = re.sub(r"\s+", " ", text).strip()
-                    return text[:12000]
-                return resp.text[:12000]
-            except Exception as e:
-                return f"[Could not fetch URL: {e}]\nURL: {source_str}"
+            return self._crawl_url(source_str)
 
         path = Path(source_str)
         if path.exists():
             return path.read_text(encoding="utf-8")
         return source_str
+
+    @staticmethod
+    def _crawl_url(
+        start_url: str,
+        max_pages: int = 20,
+        max_depth: int = 3,
+        per_page_chars: int = 4000,
+        total_chars: int = 30000,
+    ) -> str:
+        """
+        BFS-crawl a URL and its same-domain internal links.
+
+        - Stays on the same domain as the start URL
+        - Visits at most `max_pages` pages, up to `max_depth` link-hops away
+        - Strips HTML tags, scripts, and styles from each page
+        - Returns all page text joined together (capped at `total_chars`)
+        """
+        import re
+        import httpx
+        from collections import deque
+        from urllib.parse import urljoin, urlparse, urldefrag
+
+        HEADERS = {"User-Agent": "BuddyAI-PULSE/2.1 (KT crawler; +https://github.com/esasrir91/buddy-ai)"}
+
+        def _clean_html(html: str) -> str:
+            text = re.sub(r"<style[^>]*>.*?</style>", " ", html, flags=re.S | re.I)
+            text = re.sub(r"<script[^>]*>.*?</script>", " ", text, flags=re.S | re.I)
+            text = re.sub(r"<!--.*?-->", " ", text, flags=re.S)
+            text = re.sub(r"<[^>]+>", " ", text)
+            text = re.sub(r"[ \t]+", " ", text)
+            text = re.sub(r"\n{3,}", "\n\n", text)
+            return text.strip()
+
+        def _extract_links(html: str, base_url: str, allowed_netloc: str) -> List[str]:
+            links = []
+            for href in re.findall(r'href=["\']([^"\'#?][^"\']*)["\']', html, re.I):
+                abs_url, _ = urldefrag(urljoin(base_url, href))
+                if urlparse(abs_url).netloc == allowed_netloc and abs_url.startswith("http"):
+                    links.append(abs_url)
+            return links
+
+        allowed_netloc = urlparse(start_url).netloc
+        visited: set = set()
+        queue: deque = deque([(start_url, 0)])
+        pages: List[str] = []
+        total = 0
+
+        with httpx.Client(timeout=15, follow_redirects=True, headers=HEADERS) as client:
+            while queue and len(visited) < max_pages:
+                url, depth = queue.popleft()
+                clean_url, _ = urldefrag(url)
+                if clean_url in visited:
+                    continue
+                visited.add(clean_url)
+
+                try:
+                    resp = client.get(clean_url)
+                    resp.raise_for_status()
+                    ctype = resp.headers.get("content-type", "")
+                    if "html" not in ctype and "text" not in ctype:
+                        continue
+
+                    text = _clean_html(resp.text)
+                    snippet = text[:per_page_chars]
+                    pages.append(f"### {clean_url}\n{snippet}")
+                    total += len(snippet)
+
+                    # Queue internal links if we haven't hit depth limit
+                    if depth < max_depth:
+                        for link in _extract_links(resp.text, clean_url, allowed_netloc):
+                            if link not in visited:
+                                queue.append((link, depth + 1))
+
+                except Exception:
+                    continue  # skip unreachable pages silently
+
+                if total >= total_chars:
+                    break
+
+        if not pages:
+            return f"[Could not fetch any content from {start_url}]"
+
+        header = (
+            f"Crawled {len(pages)} page(s) from {start_url} "
+            f"(domain: {allowed_netloc}, max depth: {max_depth})\n\n"
+        )
+        return (header + "\n\n".join(pages))[:total_chars + len(header)]
 
     # --------------------------------------------------------------- Live KT
     def human_explains(self, text: str) -> KTTurn:
@@ -356,7 +428,7 @@ Existing knowledge domains: {', '.join(existing_domains) or 'none yet'}
 
 Document content:
 ---
-{source_text[:8000]}
+{source_text[:20000]}
 ---
 
 Build your initial understanding. Respond in JSON:
