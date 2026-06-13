@@ -1,0 +1,89 @@
+version: "3.9"
+
+services:
+  buddy:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: buddy-ai
+    ports:
+      - "7777:7777"
+    env_file:
+      - .env
+    volumes:
+      - ./workspace:/app/workspace
+      - buddy_storage:/app/.buddy
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7777/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  playground:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: buddy-playground
+    command: ["python", "-m", "buddy.app.playground.app"]
+    ports:
+      - "8501:8501"
+    env_file:
+      - .env
+    volumes:
+      - ./workspace:/app/workspace
+      - buddy_storage:/app/.buddy
+    depends_on:
+      - buddy
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: buddy-postgres
+    environment:
+      POSTGRES_DB: buddy
+      POSTGRES_USER: buddy
+      POSTGRES_PASSWORD: buddy_secret
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U buddy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: buddy-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: buddy-qdrant
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  qdrant_data:
+  buddy_storage:

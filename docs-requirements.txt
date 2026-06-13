@@ -1,0 +1,8 @@
+mkdocs==1.5.3
+mkdocs-material==9.5.2
+mkdocstrings[python]==0.24.0
+pymdown-extensions==10.6
+markdown-include==0.8.1
+mkdocs-mermaid2-plugin==1.1.1
+mkdocs-git-revision-date-localized-plugin==1.2.2
+mkdocs-minify-plugin==0.7.1

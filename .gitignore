@@ -1,0 +1,78 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+venv/
+env/
+.env
+*.env.local
+
+# Pytest / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+*.cover
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+
+# Distribution
+*.whl
+*.tar.gz
+MANIFEST
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# MkDocs build output
+site/
+
+# Node / pulse-ui
+pulse-ui/node_modules/
+pulse-ui/dist/
+pulse-ui/.env
+pulse-ui/.env.local
+
+# Logs
+*.log
+logs/
+
+# SQLite databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Vector store data
+chroma_db/
+lancedb/
+qdrant_data/
+
+# Model weights / training outputs
+models/
+checkpoints/
+runs/
+*.safetensors
+*.bin
+*.pt
+*.pth
+
+# Secrets
+*.pem
+*.key
+*.crt
+secrets.json
+credentials.json
