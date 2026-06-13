@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [2.1.1] — 2026-06-14
+
+### Changed
+- Updated README with full PULSE documentation, feature overview, and improved PyPI project page
+
+---
+
 ## [2.1.0] — 2026-06-14
 
 ### Summary
