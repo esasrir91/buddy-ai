@@ -16,7 +16,7 @@ import typer
 
 try:
     from buddy.train import delete_model, list_available_models, list_models, test_model, train_model
-except ImportError:
+except Exception:
     # Handle case where buddy.train is not available
     def train_model(*args, **kwargs):
         raise ImportError("buddy.train module not available")

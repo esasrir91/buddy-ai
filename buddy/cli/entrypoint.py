@@ -605,14 +605,14 @@ try:
     from buddy.cli.simple_train_cli import app as train_cli
 
     BUDDY_cli.add_typer(train_cli, name="train")
-except ImportError:
+except Exception:
     pass
 
 try:
     from buddy.cli.pulse_cli import pulse_app
 
     BUDDY_cli.add_typer(pulse_app, name="pulse")
-except ImportError:
+except Exception:
     pass
 
 

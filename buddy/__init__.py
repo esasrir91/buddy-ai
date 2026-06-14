@@ -34,7 +34,7 @@ try:
     from buddy.planning import ExecutionPlan, PlanningAgent, PlanStatus, PlanStep
 
     PLANNING_AVAILABLE = True
-except ImportError:
+except Exception:
     PLANNING_AVAILABLE = False
 
 try:
@@ -55,14 +55,14 @@ try:
     from buddy.agent.evolution import AgentGenome, EvolutionaryMixin, EvolutionStrategy, FitnessEvaluator
 
     EVOLUTION_AVAILABLE = True
-except ImportError:
+except Exception:
     EVOLUTION_AVAILABLE = False
 
 try:
     from buddy.reasoning import AdvancedReasoning, AdvancedReasoningMixin, ReasoningResult, ReasoningStrategy
 
     REASONING_AVAILABLE = True
-except ImportError:
+except Exception:
     REASONING_AVAILABLE = False
 
 try:
@@ -75,7 +75,7 @@ try:
     )
 
     PERSONALITY_AVAILABLE = True
-except ImportError:
+except Exception:
     PERSONALITY_AVAILABLE = False
 
 try:
@@ -88,7 +88,7 @@ try:
     )
 
     SECURITY_AVAILABLE = True
-except ImportError:
+except Exception:
     SECURITY_AVAILABLE = False
 
 try:
@@ -105,7 +105,7 @@ try:
     )
 
     PULSE_AVAILABLE = True
-except ImportError:
+except Exception:
     PULSE_AVAILABLE = False
 
 # Legacy imports for compatibility
@@ -114,7 +114,7 @@ try:
     from buddy.memory.agent import AgentMemory
     from buddy.run import run
     from buddy.workflow import Workflow
-except ImportError:
+except Exception:
     pass
 
 # Feature availability flags
