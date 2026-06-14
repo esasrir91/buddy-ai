@@ -132,8 +132,11 @@ Repository = "https://github.com/esasrir91/buddy-ai"
 buddy = "buddy.cli.entrypoint:main"
 
 [tool.setuptools]
-packages = {find = {}}
 package-dir = {"" = "."}
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["buddy*"]
 
 [tool.setuptools.package-data]
 buddy = ["py.typed", "pulse/ui/**/*"]
