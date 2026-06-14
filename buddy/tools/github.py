@@ -1355,9 +1355,11 @@ class GithubTools(Toolkit):
                 "url": result["content"].html_url,
                 "commit": {
                     "sha": result["commit"].sha,
-                    "message": result["commit"].commit.message
-                    if result["commit"].commit
-                    else result["commit"]._rawData["message"],
+                    "message": (
+                        result["commit"].commit.message
+                        if result["commit"].commit
+                        else result["commit"]._rawData["message"]
+                    ),
                     "url": result["commit"].html_url,
                 },
             }
@@ -1824,4 +1826,3 @@ class GithubTools(Toolkit):
         except GithubException as e:
             logger.error(f"Error searching issues and PRs: {e}")
             return json.dumps({"error": str(e)})
-

@@ -573,4 +573,3 @@ class Clickhouse(VectorDb):
             parameters=parameters,
         )
         return True
-

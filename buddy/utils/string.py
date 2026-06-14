@@ -202,4 +202,3 @@ def parse_response_model_str(content: str, response_model: Type[BaseModel]) -> O
                     logger.warning("All parsing attempts failed.")
 
     return structured_output
-

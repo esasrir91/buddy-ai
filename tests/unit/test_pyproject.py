@@ -6,7 +6,6 @@ import re
 import tomllib
 from pathlib import Path
 
-
 PYPROJECT = Path(__file__).parent.parent.parent / "pyproject.toml"
 
 
@@ -17,20 +16,18 @@ def load_pyproject():
 
 def test_pyproject_version_matches_init():
     import buddy
+
     data = load_pyproject()
     pyproject_version = data["project"]["version"]
     assert pyproject_version == buddy.__version__, (
-        f"pyproject.toml version ({pyproject_version}) "
-        f"does not match buddy.__version__ ({buddy.__version__})"
+        f"pyproject.toml version ({pyproject_version}) " f"does not match buddy.__version__ ({buddy.__version__})"
     )
 
 
 def test_pyproject_version_is_semver():
     data = load_pyproject()
     version = data["project"]["version"]
-    assert re.match(r"^\d+\.\d+\.\d+$", version), (
-        f"version '{version}' is not valid semver (MAJOR.MINOR.PATCH)"
-    )
+    assert re.match(r"^\d+\.\d+\.\d+$", version), f"version '{version}' is not valid semver (MAJOR.MINOR.PATCH)"
 
 
 def test_training_extra_exists():

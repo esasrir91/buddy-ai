@@ -7,4 +7,3 @@ __all__ = [
     "PlaygroundSettings",
     "serve_playground_app",
 ]
-

@@ -71,4 +71,3 @@ class JinaEmbedder(Embedder):
         except Exception as e:
             logger.warning(f"Failed to get embedding and usage: {e}")
             return [], None
-

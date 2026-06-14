@@ -146,4 +146,3 @@ class PDFUrlKnowledgeBase(AgentKnowledge):
             skip_existing=skip_existing,
             source_info=str(url),
         )
-

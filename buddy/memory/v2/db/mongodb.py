@@ -194,5 +194,3 @@ class MongoMemoryDb(MemoryDb):
         except PyMongoError as e:
             logger.error(f"Error clearing collection: {e}")
             return False
-
-

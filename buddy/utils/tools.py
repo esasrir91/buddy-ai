@@ -100,4 +100,3 @@ def get_function_call_for_tool_execution(
         call_id=_tool_call_id,
         functions=functions,
     )
-

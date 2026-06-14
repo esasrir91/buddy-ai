@@ -812,9 +812,9 @@ class Team:
         # When filters are passed manually
         if self.knowledge_filters or knowledge_filters:
             """
-                initialize metadata (specially required in case when load is commented out)
-                when load is not called the reader's document_lists won't be called and metadata filters won't be initialized
-                so we need to call initialize_valid_filters to make sure the filters are initialized
+            initialize metadata (specially required in case when load is commented out)
+            when load is not called the reader's document_lists won't be called and metadata filters won't be initialized
+            so we need to call initialize_valid_filters to make sure the filters are initialized
             """
             if not self.knowledge.valid_metadata_filters:  # type: ignore
                 self.knowledge.initialize_valid_filters()  # type: ignore
@@ -1239,9 +1239,9 @@ class Team:
         # When filters are passed manually
         if self.knowledge_filters or knowledge_filters:
             """
-                initialize metadata (specially required in case when load is commented out)
-                when load is not called the reader's document_lists won't be called and metadata filters won't be initialized
-                so we need to call initialize_valid_filters to make sure the filters are initialized
+            initialize metadata (specially required in case when load is commented out)
+            when load is not called the reader's document_lists won't be called and metadata filters won't be initialized
+            so we need to call initialize_valid_filters to make sure the filters are initialized
             """
             if not self.knowledge.valid_metadata_filters:  # type: ignore
                 self.knowledge.initialize_valid_filters()  # type: ignore
@@ -5326,8 +5326,7 @@ class Team:
             valid_filters = getattr(self.knowledge, "valid_metadata_filters", None)
             if valid_filters:
                 valid_filters_str = ", ".join(valid_filters)
-                additional_information.append(
-                    dedent(f"""
+                additional_information.append(dedent(f"""
                     The knowledge base contains documents with these metadata filters: {valid_filters_str}.
                     Always use filters when the user query indicates specific metadata.
                     Examples:
@@ -5340,8 +5339,7 @@ class Team:
                     - If multiple filters are relevant, combine them in the filters parameter (e.g., {{'name': 'Jordan Mitchell', 'document_type': 'contract'}}).
                     - Ensure the filter keys match the valid metadata filters: {valid_filters_str}.
                     You can use the search_knowledge_base tool to search the knowledge base and get the most relevant documents. Make sure to pass the filters as [Dict[str: Any]] to the tool. FOLLOW THIS STRUCTURE STRICTLY.
-                """)
-                )
+                """))
 
         # 2 Build the default system message for the Agent.
         system_message_content: str = ""
@@ -6555,9 +6553,9 @@ class Team:
                     files=files,
                     stream=True,
                     stream_intermediate_steps=stream_intermediate_steps,
-                    knowledge_filters=knowledge_filters
-                    if not member_agent.knowledge_filters and member_agent.knowledge
-                    else None,
+                    knowledge_filters=(
+                        knowledge_filters if not member_agent.knowledge_filters and member_agent.knowledge else None
+                    ),
                 )
                 for member_agent_run_response_event in member_agent_run_response_stream:
                     check_if_run_cancelled(member_agent_run_response_event)
@@ -6575,9 +6573,9 @@ class Team:
                     audio=audio,
                     files=files,
                     stream=False,
-                    knowledge_filters=knowledge_filters
-                    if not member_agent.knowledge_filters and member_agent.knowledge
-                    else None,
+                    knowledge_filters=(
+                        knowledge_filters if not member_agent.knowledge_filters and member_agent.knowledge else None
+                    ),
                 )
 
                 check_if_run_cancelled(member_agent_run_response)
@@ -6698,9 +6696,9 @@ class Team:
                     files=files,
                     stream=True,
                     stream_intermediate_steps=stream_intermediate_steps,
-                    knowledge_filters=knowledge_filters
-                    if not member_agent.knowledge_filters and member_agent.knowledge
-                    else None,
+                    knowledge_filters=(
+                        knowledge_filters if not member_agent.knowledge_filters and member_agent.knowledge else None
+                    ),
                     refresh_session_before_write=True,
                 )
                 async for member_agent_run_response_event in member_agent_run_response_stream:
@@ -6717,9 +6715,9 @@ class Team:
                     audio=audio,
                     files=files,
                     stream=False,
-                    knowledge_filters=knowledge_filters
-                    if not member_agent.knowledge_filters and member_agent.knowledge
-                    else None,
+                    knowledge_filters=(
+                        knowledge_filters if not member_agent.knowledge_filters and member_agent.knowledge else None
+                    ),
                     refresh_session_before_write=True,
                 )
                 check_if_run_cancelled(member_agent_run_response)
@@ -6936,9 +6934,9 @@ class Team:
                     files=files,
                     stream=True,
                     stream_intermediate_steps=stream_intermediate_steps,
-                    knowledge_filters=knowledge_filters
-                    if not member_agent.knowledge_filters and member_agent.knowledge
-                    else None,
+                    knowledge_filters=(
+                        knowledge_filters if not member_agent.knowledge_filters and member_agent.knowledge else None
+                    ),
                 )
                 for member_agent_run_response_chunk in member_agent_run_response_stream:
                     check_if_run_cancelled(member_agent_run_response_chunk)
@@ -6954,9 +6952,9 @@ class Team:
                     audio=audio,
                     files=files,
                     stream=False,
-                    knowledge_filters=knowledge_filters
-                    if not member_agent.knowledge_filters and member_agent.knowledge
-                    else None,
+                    knowledge_filters=(
+                        knowledge_filters if not member_agent.knowledge_filters and member_agent.knowledge else None
+                    ),
                 )
                 check_if_run_cancelled(member_agent_run_response)
 
@@ -7072,9 +7070,9 @@ class Team:
                     files=files,
                     stream=True,
                     stream_intermediate_steps=stream_intermediate_steps,
-                    knowledge_filters=knowledge_filters
-                    if not member_agent.knowledge_filters and member_agent.knowledge
-                    else None,
+                    knowledge_filters=(
+                        knowledge_filters if not member_agent.knowledge_filters and member_agent.knowledge else None
+                    ),
                     refresh_session_before_write=True,
                 )
                 async for member_agent_run_response_event in member_agent_run_response_stream:
@@ -7091,9 +7089,9 @@ class Team:
                     audio=audio,
                     files=files,
                     stream=False,
-                    knowledge_filters=knowledge_filters
-                    if (member_agent.knowledge_filters and member_agent.knowledge)
-                    else None,
+                    knowledge_filters=(
+                        knowledge_filters if (member_agent.knowledge_filters and member_agent.knowledge) else None
+                    ),
                     refresh_session_before_write=True,
                 )
 
@@ -8197,5 +8195,3 @@ class Team:
 
         log_info(f"Filters used by Agent: {search_filters}")
         return search_filters
-
-

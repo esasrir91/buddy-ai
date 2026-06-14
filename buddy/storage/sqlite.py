@@ -644,4 +644,3 @@ class SqliteStorage(Storage):
         copied_obj.table = copied_obj.get_table()
 
         return copied_obj
-

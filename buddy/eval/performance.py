@@ -703,5 +703,3 @@ class PerformanceEval:
 
         log_debug(f"*********** Evaluation End: {self.eval_id} ***********")
         return self.result
-
-

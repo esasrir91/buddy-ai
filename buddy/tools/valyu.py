@@ -197,4 +197,3 @@ class ValyuTools(Toolkit):
             search_type="proprietary",
             sources=[paper_url],
         )
-

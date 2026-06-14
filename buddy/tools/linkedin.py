@@ -1,6 +1,6 @@
 import json
-from typing import Any, Dict, List, Optional
 from os import getenv
+from typing import Any, Dict, List, Optional
 
 from buddy.tools import Toolkit
 from buddy.utils.log import log_debug, logger
@@ -46,7 +46,7 @@ class LinkedInTools(Toolkit):
         return {
             "Authorization": f"Bearer {self.access_token}",
             "Content-Type": "application/json",
-            "X-Restli-Protocol-Version": "2.0.0"
+            "X-Restli-Protocol-Version": "2.0.0",
         }
 
     def post_update(self, text: str, visibility: str = "PUBLIC") -> str:
@@ -64,10 +64,7 @@ class LinkedInTools(Toolkit):
 
         try:
             # Get user profile first
-            profile_response = requests.get(
-                f"{self.base_url}/people/~",
-                headers=self._get_headers()
-            )
+            profile_response = requests.get(f"{self.base_url}/people/~", headers=self._get_headers())
             profile_response.raise_for_status()
             profile = profile_response.json()
             person_urn = profile["id"]
@@ -76,25 +73,14 @@ class LinkedInTools(Toolkit):
                 "author": f"urn:li:person:{person_urn}",
                 "lifecycleState": "PUBLISHED",
                 "specificContent": {
-                    "com.linkedin.ugc.ShareContent": {
-                        "shareCommentary": {
-                            "text": text
-                        },
-                        "shareMediaCategory": "NONE"
-                    }
+                    "com.linkedin.ugc.ShareContent": {"shareCommentary": {"text": text}, "shareMediaCategory": "NONE"}
                 },
-                "visibility": {
-                    "com.linkedin.ugc.MemberNetworkVisibility": visibility
-                }
+                "visibility": {"com.linkedin.ugc.MemberNetworkVisibility": visibility},
             }
 
-            response = requests.post(
-                f"{self.base_url}/ugcPosts",
-                headers=self._get_headers(),
-                json=payload
-            )
+            response = requests.post(f"{self.base_url}/ugcPosts", headers=self._get_headers(), json=payload)
             response.raise_for_status()
-            
+
             return json.dumps(response.json())
         except Exception as e:
             return json.dumps({"error": f"Failed to post update: {str(e)}"})
@@ -109,12 +95,9 @@ class LinkedInTools(Toolkit):
             return json.dumps({"error": "Access token not provided"})
 
         try:
-            response = requests.get(
-                f"{self.base_url}/people/~",
-                headers=self._get_headers()
-            )
+            response = requests.get(f"{self.base_url}/people/~", headers=self._get_headers())
             response.raise_for_status()
-            
+
             return json.dumps(response.json())
         except Exception as e:
             return json.dumps({"error": f"Failed to get profile: {str(e)}"})
@@ -135,10 +118,7 @@ class LinkedInTools(Toolkit):
 
         try:
             # Get user profile first
-            profile_response = requests.get(
-                f"{self.base_url}/people/~",
-                headers=self._get_headers()
-            )
+            profile_response = requests.get(f"{self.base_url}/people/~", headers=self._get_headers())
             profile_response.raise_for_status()
             profile = profile_response.json()
             person_urn = profile["id"]
@@ -148,34 +128,24 @@ class LinkedInTools(Toolkit):
                 "lifecycleState": "PUBLISHED",
                 "specificContent": {
                     "com.linkedin.ugc.ShareContent": {
-                        "shareCommentary": {
-                            "text": comment
-                        },
+                        "shareCommentary": {"text": comment},
                         "shareMediaCategory": "ARTICLE",
-                        "media": [{
-                            "status": "READY",
-                            "description": {
-                                "text": title or "Shared article"
-                            },
-                            "originalUrl": article_url,
-                            "title": {
-                                "text": title or "Article"
+                        "media": [
+                            {
+                                "status": "READY",
+                                "description": {"text": title or "Shared article"},
+                                "originalUrl": article_url,
+                                "title": {"text": title or "Article"},
                             }
-                        }]
+                        ],
                     }
                 },
-                "visibility": {
-                    "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"
-                }
+                "visibility": {"com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"},
             }
 
-            response = requests.post(
-                f"{self.base_url}/ugcPosts",
-                headers=self._get_headers(),
-                json=payload
-            )
+            response = requests.post(f"{self.base_url}/ugcPosts", headers=self._get_headers(), json=payload)
             response.raise_for_status()
-            
+
             return json.dumps(response.json())
         except Exception as e:
             return json.dumps({"error": f"Failed to share article: {str(e)}"})
@@ -194,18 +164,11 @@ class LinkedInTools(Toolkit):
             return json.dumps({"error": "Access token not provided"})
 
         try:
-            params = {
-                "start": start,
-                "count": count
-            }
+            params = {"start": start, "count": count}
 
-            response = requests.get(
-                f"{self.base_url}/people/~/connections",
-                headers=self._get_headers(),
-                params=params
-            )
+            response = requests.get(f"{self.base_url}/people/~/connections", headers=self._get_headers(), params=params)
             response.raise_for_status()
-            
+
             return json.dumps(response.json())
         except Exception as e:
             return json.dumps({"error": f"Failed to get connections: {str(e)}"})
@@ -226,24 +189,14 @@ class LinkedInTools(Toolkit):
 
         try:
             payload = {
-                "recipients": {
-                    "values": [{
-                        "person": {
-                            "_path": f"/person/{recipient_id}"
-                        }
-                    }]
-                },
+                "recipients": {"values": [{"person": {"_path": f"/person/{recipient_id}"}}]},
                 "subject": subject,
-                "body": message
+                "body": message,
             }
 
-            response = requests.post(
-                f"{self.base_url}/people/~/mailbox",
-                headers=self._get_headers(),
-                json=payload
-            )
+            response = requests.post(f"{self.base_url}/people/~/mailbox", headers=self._get_headers(), json=payload)
             response.raise_for_status()
-            
+
             return json.dumps(response.json())
         except Exception as e:
             return json.dumps({"error": f"Failed to send message: {str(e)}"})

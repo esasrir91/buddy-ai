@@ -191,11 +191,11 @@ class TeamGetResponse(BaseModel):
             storage={"name": team.storage.__class__.__name__} if team.storage else None,
             memory=memory_dict,
             members=[
-                AgentGetResponse.from_agent(member, async_mode=async_mode)
-                if isinstance(member, Agent)
-                else TeamGetResponse.from_team(member, async_mode=async_mode)
-                if isinstance(member, Team)
-                else None
+                (
+                    AgentGetResponse.from_agent(member, async_mode=async_mode)
+                    if isinstance(member, Agent)
+                    else TeamGetResponse.from_team(member, async_mode=async_mode) if isinstance(member, Team) else None
+                )
                 for member in team.members
             ],
         )
@@ -218,4 +218,3 @@ class TeamSessionResponse(BaseModel):
 class TeamRenameRequest(BaseModel):
     name: str
     user_id: str
-

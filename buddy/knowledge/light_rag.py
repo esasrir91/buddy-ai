@@ -271,4 +271,3 @@ def _format_lightrag_response(result: Any, query: str, mode: str) -> List[Dict[s
     else:
         # If it's a string or other format, wrap it
         return [{"content": str(result), "source": "lightrag", "metadata": {"query": query, "mode": mode}}]
-

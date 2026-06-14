@@ -24,99 +24,96 @@ __description__ = "A comprehensive Python framework for building and deploying A
 
 # Core imports for easy access
 from buddy.agent import Agent
-from buddy.team import Team
 from buddy.models.base import Model
+from buddy.team import Team
 from buddy.tools import Toolkit
 from buddy.tools.function import Function
 
 # Advanced features
 try:
-    from buddy.planning import PlanningAgent, ExecutionPlan, PlanStep, PlanStatus
+    from buddy.planning import ExecutionPlan, PlanningAgent, PlanStatus, PlanStep
+
     PLANNING_AVAILABLE = True
 except ImportError:
     PLANNING_AVAILABLE = False
 
 try:
     from buddy.multimodal import (
-        MultiModalAgent, 
-        ModalityType, 
-        MultiModalResponse,
+        AudioAnalysis,
         ImageAnalysis,
-        AudioAnalysis, 
-        VideoAnalysis
+        ModalityType,
+        MultiModalAgent,
+        MultiModalResponse,
+        VideoAnalysis,
     )
+
     MULTIMODAL_AVAILABLE = True
 except ImportError:
     MULTIMODAL_AVAILABLE = False
 
 try:
-    from buddy.agent.evolution import (
-        EvolutionaryMixin,
-        AgentGenome,
-        EvolutionStrategy,
-        FitnessEvaluator
-    )
+    from buddy.agent.evolution import AgentGenome, EvolutionaryMixin, EvolutionStrategy, FitnessEvaluator
+
     EVOLUTION_AVAILABLE = True
 except ImportError:
     EVOLUTION_AVAILABLE = False
 
 try:
-    from buddy.reasoning import (
-        AdvancedReasoning,
-        AdvancedReasoningMixin,
-        ReasoningStrategy,
-        ReasoningResult
-    )
+    from buddy.reasoning import AdvancedReasoning, AdvancedReasoningMixin, ReasoningResult, ReasoningStrategy
+
     REASONING_AVAILABLE = True
 except ImportError:
     REASONING_AVAILABLE = False
 
 try:
     from buddy.agent.personality import (
+        CommunicationStyle,
+        EmotionalState,
         PersonalityEngine,
         PersonalityMixin,
         PersonalityProfile,
-        EmotionalState,
-        CommunicationStyle
     )
+
     PERSONALITY_AVAILABLE = True
 except ImportError:
     PERSONALITY_AVAILABLE = False
 
 try:
     from buddy.security import (
-        AdversarialProtectionSystem,
         AdversarialProtectionMixin,
+        AdversarialProtectionSystem,
+        SecurityAction,
         SecurityConfig,
         ThreatLevel,
-        SecurityAction
     )
+
     SECURITY_AVAILABLE = True
 except ImportError:
     SECURITY_AVAILABLE = False
 
 try:
     from buddy.pulse import (
-        PulseEmployee,
         EmployeeProfile,
         KTSession,
         KTSourceType,
         KTSummary,
         MeetingNotes,
-        WorkItem,
-        ProfessionalMemory,
         OnboardingWorkflow,
+        ProfessionalMemory,
+        PulseEmployee,
+        WorkItem,
     )
+
     PULSE_AVAILABLE = True
 except ImportError:
     PULSE_AVAILABLE = False
 
 # Legacy imports for compatibility
 try:
-    from buddy.memory.agent import AgentMemory
     from buddy.knowledge.agent import AgentKnowledge
-    from buddy.workflow import Workflow
+    from buddy.memory.agent import AgentMemory
     from buddy.run import run
+    from buddy.workflow import Workflow
 except ImportError:
     pass
 
@@ -129,8 +126,9 @@ __features__ = {
     "personality": PERSONALITY_AVAILABLE,
     "security": SECURITY_AVAILABLE,
     "pulse": PULSE_AVAILABLE,
-    "core": True
+    "core": True,
 }
+
 
 def get_available_features():
     """Get list of available features in current installation"""
@@ -140,9 +138,11 @@ def get_available_features():
             available.append(feature)
     return available
 
+
 def check_feature(feature_name: str) -> bool:
     """Check if a specific feature is available"""
     return __features__.get(feature_name, False)
+
 
 def get_version_info():
     """Get comprehensive version and feature information"""
@@ -151,28 +151,28 @@ def get_version_info():
         "features": __features__,
         "available_features": get_available_features(),
         "description": __description__,
-        "author": __author__
+        "author": __author__,
     }
+
 
 __all__ = [
     # Core
     "Agent",
-    "Team", 
+    "Team",
     "Model",
     "Function",
     "Toolkit",
     "AgentMemory",
     "AgentKnowledge",
-    
     # Advanced features (conditional)
-    "PlanningAgent", 
-    "ExecutionPlan", 
-    "PlanStep", 
+    "PlanningAgent",
+    "ExecutionPlan",
+    "PlanStep",
     "PlanStatus",
     "MultiModalAgent",
     "ModalityType",
     "MultiModalResponse",
-    "ImageAnalysis", 
+    "ImageAnalysis",
     "AudioAnalysis",
     "VideoAnalysis",
     "EvolutionaryMixin",
@@ -180,7 +180,7 @@ __all__ = [
     "EvolutionStrategy",
     "FitnessEvaluator",
     "AdvancedReasoning",
-    "AdvancedReasoningMixin", 
+    "AdvancedReasoningMixin",
     "ReasoningStrategy",
     "ReasoningResult",
     "PersonalityEngine",
@@ -203,17 +203,15 @@ __all__ = [
     "WorkItem",
     "ProfessionalMemory",
     "OnboardingWorkflow",
-    
     # Utility functions
     "get_available_features",
     "check_feature",
     "get_version_info",
-    
     # Metadata
     "__version__",
     "__author__",
     "__email__",
     "__license__",
     "__description__",
-    "__features__"
+    "__features__",
 ]

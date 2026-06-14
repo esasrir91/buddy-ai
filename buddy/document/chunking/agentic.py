@@ -74,4 +74,3 @@ class AgenticChunking(ChunkingStrategy):
                 break
 
         return chunks
-

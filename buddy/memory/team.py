@@ -413,4 +413,3 @@ class TeamMemory:
         copied_obj.manager = self.manager
 
         return copied_obj
-

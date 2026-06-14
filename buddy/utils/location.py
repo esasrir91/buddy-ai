@@ -17,4 +17,3 @@ def get_location() -> Dict[str, Any]:
     except Exception as e:
         log_warning(f"Failed to get location: {e}")
     return {}
-

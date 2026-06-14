@@ -45,4 +45,3 @@ class Reader:
         chunked_lists = await asyncio.gather(*[_chunk_document_async(doc) for doc in documents])
         # Flatten the result
         return [chunk for sublist in chunked_lists for chunk in sublist]
-

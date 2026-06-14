@@ -89,4 +89,3 @@ class DocumentChunking(ChunkingStrategy):
             chunks = overlapped_chunks
 
         return chunks
-

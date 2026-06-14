@@ -1,6 +1,6 @@
 import json
-from typing import Any, Dict, List, Optional
 from os import getenv
+from typing import Any, Dict, List, Optional
 
 from buddy.tools import Toolkit
 from buddy.utils.log import log_debug, logger
@@ -43,12 +43,7 @@ class PushNotificationTools(Toolkit):
         super().__init__(name="push_notifications", tools=tools, **kwargs)
 
     def send_firebase_notification(
-        self,
-        tokens: List[str],
-        title: str,
-        body: str,
-        data: Optional[Dict] = None,
-        image_url: Optional[str] = None
+        self, tokens: List[str], title: str, body: str, data: Optional[Dict] = None, image_url: Optional[str] = None
     ) -> str:
         """Send push notification via Firebase Cloud Messaging.
 
@@ -66,34 +61,21 @@ class PushNotificationTools(Toolkit):
             return json.dumps({"error": "Firebase server key not provided"})
 
         try:
-            headers = {
-                "Authorization": f"key={self.firebase_server_key}",
-                "Content-Type": "application/json"
-            }
+            headers = {"Authorization": f"key={self.firebase_server_key}", "Content-Type": "application/json"}
 
-            notification_payload = {
-                "title": title,
-                "body": body
-            }
+            notification_payload = {"title": title, "body": body}
 
             if image_url:
                 notification_payload["image"] = image_url
 
-            payload = {
-                "registration_ids": tokens,
-                "notification": notification_payload
-            }
+            payload = {"registration_ids": tokens, "notification": notification_payload}
 
             if data:
                 payload["data"] = data
 
-            response = requests.post(
-                "https://fcm.googleapis.com/fcm/send",
-                headers=headers,
-                json=payload
-            )
+            response = requests.post("https://fcm.googleapis.com/fcm/send", headers=headers, json=payload)
             response.raise_for_status()
-            
+
             return json.dumps(response.json())
         except Exception as e:
             return json.dumps({"error": f"Failed to send Firebase notification: {str(e)}"})
@@ -104,7 +86,7 @@ class PushNotificationTools(Toolkit):
         title: str,
         content: str,
         url: Optional[str] = None,
-        image_url: Optional[str] = None
+        image_url: Optional[str] = None,
     ) -> str:
         """Send push notification via OneSignal.
 
@@ -122,16 +104,13 @@ class PushNotificationTools(Toolkit):
             return json.dumps({"error": "OneSignal credentials not provided"})
 
         try:
-            headers = {
-                "Authorization": f"Basic {self.onesignal_api_key}",
-                "Content-Type": "application/json"
-            }
+            headers = {"Authorization": f"Basic {self.onesignal_api_key}", "Content-Type": "application/json"}
 
             payload = {
                 "app_id": self.onesignal_app_id,
                 "include_player_ids": player_ids,
                 "headings": {"en": title},
-                "contents": {"en": content}
+                "contents": {"en": content},
             }
 
             if url:
@@ -140,24 +119,15 @@ class PushNotificationTools(Toolkit):
             if image_url:
                 payload["large_icon"] = image_url
 
-            response = requests.post(
-                "https://onesignal.com/api/v1/notifications",
-                headers=headers,
-                json=payload
-            )
+            response = requests.post("https://onesignal.com/api/v1/notifications", headers=headers, json=payload)
             response.raise_for_status()
-            
+
             return json.dumps(response.json())
         except Exception as e:
             return json.dumps({"error": f"Failed to send OneSignal notification: {str(e)}"})
 
     def send_expo_notification(
-        self,
-        expo_tokens: List[str],
-        title: str,
-        body: str,
-        data: Optional[Dict] = None,
-        sound: str = "default"
+        self, expo_tokens: List[str], title: str, body: str, data: Optional[Dict] = None, sound: str = "default"
     ) -> str:
         """Send push notification via Expo.
 
@@ -175,7 +145,7 @@ class PushNotificationTools(Toolkit):
             headers = {
                 "Accept": "application/json",
                 "Accept-encoding": "gzip, deflate",
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
             }
 
             if self.expo_access_token:
@@ -183,23 +153,14 @@ class PushNotificationTools(Toolkit):
 
             messages = []
             for token in expo_tokens:
-                message = {
-                    "to": token,
-                    "title": title,
-                    "body": body,
-                    "sound": sound
-                }
+                message = {"to": token, "title": title, "body": body, "sound": sound}
                 if data:
                     message["data"] = data
                 messages.append(message)
 
-            response = requests.post(
-                "https://exp.host/--/api/v2/push/send",
-                headers=headers,
-                json=messages
-            )
+            response = requests.post("https://exp.host/--/api/v2/push/send", headers=headers, json=messages)
             response.raise_for_status()
-            
+
             return json.dumps(response.json())
         except Exception as e:
             return json.dumps({"error": f"Failed to send Expo notification: {str(e)}"})
@@ -211,7 +172,7 @@ class PushNotificationTools(Toolkit):
         body: str,
         icon: Optional[str] = None,
         badge: Optional[str] = None,
-        actions: Optional[List[Dict]] = None
+        actions: Optional[List[Dict]] = None,
     ) -> str:
         """Send web push notification.
 
@@ -227,10 +188,7 @@ class PushNotificationTools(Toolkit):
             str: Notification result or error message
         """
         try:
-            payload = {
-                "title": title,
-                "body": body
-            }
+            payload = {"title": title, "body": body}
 
             if icon:
                 payload["icon"] = icon
@@ -243,7 +201,7 @@ class PushNotificationTools(Toolkit):
 
             response = requests.post(endpoint, headers=headers, json=payload)
             response.raise_for_status()
-            
+
             return json.dumps({"success": "Web push sent successfully"})
         except Exception as e:
             return json.dumps({"error": f"Failed to send web push: {str(e)}"})

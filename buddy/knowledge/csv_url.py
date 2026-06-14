@@ -122,4 +122,3 @@ class CSVUrlKnowledgeBase(AgentKnowledge):
             skip_existing=skip_existing,
             source_info=url,
         )
-

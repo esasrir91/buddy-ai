@@ -33,4 +33,3 @@ class YouTubeKnowledgeBase(AgentKnowledge):
         results = await asyncio.gather(*tasks)
         for documents in results:
             yield documents
-

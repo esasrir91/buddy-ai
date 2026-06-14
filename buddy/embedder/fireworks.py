@@ -11,4 +11,3 @@ class FireworksEmbedder(OpenAIEmbedder):
     dimensions: int = 768
     api_key: Optional[str] = getenv("FIREWORKS_API_KEY")
     base_url: str = "https://api.fireworks.ai/inference/v1"
-

@@ -20,4 +20,3 @@ def run_shell_command(args: List[str], tail: int = 100) -> str:
     except Exception as e:
         logger.warning(f"Failed to run shell command: {e}")
         return f"Error: {e}"
-

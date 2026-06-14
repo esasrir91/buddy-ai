@@ -100,4 +100,3 @@ class DalleTools(Toolkit):
         except Exception as e:
             logger.error(f"Failed to generate image: {e}")
             return f"Error: {e}"
-

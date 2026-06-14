@@ -40,4 +40,3 @@ class MemoryDb(ABC):
     @abstractmethod
     def clear(self) -> bool:
         raise NotImplementedError
-

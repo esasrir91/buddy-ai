@@ -1134,5 +1134,3 @@ class MongoDb(VectorDb):
             return tuple(self._convert_objectids_to_strings(item) for item in obj)
         else:
             return obj
-
-

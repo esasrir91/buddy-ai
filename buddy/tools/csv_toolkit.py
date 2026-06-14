@@ -182,4 +182,3 @@ class CsvTools(Toolkit):
         except Exception as e:
             logger.error(f"Error querying csv: {e}")
             return f"Error querying csv: {e}"
-

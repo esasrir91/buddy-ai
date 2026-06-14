@@ -303,4 +303,3 @@ class OpenCVTools(Toolkit):
             error_msg = f"Error capturing video: {str(e)}"
             log_error(error_msg)
             return error_msg
-

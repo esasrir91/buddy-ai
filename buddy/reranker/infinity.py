@@ -193,4 +193,3 @@ class InfinityReranker(Reranker):
             return documents
 
         return compressed_docs
-

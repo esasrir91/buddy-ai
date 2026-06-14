@@ -712,4 +712,3 @@ class GmailTools(Toolkit):
         if attachments:
             return f"{body}\n\nAttachments: {', '.join(attachments)}"
         return body
-

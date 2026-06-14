@@ -272,5 +272,3 @@ class BuddyCliConfig:
                 if v.ws_team and v.ws_team.name:
                     print_info(f"     Team: {v.ws_team.name}")
                 c += 1
-
-

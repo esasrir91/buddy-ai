@@ -139,4 +139,3 @@ class TextKnowledgeBase(AgentKnowledge):
             skip_existing=skip_existing,
             source_info=str(_file_path),
         )
-

@@ -440,20 +440,24 @@ class Workflow:
             self._run_parameters = {
                 param_name: {
                     "name": param_name,
-                    "default": param.default.default
-                    if hasattr(param.default, "__class__") and param.default.__class__.__name__ == "FieldInfo"
-                    else (param.default if param.default is not inspect.Parameter.empty else None),
+                    "default": (
+                        param.default.default
+                        if hasattr(param.default, "__class__") and param.default.__class__.__name__ == "FieldInfo"
+                        else (param.default if param.default is not inspect.Parameter.empty else None)
+                    ),
                     "annotation": (
-                        param.annotation.__name__
-                        if hasattr(param.annotation, "__name__")
-                        else (
-                            str(param.annotation).replace("typing.Optional[", "").replace("]", "")
-                            if "typing.Optional" in str(param.annotation)
-                            else str(param.annotation)
+                        (
+                            param.annotation.__name__
+                            if hasattr(param.annotation, "__name__")
+                            else (
+                                str(param.annotation).replace("typing.Optional[", "").replace("]", "")
+                                if "typing.Optional" in str(param.annotation)
+                                else str(param.annotation)
+                            )
                         )
-                    )
-                    if param.annotation is not inspect.Parameter.empty
-                    else None,
+                        if param.annotation is not inspect.Parameter.empty
+                        else None
+                    ),
                     "required": param.default is inspect.Parameter.empty,
                 }
                 for param_name, param in sig.parameters.items()
@@ -464,9 +468,7 @@ class Workflow:
             self._run_return_type = (
                 return_annotation.__name__
                 if return_annotation is not inspect.Signature.empty and hasattr(return_annotation, "__name__")
-                else str(return_annotation)
-                if return_annotation is not inspect.Signature.empty
-                else None
+                else str(return_annotation) if return_annotation is not inspect.Signature.empty else None
             )
             # Important: Replace the instance's run method with run_workflow
             # This is so we call run_workflow() instead of the subclass's run()
@@ -805,5 +807,3 @@ class Workflow:
 
         # For other types, return as is
         return field_value
-
-

@@ -139,4 +139,3 @@ class JiraTools(Toolkit):
         except Exception as e:
             logger.error(f"Error adding comment to issue {issue_key}: {e}")
             return json.dumps({"error": str(e)})
-

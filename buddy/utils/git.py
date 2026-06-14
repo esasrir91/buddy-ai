@@ -50,4 +50,3 @@ class GitCloneProgress(git.RemoteProgress):
         # log_debug(f"max_count: {max_count}")
         # log_debug(f"message: {message}")
         # print(self._cur_line)
-

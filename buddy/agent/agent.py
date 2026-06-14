@@ -1040,9 +1040,9 @@ class Agent:
         # When filters are passed manually
         if self.knowledge_filters or knowledge_filters:
             """
-                initialize metadata (specially required in case when load is commented out)
-                when load is not called the reader's document_lists won't be called and metadata filters won't be initialized
-                so we need to call initialize_valid_filters to make sure the filters are initialized
+            initialize metadata (specially required in case when load is commented out)
+            when load is not called the reader's document_lists won't be called and metadata filters won't be initialized
+            so we need to call initialize_valid_filters to make sure the filters are initialized
             """
             if not self.knowledge.valid_metadata_filters:  # type: ignore
                 self.knowledge.initialize_valid_filters()  # type: ignore
@@ -1444,9 +1444,9 @@ class Agent:
         # When filters are passed manually
         if self.knowledge_filters or knowledge_filters:
             """
-                initialize metadata (specially required in case when load is commented out)
-                when load is not called the reader's document_lists won't be called and metadata filters won't be initialized
-                so we need to call initialize_valid_filters to make sure the filters are initialized
+            initialize metadata (specially required in case when load is commented out)
+            when load is not called the reader's document_lists won't be called and metadata filters won't be initialized
+            so we need to call initialize_valid_filters to make sure the filters are initialized
             """
             if not self.knowledge.valid_metadata_filters:  # type: ignore
                 self.knowledge.initialize_valid_filters()  # type: ignore
@@ -1696,9 +1696,9 @@ class Agent:
         # When filters are passed manually
         if self.knowledge_filters or knowledge_filters:
             """
-                initialize metadata (specially required in case when load is commented out)
-                when load is not called the reader's document_lists won't be called and metadata filters won't be initialized
-                so we need to call initialize_valid_filters to make sure the filters are initialized
+            initialize metadata (specially required in case when load is commented out)
+            when load is not called the reader's document_lists won't be called and metadata filters won't be initialized
+            so we need to call initialize_valid_filters to make sure the filters are initialized
             """
             if not self.knowledge.valid_metadata_filters:  # type: ignore
                 self.knowledge.initialize_valid_filters()  # type: ignore
@@ -2084,9 +2084,9 @@ class Agent:
         # When filters are passed manually
         if self.knowledge_filters or knowledge_filters:
             """
-                initialize metadata (specially required in case when load is commented out)
-                when load is not called the reader's document_lists won't be called and metadata filters won't be initialized
-                so we need to call initialize_valid_filters to make sure the filters are initialized
+            initialize metadata (specially required in case when load is commented out)
+            when load is not called the reader's document_lists won't be called and metadata filters won't be initialized
+            so we need to call initialize_valid_filters to make sure the filters are initialized
             """
             if not self.knowledge.valid_metadata_filters:  # type: ignore
                 self.knowledge.initialize_valid_filters()  # type: ignore
@@ -4513,8 +4513,7 @@ class Agent:
             valid_filters = getattr(self.knowledge, "valid_metadata_filters", None)
             if valid_filters:
                 valid_filters_str = ", ".join(valid_filters)
-                additional_information.append(
-                    dedent(f"""
+                additional_information.append(dedent(f"""
                     The knowledge base contains documents with these metadata filters: {valid_filters_str}.
                     Always use filters when the user query indicates specific metadata.
 
@@ -4530,8 +4529,7 @@ class Agent:
                     - Ensure the filter keys match the valid metadata filters: {valid_filters_str}.
 
                     You can use the search_knowledge_base tool to search the knowledge base and get the most relevant documents. Make sure to pass the filters as [Dict[str: Any]] to the tool. FOLLOW THIS STRUCTURE STRICTLY.
-                """)
-                )
+                """))
 
         # 3.3 Build the default system message for the Agent.
         system_message_content: str = ""
@@ -8276,16 +8274,20 @@ class Agent:
                 if self.memory is not None and hasattr(self.memory, "db") and self.memory.db is not None
                 else None
             ),
-            "storage": {
-                "name": self.storage.__class__.__name__,
-            }
-            if self.storage is not None
-            else None,
-            "knowledge": {
-                "name": self.knowledge.__class__.__name__,
-            }
-            if self.knowledge is not None
-            else None,
+            "storage": (
+                {
+                    "name": self.storage.__class__.__name__,
+                }
+                if self.storage is not None
+                else None
+            ),
+            "knowledge": (
+                {
+                    "name": self.knowledge.__class__.__name__,
+                }
+                if self.knowledge is not None
+                else None
+            ),
             "model": model,
             "name": self.name,
             "description": self.description,
@@ -8325,5 +8327,3 @@ class Agent:
             await self.aprint_response(
                 message=message, stream=stream, markdown=markdown, user_id=user_id, session_id=session_id, **kwargs
             )
-
-

@@ -57,4 +57,3 @@ class WorkflowCompletedEvent(BaseWorkflowRunResponseEvent):
 
 
 WorkflowRunResponseEvent = Union[WorkflowRunResponseStartedEvent, WorkflowCompletedEvent]
-

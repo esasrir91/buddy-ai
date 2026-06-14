@@ -17,4 +17,3 @@ class SleepTools(Toolkit):
         time.sleep(seconds)
         log_info(f"Awake after {seconds} seconds")
         return f"Slept for {seconds} seconds"
-

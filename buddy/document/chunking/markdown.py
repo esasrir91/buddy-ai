@@ -149,4 +149,3 @@ class MarkdownChunking(ChunkingStrategy):
                     overlapped_chunks.append(chunks[i])
             chunks = overlapped_chunks
         return chunks
-

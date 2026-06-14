@@ -14,4 +14,3 @@ class File:
 
     def get_metadata(self) -> dict[str, Any]:
         return dataclass_to_dict(self, exclude_none=True)
-

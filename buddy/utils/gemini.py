@@ -236,4 +236,3 @@ def format_function_definitions(tools_list: List[Dict[str, Any]]) -> Optional[To
         return Tool(function_declarations=function_declarations)
     else:
         return None
-

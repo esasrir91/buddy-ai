@@ -815,5 +815,3 @@ def delete(
                 ws_to_delete.append(Path(BUDDY_config.active_ws_dir))
 
     delete_workspace(BUDDY_config, ws_to_delete)
-
-

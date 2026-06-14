@@ -61,4 +61,3 @@ class RecursiveChunking(ChunkingStrategy):
             start = new_start
 
         return chunks
-

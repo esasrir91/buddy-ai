@@ -62,4 +62,3 @@ class CohereReranker(Reranker):
         except Exception as e:
             logger.error(f"Error reranking documents: {e}. Returning original documents")
             return documents
-

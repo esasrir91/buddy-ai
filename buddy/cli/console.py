@@ -86,4 +86,3 @@ def confirm_yes_no(question, default: str = "yes") -> bool:
     else:
         logger.error(f"{choice} invalid")
         return False
-

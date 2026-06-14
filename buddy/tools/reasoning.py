@@ -273,4 +273,3 @@ Confidence: {step_parsed.confidence}
         *Agent's Final Answer to User:*
         The capital of France is Paris. Its estimated population (city proper) is approximately 2.1 million as of early 2024."""
     )
-

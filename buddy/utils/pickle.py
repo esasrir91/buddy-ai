@@ -30,4 +30,3 @@ def unpickle_object_from_file(file_path: Path, verify_class: Optional[Any] = Non
         _obj = None
 
     return _obj
-

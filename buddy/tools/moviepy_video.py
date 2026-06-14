@@ -346,4 +346,3 @@ class MoviePyVideoTools(Toolkit):
         except Exception as e:
             logger.error(f"Failed to embed captions: {str(e)}")
             return f"Failed to embed captions: {str(e)}"
-

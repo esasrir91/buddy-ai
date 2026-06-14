@@ -30,4 +30,3 @@ class WikipediaKnowledgeBase(AgentKnowledge):
                     content=wikipedia.summary(topic, auto_suggest=self.auto_suggest),
                 )
             ]
-

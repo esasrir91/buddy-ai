@@ -200,9 +200,11 @@ class Qdrant(VectorDb):
             self.client.create_collection(
                 collection_name=self.collection,
                 vectors_config=vectors_config,
-                sparse_vectors_config={self.sparse_vector_name: models.SparseVectorParams()}
-                if self.search_type in [SearchType.keyword, SearchType.hybrid]
-                else None,
+                sparse_vectors_config=(
+                    {self.sparse_vector_name: models.SparseVectorParams()}
+                    if self.search_type in [SearchType.keyword, SearchType.hybrid]
+                    else None
+                ),
             )
 
     async def async_create(self) -> None:
@@ -228,9 +230,11 @@ class Qdrant(VectorDb):
             await self.async_client.create_collection(
                 collection_name=self.collection,
                 vectors_config=vectors_config,
-                sparse_vectors_config={self.sparse_vector_name: models.SparseVectorParams()}
-                if self.search_type in [SearchType.keyword, SearchType.hybrid]
-                else None,
+                sparse_vectors_config=(
+                    {self.sparse_vector_name: models.SparseVectorParams()}
+                    if self.search_type in [SearchType.keyword, SearchType.hybrid]
+                    else None
+                ),
             )
 
     def doc_exists(self, document: Document) -> bool:
@@ -704,4 +708,3 @@ class Qdrant(VectorDb):
 
     def delete(self) -> bool:
         return self.client.delete_collection(collection_name=self.collection)
-

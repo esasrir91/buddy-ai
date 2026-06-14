@@ -62,4 +62,3 @@ class VoyageAIEmbedder(Embedder):
         embedding = response.embeddings[0]
         usage = {"total_tokens": response.total_tokens}
         return embedding, usage
-

@@ -90,4 +90,3 @@ def get_async_router(agent: Optional[Agent] = None, team: Optional[Team] = None)
                 SlackTools().send_message_thread(channel=channel, text=message or "", thread_ts=thread_ts)
 
     return router
-

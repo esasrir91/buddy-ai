@@ -12,4 +12,3 @@ class Reranker(BaseModel):
 
     def rerank(self, query: str, documents: List[Document]) -> List[Document]:
         raise NotImplementedError
-

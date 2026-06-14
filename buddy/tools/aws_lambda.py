@@ -49,4 +49,3 @@ class AWSLambdaTools(Toolkit):
             return f"Function invoked successfully. Status code: {response['StatusCode']}, Payload: {response['Payload'].read().decode('utf-8')}"
         except Exception as e:
             return f"Error invoking function: {str(e)}"
-

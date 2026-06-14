@@ -870,4 +870,3 @@ class Weaviate(VectorDb):
             return None
 
         return None
-

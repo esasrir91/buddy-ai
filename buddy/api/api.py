@@ -79,5 +79,3 @@ def invalid_response(r: Response) -> bool:
     if r.status_code >= 400:
         return True
     return False
-
-

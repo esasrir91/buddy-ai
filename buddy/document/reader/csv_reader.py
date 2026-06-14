@@ -182,4 +182,3 @@ class CSVUrlReader(Reader):
             file_obj.close()
 
             return documents
-

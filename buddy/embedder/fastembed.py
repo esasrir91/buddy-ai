@@ -44,4 +44,3 @@ class FastEmbedEmbedder(Embedder):
         usage = None
 
         return embedding, usage
-

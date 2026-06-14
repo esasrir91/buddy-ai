@@ -255,4 +255,3 @@ def tool(*args, **kwargs) -> Union[Function, Callable[[F], Function]]:
         return decorator(args[0])
 
     return decorator
-

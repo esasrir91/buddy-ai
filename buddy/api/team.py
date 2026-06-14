@@ -83,5 +83,3 @@ async def acreate_team(team: TeamCreate) -> None:
             print(f"Could not create Team: {e}")
 
             log_debug(f"Could not create Team: {e}")
-
-

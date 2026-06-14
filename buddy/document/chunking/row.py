@@ -37,4 +37,3 @@ class RowChunking(ChunkingStrategy):
                 chunk_id = f"{document.id}_row_{start_index + i}" if document.id else None
                 chunks.append(Document(id=chunk_id, name=document.name, meta_data=meta_data, content=chunk_content))
         return chunks
-

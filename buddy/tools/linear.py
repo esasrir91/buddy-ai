@@ -439,4 +439,3 @@ class LinearTools(Toolkit):
         except Exception as e:
             logger.error(f"Error retrieving high-priority issues: {e}")
             raise
-

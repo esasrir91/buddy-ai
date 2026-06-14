@@ -2,8 +2,9 @@ from typing import Optional
 
 from fastapi import HTTPException, UploadFile
 
-from buddy.media import Audio, Image, Video
+from buddy.media import Audio
 from buddy.media import File as FileMedia
+from buddy.media import Image, Video
 from buddy.utils.log import logger
 
 
@@ -44,4 +45,3 @@ def process_document(file: UploadFile) -> Optional[FileMedia]:
     except Exception as e:
         logger.error(f"Error processing document {file.filename}: {e}")
         return None
-

@@ -161,4 +161,3 @@ async def async_generator_wrapper(
     event: Union[RunResponseEvent, TeamRunResponseEvent],
 ) -> AsyncIterator[Union[RunResponseEvent, TeamRunResponseEvent]]:
     yield event
-

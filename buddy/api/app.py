@@ -33,5 +33,3 @@ async def acreate_app(app: AppCreate) -> None:
 
         except Exception as e:
             log_debug(f"Could not create App: {e}")
-
-

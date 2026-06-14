@@ -657,4 +657,3 @@ class Parallel:
                 parallel_step_count=len(self.steps),
                 step_results=[aggregated_result],  # Now single aggregated result
             )
-

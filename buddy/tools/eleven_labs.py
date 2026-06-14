@@ -189,4 +189,3 @@ class ElevenLabsTools(Toolkit):
         except Exception as e:
             logger.error(f"Failed to generate audio: {e}")
             return f"Error: {e}"
-

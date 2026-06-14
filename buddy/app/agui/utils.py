@@ -388,5 +388,3 @@ async def async_stream_BUDDY_response_as_agui_events(
                 events_to_emit = _emit_event_logic(event_buffer=event_buffer, event=event)
                 for emit_event in events_to_emit:
                     yield emit_event
-
-

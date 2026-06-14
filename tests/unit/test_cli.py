@@ -3,8 +3,8 @@ Unit tests for CLI entrypoint — version callback and structure.
 """
 
 from typer.testing import CliRunner
-from buddy.cli.entrypoint import BUDDY_cli
 
+from buddy.cli.entrypoint import BUDDY_cli
 
 runner = CliRunner()
 
@@ -16,6 +16,7 @@ def test_version_flag_exits_zero():
 
 def test_version_output_contains_version_string():
     import buddy
+
     result = runner.invoke(BUDDY_cli, ["--version"])
     assert buddy.__version__ in result.output
 

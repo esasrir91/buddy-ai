@@ -334,4 +334,3 @@ class RedisStorage(Storage):
         For Redis, this is a no-op as it's schema-less.
         """
         pass
-

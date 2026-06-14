@@ -248,5 +248,3 @@ class ReliabilityEval:
 
         logger.debug(f"*********** Evaluation End: {self.eval_id} ***********")
         return self.result
-
-

@@ -31,4 +31,3 @@ class ArxivKnowledgeBase(AgentKnowledge):
         """
         for _query in self.queries:
             yield await self.reader.async_read(query=_query)
-

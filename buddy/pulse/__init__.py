@@ -8,6 +8,7 @@ team member. Import the key classes from here:
 
 See the full documentation at docs/advanced/pulse.md
 """
+
 from buddy.pulse.employee import PulseEmployee
 from buddy.pulse.feedback import (
     FeedbackCategory,
@@ -45,15 +46,15 @@ from buddy.pulse.meeting import (
     MeetingNotes,
     MeetingParticipant,
     MeetingPlatform,
-    TranscriptProcessor,
     TranscriptEntry,
+    TranscriptProcessor,
 )
 from buddy.pulse.memory import (
     ColleagueMemoryEntry,
     DecisionMemoryEntry,
     KTMemoryEntry,
-    ProjectMemoryEntry,
     ProfessionalMemory,
+    ProjectMemoryEntry,
 )
 from buddy.pulse.onboarding import OnboardingConfig, OnboardingResult, OnboardingWorkflow
 from buddy.pulse.work import (

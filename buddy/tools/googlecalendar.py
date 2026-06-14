@@ -644,4 +644,3 @@ class GoogleCalendarTools(Toolkit):
         except HttpError as error:
             log_error(f"An error occurred while listing calendars: {error}")
             return json.dumps({"error": f"An error occurred: {error}"})
-

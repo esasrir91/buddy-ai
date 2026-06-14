@@ -21,5 +21,3 @@ def read_auth_token() -> Optional[str]:
     except Exception:
         pass
     return None
-
-

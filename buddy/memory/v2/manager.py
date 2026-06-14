@@ -435,4 +435,3 @@ class MemoryManager:
         if enable_clear_memory:
             functions.append(clear_memory)
         return functions
-

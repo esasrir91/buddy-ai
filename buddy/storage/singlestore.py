@@ -334,13 +334,11 @@ class SingleStoreStorage(Storage):
             if self.mode == "agent" and self.table_exists():
                 with self.SqlSession() as sess:
                     # Check if team_session_id column exists
-                    column_exists_query = text(
-                        """
+                    column_exists_query = text("""
                         SELECT 1 FROM information_schema.columns
                         WHERE table_schema = :schema AND table_name = :table
                         AND column_name = 'team_session_id'
-                        """
-                    )
+                        """)
                     column_exists = (
                         sess.execute(column_exists_query, {"schema": self.schema, "table": self.table_name}).scalar()
                         is not None
@@ -370,8 +368,7 @@ class SingleStoreStorage(Storage):
         with self.SqlSession.begin() as sess:
             # Create an insert statement using MySQL's ON DUPLICATE KEY UPDATE syntax
             if self.mode == "agent":
-                upsert_sql = text(
-                    f"""
+                upsert_sql = text(f"""
                     INSERT INTO {self.schema}.{self.table_name}
                     (session_id, agent_id, team_session_id, user_id, memory, agent_data, session_data, extra_data, created_at, updated_at)
                     VALUES
@@ -385,11 +382,9 @@ class SingleStoreStorage(Storage):
                         session_data = VALUES(session_data),
                         extra_data = VALUES(extra_data),
                         updated_at = UNIX_TIMESTAMP();
-                    """
-                )
+                    """)
             elif self.mode == "team":
-                upsert_sql = text(
-                    f"""
+                upsert_sql = text(f"""
                     INSERT INTO {self.schema}.{self.table_name}
                     (session_id, team_id, user_id, team_session_id, memory, team_data, session_data, extra_data, created_at, updated_at)
                     VALUES
@@ -403,11 +398,9 @@ class SingleStoreStorage(Storage):
                         session_data = VALUES(session_data),
                         extra_data = VALUES(extra_data),
                         updated_at = UNIX_TIMESTAMP();
-                    """
-                )
+                    """)
             elif self.mode == "workflow":
-                upsert_sql = text(
-                    f"""
+                upsert_sql = text(f"""
                     INSERT INTO {self.schema}.{self.table_name}
                     (session_id, workflow_id, user_id, memory, workflow_data, session_data, extra_data, created_at, updated_at)
                     VALUES
@@ -420,12 +413,10 @@ class SingleStoreStorage(Storage):
                         session_data = VALUES(session_data),
                         extra_data = VALUES(extra_data),
                         updated_at = UNIX_TIMESTAMP();
-                    """
-                )
+                    """)
             elif self.mode == "workflow_v2":
                 # Convert session to dict to ensure proper serialization
-                upsert_sql = text(
-                    f"""
+                upsert_sql = text(f"""
                     INSERT INTO {self.schema}.{self.table_name}
                     (session_id, workflow_id, user_id, workflow_name, runs, workflow_data, session_data, extra_data, created_at, updated_at)
                     VALUES      
@@ -439,8 +430,7 @@ class SingleStoreStorage(Storage):
                         session_data = VALUES(session_data),
                         extra_data = VALUES(extra_data),
                         updated_at = UNIX_TIMESTAMP();
-                    """
-                )
+                    """)
 
             try:
                 if self.mode == "agent":
@@ -451,18 +441,26 @@ class SingleStoreStorage(Storage):
                             "agent_id": session.agent_id,  # type: ignore
                             "team_session_id": session.team_session_id,  # type: ignore
                             "user_id": session.user_id,
-                            "memory": json.dumps(getattr(session, "memory", None), ensure_ascii=False)
-                            if getattr(session, "memory", None) is not None
-                            else None,
-                            "agent_data": json.dumps(session.agent_data, ensure_ascii=False)  # type: ignore
-                            if session.agent_data is not None  # type: ignore
-                            else None,
-                            "session_data": json.dumps(session.session_data, ensure_ascii=False)
-                            if session.session_data is not None
-                            else None,
-                            "extra_data": json.dumps(session.extra_data, ensure_ascii=False)
-                            if session.extra_data is not None
-                            else None,
+                            "memory": (
+                                json.dumps(getattr(session, "memory", None), ensure_ascii=False)
+                                if getattr(session, "memory", None) is not None
+                                else None
+                            ),
+                            "agent_data": (
+                                json.dumps(session.agent_data, ensure_ascii=False)  # type: ignore
+                                if session.agent_data is not None  # type: ignore
+                                else None
+                            ),
+                            "session_data": (
+                                json.dumps(session.session_data, ensure_ascii=False)
+                                if session.session_data is not None
+                                else None
+                            ),
+                            "extra_data": (
+                                json.dumps(session.extra_data, ensure_ascii=False)
+                                if session.extra_data is not None
+                                else None
+                            ),
                         },
                     )
                 elif self.mode == "team":
@@ -473,18 +471,26 @@ class SingleStoreStorage(Storage):
                             "team_id": session.team_id,  # type: ignore
                             "user_id": session.user_id,
                             "team_session_id": session.team_session_id,  # type: ignore
-                            "memory": json.dumps(getattr(session, "memory", None), ensure_ascii=False)
-                            if getattr(session, "memory", None) is not None
-                            else None,
-                            "team_data": json.dumps(session.team_data, ensure_ascii=False)  # type: ignore
-                            if session.team_data is not None  # type: ignore
-                            else None,
-                            "session_data": json.dumps(session.session_data, ensure_ascii=False)
-                            if session.session_data is not None
-                            else None,
-                            "extra_data": json.dumps(session.extra_data, ensure_ascii=False)
-                            if session.extra_data is not None
-                            else None,
+                            "memory": (
+                                json.dumps(getattr(session, "memory", None), ensure_ascii=False)
+                                if getattr(session, "memory", None) is not None
+                                else None
+                            ),
+                            "team_data": (
+                                json.dumps(session.team_data, ensure_ascii=False)  # type: ignore
+                                if session.team_data is not None  # type: ignore
+                                else None
+                            ),
+                            "session_data": (
+                                json.dumps(session.session_data, ensure_ascii=False)
+                                if session.session_data is not None
+                                else None
+                            ),
+                            "extra_data": (
+                                json.dumps(session.extra_data, ensure_ascii=False)
+                                if session.extra_data is not None
+                                else None
+                            ),
                         },
                     )
                 elif self.mode == "workflow":
@@ -494,18 +500,26 @@ class SingleStoreStorage(Storage):
                             "session_id": session.session_id,
                             "workflow_id": session.workflow_id,  # type: ignore
                             "user_id": session.user_id,
-                            "memory": json.dumps(getattr(session, "memory", None), ensure_ascii=False)
-                            if getattr(session, "memory", None) is not None
-                            else None,
-                            "workflow_data": json.dumps(session.workflow_data, ensure_ascii=False)  # type: ignore
-                            if session.workflow_data is not None  # type: ignore
-                            else None,
-                            "session_data": json.dumps(session.session_data, ensure_ascii=False)
-                            if session.session_data is not None
-                            else None,
-                            "extra_data": json.dumps(session.extra_data, ensure_ascii=False)
-                            if session.extra_data is not None
-                            else None,
+                            "memory": (
+                                json.dumps(getattr(session, "memory", None), ensure_ascii=False)
+                                if getattr(session, "memory", None) is not None
+                                else None
+                            ),
+                            "workflow_data": (
+                                json.dumps(session.workflow_data, ensure_ascii=False)  # type: ignore
+                                if session.workflow_data is not None  # type: ignore
+                                else None
+                            ),
+                            "session_data": (
+                                json.dumps(session.session_data, ensure_ascii=False)
+                                if session.session_data is not None
+                                else None
+                            ),
+                            "extra_data": (
+                                json.dumps(session.extra_data, ensure_ascii=False)
+                                if session.extra_data is not None
+                                else None
+                            ),
                         },
                     )
                 elif self.mode == "workflow_v2":
@@ -519,18 +533,26 @@ class SingleStoreStorage(Storage):
                             "workflow_id": session.workflow_id,  # type: ignore
                             "user_id": session.user_id,
                             "workflow_name": session.workflow_name,  # type: ignore
-                            "runs": json.dumps(session_dict.get("runs"), ensure_ascii=False)
-                            if session_dict.get("runs")
-                            else None,
-                            "workflow_data": json.dumps(session.workflow_data, ensure_ascii=False)  # type: ignore
-                            if session.workflow_data is not None  # type: ignore
-                            else None,
-                            "session_data": json.dumps(session.session_data, ensure_ascii=False)
-                            if session.session_data is not None
-                            else None,
-                            "extra_data": json.dumps(session.extra_data, ensure_ascii=False)
-                            if session.extra_data is not None
-                            else None,
+                            "runs": (
+                                json.dumps(session_dict.get("runs"), ensure_ascii=False)
+                                if session_dict.get("runs")
+                                else None
+                            ),
+                            "workflow_data": (
+                                json.dumps(session.workflow_data, ensure_ascii=False)  # type: ignore
+                                if session.workflow_data is not None  # type: ignore
+                                else None
+                            ),
+                            "session_data": (
+                                json.dumps(session.session_data, ensure_ascii=False)
+                                if session.session_data is not None
+                                else None
+                            ),
+                            "extra_data": (
+                                json.dumps(session.extra_data, ensure_ascii=False)
+                                if session.extra_data is not None
+                                else None
+                            ),
                         },
                     )
             except Exception as e:
@@ -604,4 +626,3 @@ class SingleStoreStorage(Storage):
         copied_obj.table = copied_obj.get_table()
 
         return copied_obj
-

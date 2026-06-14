@@ -32,8 +32,9 @@ from buddy.app.playground.schemas import (
     WorkflowsGetResponse,
 )
 from buddy.app.playground.utils import process_audio, process_document, process_image, process_video
-from buddy.media import Audio, Image, Video
+from buddy.media import Audio
 from buddy.media import File as FileMedia
+from buddy.media import Image, Video
 from buddy.memory.agent import AgentMemory
 from buddy.memory.v2 import Memory
 from buddy.run.response import RunResponseErrorEvent, RunResponseEvent
@@ -1048,4 +1049,3 @@ def get_async_playground_router(
             return []
 
     return playground_router
-

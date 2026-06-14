@@ -255,4 +255,3 @@ def _format_file_for_message(file: File) -> Optional[Dict[str, Any]]:
         return {"type": "file", "file": {"filename": name, "file_data": _data_url}}
 
     return None
-

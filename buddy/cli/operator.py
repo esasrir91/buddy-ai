@@ -354,5 +354,3 @@ def patch_resources(
     print_heading(f"\n--**-- ResourceGroups patched: {num_rgs_patched}/{num_rgs_to_patch}\n")
     if num_resources_patched != num_resources_to_patch:
         logger.error("Some resources failed to patch, please check logs")
-
-

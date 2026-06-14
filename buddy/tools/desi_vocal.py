@@ -52,9 +52,9 @@ class DesiVocalTools(Toolkit):
                         "gender": voice_info["audio_gender"],
                         "type": voice_info["voice_type"],
                         "language": ", ".join(voice_info["languages"]),
-                        "preview_url": next(iter(voice_info["preview_path"].values()))
-                        if voice_info["preview_path"]
-                        else None,
+                        "preview_url": (
+                            next(iter(voice_info["preview_path"].values())) if voice_info["preview_path"] else None
+                        ),
                     }
                 )
 
@@ -97,4 +97,3 @@ class DesiVocalTools(Toolkit):
         except Exception as e:
             logger.error(f"Failed to generate audio: {e}")
             return f"Error: {e}"
-

@@ -88,4 +88,3 @@ class OllamaEmbedder(Embedder):
         embedding = self.get_embedding(text=text)
         usage = None
         return embedding, usage
-

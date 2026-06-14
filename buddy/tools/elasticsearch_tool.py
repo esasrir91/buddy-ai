@@ -1,6 +1,6 @@
 import json
-from typing import Any, Dict, List, Optional, Union
 from os import getenv
+from typing import Any, Dict, List, Optional, Union
 
 from buddy.tools import Toolkit
 from buddy.utils.log import log_debug, logger
@@ -156,11 +156,13 @@ class ElasticsearchTools(Toolkit):
                 body["settings"] = settings
 
             result = self.es_client.indices.create(index=index_name, body=body if body else None)
-            return json.dumps({
-                "success": f"Index '{index_name}' created successfully",
-                "acknowledged": result.get("acknowledged", False),
-                "shards_acknowledged": result.get("shards_acknowledged", False)
-            })
+            return json.dumps(
+                {
+                    "success": f"Index '{index_name}' created successfully",
+                    "acknowledged": result.get("acknowledged", False),
+                    "shards_acknowledged": result.get("shards_acknowledged", False),
+                }
+            )
 
         except Exception as e:
             logger.error(f"Error creating index: {e}")
@@ -179,10 +181,12 @@ class ElasticsearchTools(Toolkit):
             log_debug(f"Deleting index: {index_name}")
 
             result = self.es_client.indices.delete(index=index_name)
-            return json.dumps({
-                "success": f"Index '{index_name}' deleted successfully",
-                "acknowledged": result.get("acknowledged", False)
-            })
+            return json.dumps(
+                {
+                    "success": f"Index '{index_name}' deleted successfully",
+                    "acknowledged": result.get("acknowledged", False),
+                }
+            )
 
         except Exception as e:
             logger.error(f"Error deleting index: {e}")
@@ -205,10 +209,7 @@ class ElasticsearchTools(Toolkit):
             else:
                 indices = self.es_client.cat.indices(format="json")
 
-            return json.dumps({
-                "indices": indices,
-                "total_count": len(indices)
-            })
+            return json.dumps({"indices": indices, "total_count": len(indices)})
 
         except Exception as e:
             logger.error(f"Error listing indices: {e}")
@@ -233,13 +234,15 @@ class ElasticsearchTools(Toolkit):
             else:
                 result = self.es_client.index(index=index_name, body=document)
 
-            return json.dumps({
-                "success": f"Document indexed successfully",
-                "index": result["_index"],
-                "id": result["_id"],
-                "version": result["_version"],
-                "result": result["result"]
-            })
+            return json.dumps(
+                {
+                    "success": f"Document indexed successfully",
+                    "index": result["_index"],
+                    "id": result["_id"],
+                    "version": result["_version"],
+                    "result": result["result"],
+                }
+            )
 
         except Exception as e:
             logger.error(f"Error indexing document: {e}")
@@ -259,13 +262,15 @@ class ElasticsearchTools(Toolkit):
             log_debug(f"Getting document {doc_id} from index: {index_name}")
 
             result = self.es_client.get(index=index_name, id=doc_id)
-            return json.dumps({
-                "found": result["found"],
-                "source": result.get("_source", {}),
-                "index": result["_index"],
-                "id": result["_id"],
-                "version": result.get("_version")
-            })
+            return json.dumps(
+                {
+                    "found": result["found"],
+                    "source": result.get("_source", {}),
+                    "index": result["_index"],
+                    "id": result["_id"],
+                    "version": result.get("_version"),
+                }
+            )
 
         except Exception as e:
             logger.error(f"Error getting document: {e}")
@@ -286,13 +291,15 @@ class ElasticsearchTools(Toolkit):
             log_debug(f"Updating document {doc_id} in index: {index_name}")
 
             result = self.es_client.update(index=index_name, id=doc_id, body=update_body)
-            return json.dumps({
-                "success": f"Document updated successfully",
-                "index": result["_index"],
-                "id": result["_id"],
-                "version": result["_version"],
-                "result": result["result"]
-            })
+            return json.dumps(
+                {
+                    "success": f"Document updated successfully",
+                    "index": result["_index"],
+                    "id": result["_id"],
+                    "version": result["_version"],
+                    "result": result["result"],
+                }
+            )
 
         except Exception as e:
             logger.error(f"Error updating document: {e}")
@@ -312,13 +319,15 @@ class ElasticsearchTools(Toolkit):
             log_debug(f"Deleting document {doc_id} from index: {index_name}")
 
             result = self.es_client.delete(index=index_name, id=doc_id)
-            return json.dumps({
-                "success": f"Document deleted successfully",
-                "index": result["_index"],
-                "id": result["_id"],
-                "version": result["_version"],
-                "result": result["result"]
-            })
+            return json.dumps(
+                {
+                    "success": f"Document deleted successfully",
+                    "index": result["_index"],
+                    "id": result["_id"],
+                    "version": result["_version"],
+                    "result": result["result"],
+                }
+            )
 
         except Exception as e:
             logger.error(f"Error deleting document: {e}")
@@ -339,27 +348,19 @@ class ElasticsearchTools(Toolkit):
         try:
             log_debug(f"Searching in index: {index_name}")
 
-            result = self.es_client.search(
-                index=index_name,
-                body={"query": query},
-                size=size,
-                from_=from_
-            )
+            result = self.es_client.search(index=index_name, body={"query": query}, size=size, from_=from_)
 
             hits = result["hits"]
-            return json.dumps({
-                "total_hits": hits["total"]["value"],
-                "max_score": hits.get("max_score"),
-                "documents": [
-                    {
-                        "id": hit["_id"],
-                        "score": hit["_score"],
-                        "source": hit["_source"]
-                    }
-                    for hit in hits["hits"]
-                ],
-                "took": result["took"]
-            })
+            return json.dumps(
+                {
+                    "total_hits": hits["total"]["value"],
+                    "max_score": hits.get("max_score"),
+                    "documents": [
+                        {"id": hit["_id"], "score": hit["_score"], "source": hit["_source"]} for hit in hits["hits"]
+                    ],
+                    "took": result["took"],
+                }
+            )
 
         except Exception as e:
             logger.error(f"Error searching documents: {e}")
@@ -378,11 +379,13 @@ class ElasticsearchTools(Toolkit):
             log_debug(f"Performing bulk operations: {len(operations)} operations")
 
             result = helpers.bulk(self.es_client, operations)
-            return json.dumps({
-                "success": f"Bulk operations completed",
-                "successful": result[0],
-                "failed": result[1] if len(result) > 1 else []
-            })
+            return json.dumps(
+                {
+                    "success": f"Bulk operations completed",
+                    "successful": result[0],
+                    "failed": result[1] if len(result) > 1 else [],
+                }
+            )
 
         except Exception as e:
             logger.error(f"Error performing bulk operations: {e}")
@@ -421,10 +424,9 @@ class ElasticsearchTools(Toolkit):
             log_debug(f"Updating mapping for index: {index_name}")
 
             result = self.es_client.indices.put_mapping(index=index_name, body=mapping)
-            return json.dumps({
-                "success": f"Mapping updated successfully",
-                "acknowledged": result.get("acknowledged", False)
-            })
+            return json.dumps(
+                {"success": f"Mapping updated successfully", "acknowledged": result.get("acknowledged", False)}
+            )
 
         except Exception as e:
             logger.error(f"Error updating mapping: {e}")
@@ -445,15 +447,17 @@ class ElasticsearchTools(Toolkit):
             log_debug(f"Creating alias {alias_name} for index: {index_name}")
 
             body = {"actions": [{"add": {"index": index_name, "alias": alias_name}}]}
-            
+
             if filter_query:
                 body["actions"][0]["add"]["filter"] = filter_query
 
             result = self.es_client.indices.update_aliases(body=body)
-            return json.dumps({
-                "success": f"Alias '{alias_name}' created successfully",
-                "acknowledged": result.get("acknowledged", False)
-            })
+            return json.dumps(
+                {
+                    "success": f"Alias '{alias_name}' created successfully",
+                    "acknowledged": result.get("acknowledged", False),
+                }
+            )
 
         except Exception as e:
             logger.error(f"Error creating alias: {e}")
@@ -512,23 +516,22 @@ class ElasticsearchTools(Toolkit):
         try:
             log_debug(f"Reindexing from {source_index} to {dest_index}")
 
-            body = {
-                "source": {"index": source_index},
-                "dest": {"index": dest_index}
-            }
+            body = {"source": {"index": source_index}, "dest": {"index": dest_index}}
 
             if query:
                 body["source"]["query"] = query
 
             result = self.es_client.reindex(body=body, wait_for_completion=True)
-            return json.dumps({
-                "success": f"Reindexing completed",
-                "total": result.get("total", 0),
-                "created": result.get("created", 0),
-                "updated": result.get("updated", 0),
-                "deleted": result.get("deleted", 0),
-                "took": result.get("took", 0)
-            })
+            return json.dumps(
+                {
+                    "success": f"Reindexing completed",
+                    "total": result.get("total", 0),
+                    "created": result.get("created", 0),
+                    "updated": result.get("updated", 0),
+                    "deleted": result.get("deleted", 0),
+                    "took": result.get("took", 0),
+                }
+            )
 
         except Exception as e:
             logger.error(f"Error reindexing data: {e}")
@@ -549,30 +552,34 @@ class ElasticsearchTools(Toolkit):
             log_debug(f"Analyzing text with analyzer: {analyzer}")
 
             body = {"text": text, "analyzer": analyzer}
-            
+
             if index_name:
                 result = self.es_client.indices.analyze(index=index_name, body=body)
             else:
                 result = self.es_client.indices.analyze(body=body)
 
-            return json.dumps({
-                "tokens": [
-                    {
-                        "token": token["token"],
-                        "start_offset": token["start_offset"],
-                        "end_offset": token["end_offset"],
-                        "type": token["type"],
-                        "position": token["position"]
-                    }
-                    for token in result["tokens"]
-                ]
-            })
+            return json.dumps(
+                {
+                    "tokens": [
+                        {
+                            "token": token["token"],
+                            "start_offset": token["start_offset"],
+                            "end_offset": token["end_offset"],
+                            "type": token["type"],
+                            "position": token["position"],
+                        }
+                        for token in result["tokens"]
+                    ]
+                }
+            )
 
         except Exception as e:
             logger.error(f"Error analyzing text: {e}")
             return json.dumps({"error": f"Failed to analyze text: {str(e)}"})
 
-    def create_template(self, template_name: str, index_patterns: List[str], mappings: Dict, settings: Optional[Dict] = None) -> str:
+    def create_template(
+        self, template_name: str, index_patterns: List[str], mappings: Dict, settings: Optional[Dict] = None
+    ) -> str:
         """Create an index template.
 
         Args:
@@ -587,19 +594,18 @@ class ElasticsearchTools(Toolkit):
         try:
             log_debug(f"Creating template: {template_name}")
 
-            body = {
-                "index_patterns": index_patterns,
-                "mappings": mappings
-            }
+            body = {"index_patterns": index_patterns, "mappings": mappings}
 
             if settings:
                 body["settings"] = settings
 
             result = self.es_client.indices.put_template(name=template_name, body=body)
-            return json.dumps({
-                "success": f"Template '{template_name}' created successfully",
-                "acknowledged": result.get("acknowledged", False)
-            })
+            return json.dumps(
+                {
+                    "success": f"Template '{template_name}' created successfully",
+                    "acknowledged": result.get("acknowledged", False),
+                }
+            )
 
         except Exception as e:
             logger.error(f"Error creating template: {e}")

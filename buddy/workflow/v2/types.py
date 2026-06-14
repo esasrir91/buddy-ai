@@ -345,4 +345,3 @@ class WorkflowMetrics:
             total_steps=data["total_steps"],
             steps=steps,
         )
-

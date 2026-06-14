@@ -491,4 +491,3 @@ class SurrealDb(VectorDb):
 
         """
         return True
-

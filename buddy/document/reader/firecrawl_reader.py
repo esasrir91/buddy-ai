@@ -178,4 +178,3 @@ class FirecrawlReader(Reader):
             return await self.async_crawl(url)
         else:
             raise NotImplementedError(f"Mode {self.mode} not implemented")
-

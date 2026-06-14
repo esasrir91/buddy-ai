@@ -1,29 +1,27 @@
 """
 Unit tests for the PULSE virtual employee module.
 """
-import pytest
-from datetime import time
-from unittest.mock import MagicMock, patch
 
+from buddy.pulse.feedback import (
+    FeedbackCategory,
+    FeedbackEntry,
+    FeedbackSentiment,
+    FeedbackSystem,
+)
 from buddy.pulse.identity import (
     ColleagueBook,
     ColleagueRecord,
-    CommunicationStyle,
     EmployeeProfile,
     WorkingHours,
-    WorkStyle,
 )
-from buddy.pulse.kt import KTPhase, KTSession, KTSourceType, KTSummary
+from buddy.pulse.kt import KTSession, KTSourceType
 from buddy.pulse.meeting import (
     ActionItemPriority,
-    ActionItemStatus,
     MeetingNotes,
-    MeetingPlatform,
     TranscriptProcessor,
 )
 from buddy.pulse.memory import (
     ColleagueMemoryEntry,
-    DecisionMemoryEntry,
     KTMemoryEntry,
     ProfessionalMemory,
 )
@@ -32,21 +30,13 @@ from buddy.pulse.work import (
     TaskManager,
     TaskPriority,
     TaskStatus,
-    WorkCalendar,
     WorkItem,
 )
-from buddy.pulse.feedback import (
-    FeedbackCategory,
-    FeedbackEntry,
-    FeedbackSentiment,
-    FeedbackSystem,
-    PerformanceTracker,
-)
-
 
 # ===========================================================================
 # Identity tests
 # ===========================================================================
+
 
 class TestEmployeeProfile:
     def test_build_introduction(self):
@@ -123,6 +113,7 @@ class TestColleagueBook:
 # Professional Memory tests
 # ===========================================================================
 
+
 class TestProfessionalMemory:
     def _make_kt_entry(self, domain: str, confidence: float = 0.9) -> KTMemoryEntry:
         return KTMemoryEntry(
@@ -156,11 +147,13 @@ class TestProfessionalMemory:
 
     def test_colleague_memory(self):
         mem = ProfessionalMemory()
-        mem.remember_colleague(ColleagueMemoryEntry(
-            colleague_name="Arjun Nair",
-            role="Tech Lead",
-            interactions=["Code review discussion"],
-        ))
+        mem.remember_colleague(
+            ColleagueMemoryEntry(
+                colleague_name="Arjun Nair",
+                role="Tech Lead",
+                interactions=["Code review discussion"],
+            )
+        )
         found = mem.recall_colleague("arjun")
         assert found is not None
         assert found.role == "Tech Lead"
@@ -178,6 +171,7 @@ class TestProfessionalMemory:
 # ===========================================================================
 # KT Engine tests
 # ===========================================================================
+
 
 class TestKTSourceType:
     def test_human_mode_detection(self):
@@ -218,6 +212,7 @@ class TestKTSessionJsonParsing:
 # Meeting tests
 # ===========================================================================
 
+
 class TestTranscriptProcessor:
     def test_parse_simple_transcript(self):
         transcript = "Alice: Hello everyone\nBob: Hi Alice\nAlice: Let's start"
@@ -248,6 +243,7 @@ class TestTranscriptProcessor:
 class TestMeetingNotes:
     def _make_notes(self) -> MeetingNotes:
         from buddy.pulse.meeting import ActionItem
+
         return MeetingNotes(
             title="Sprint Planning",
             participants=["Priya", "Arjun", "Dev"],
@@ -280,6 +276,7 @@ class TestMeetingNotes:
 # ===========================================================================
 # Work Engine tests
 # ===========================================================================
+
 
 class TestWorkItem:
     def test_lifecycle(self):
@@ -341,6 +338,7 @@ class TestTaskManager:
 # Feedback tests
 # ===========================================================================
 
+
 class TestFeedbackSystem:
     def test_receive_and_retrieve(self):
         fs = FeedbackSystem("Priya")
@@ -373,12 +371,14 @@ class TestFeedbackSystem:
 
     def test_build_improvement_prompt(self):
         fs = FeedbackSystem("Priya")
-        fs.receive(FeedbackEntry(
-            given_by="Arjun",
-            category=FeedbackCategory.COMMUNICATION,
-            sentiment=FeedbackSentiment.CONSTRUCTIVE,
-            content="Please be more concise in messages",
-        ))
+        fs.receive(
+            FeedbackEntry(
+                given_by="Arjun",
+                category=FeedbackCategory.COMMUNICATION,
+                sentiment=FeedbackSentiment.CONSTRUCTIVE,
+                content="Please be more concise in messages",
+            )
+        )
         prompt = fs.build_improvement_prompt()
         assert "concise" in prompt
         assert "communication" in prompt
@@ -387,6 +387,7 @@ class TestFeedbackSystem:
 # ===========================================================================
 # StatusUpdate tests
 # ===========================================================================
+
 
 class TestStatusUpdate:
     def test_format_standup(self):

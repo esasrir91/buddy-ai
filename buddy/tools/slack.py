@@ -118,4 +118,3 @@ class SlackTools(Toolkit):
         except SlackApiError as e:
             logger.error(f"Error getting channel history: {e}")
             return json.dumps({"error": str(e)})
-

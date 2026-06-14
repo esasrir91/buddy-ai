@@ -6,6 +6,7 @@ MeetingNotes        : Structured output from a processed meeting.
 ActionItem          : A task extracted from a meeting.
 TranscriptProcessor : Parses raw transcripts into structured entries.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -22,6 +23,7 @@ if TYPE_CHECKING:
 # ---------------------------------------------------------------------------
 # Enums
 # ---------------------------------------------------------------------------
+
 
 class MeetingPlatform(str, Enum):
     ZOOM = "zoom"
@@ -49,6 +51,7 @@ class ActionItemStatus(str, Enum):
 # ---------------------------------------------------------------------------
 # Models
 # ---------------------------------------------------------------------------
+
 
 class ActionItem(BaseModel):
     """A task extracted from a meeting transcript."""
@@ -129,6 +132,7 @@ class MeetingNotes(BaseModel):
 # TranscriptProcessor
 # ---------------------------------------------------------------------------
 
+
 class TranscriptProcessor:
     """Parses a raw meeting transcript string into structured TranscriptEntry list."""
 
@@ -149,14 +153,16 @@ class TranscriptProcessor:
                 bracket_end = line.find("]")
                 if bracket_end != -1:
                     timestamp = line[1:bracket_end]
-                    line = line[bracket_end + 1:].strip()
+                    line = line[bracket_end + 1 :].strip()
             if ":" in line:
                 speaker, _, text = line.partition(":")
-                entries.append(TranscriptEntry(
-                    speaker=speaker.strip(),
-                    text=text.strip(),
-                    timestamp=timestamp,
-                ))
+                entries.append(
+                    TranscriptEntry(
+                        speaker=speaker.strip(),
+                        text=text.strip(),
+                        timestamp=timestamp,
+                    )
+                )
             elif line:
                 entries.append(TranscriptEntry(speaker="Unknown", text=line, timestamp=timestamp))
         return entries
@@ -173,6 +179,7 @@ class TranscriptProcessor:
 # ---------------------------------------------------------------------------
 # MeetingParticipant
 # ---------------------------------------------------------------------------
+
 
 class MeetingParticipant:
     """
@@ -211,7 +218,8 @@ Please produce a JSON response with the following fields:
   "summary": "<2-3 sentence summary of what was discussed>",
   "key_decisions": ["<decision 1>", ...],
   "action_items": [
-    {{"description": "...", "owner": "<name or null>", "due_date": "<YYYY-MM-DD or null>", "priority": "low|medium|high|critical"}}
+    {{"description": "...", "owner": "<name or null>", "due_date": "<YYYY-MM-DD or null>",
+     "priority": "low|medium|high|critical"}}
   ],
   "open_questions": ["<question 1>", ...],
   "topics_discussed": ["<topic 1>", ...],

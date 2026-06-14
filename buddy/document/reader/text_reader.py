@@ -92,4 +92,3 @@ class TextReader(Reader):
 
         tasks = [process_chunk(chunk_doc) for chunk_doc in chunked_documents]
         return await asyncio.gather(*tasks)
-

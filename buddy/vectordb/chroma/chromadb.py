@@ -360,4 +360,3 @@ class ChromaDb(VectorDb):
         except Exception as e:
             logger.error(f"Error clearing collection: {e}")
             return False
-

@@ -40,4 +40,3 @@ class PDFBytesKnowledgeBase(AgentKnowledge):
         for pdf in self.pdfs:
             _pdf = io.BytesIO(pdf) if isinstance(pdf, bytes) else pdf
             yield await self.reader.async_read(pdf=_pdf)
-

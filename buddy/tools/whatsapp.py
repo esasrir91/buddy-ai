@@ -288,4 +288,3 @@ class WhatsAppTools(Toolkit):
         except httpx.HTTPStatusError as e:
             logger.error(f"Failed to send WhatsApp template message: {e}")
             raise
-

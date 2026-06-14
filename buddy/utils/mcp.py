@@ -64,4 +64,3 @@ def get_entrypoint_for_tool(tool: MCPTool, session: ClientSession):
             return f"Error: {e}"
 
     return partial(call_tool, tool_name=tool.name)
-

@@ -43,4 +43,3 @@ class SemanticChunking(ChunkingStrategy):
             chunked_documents.append(Document(id=chunk_id, name=document.name, meta_data=meta_data, content=chunk.text))
 
         return chunked_documents
-

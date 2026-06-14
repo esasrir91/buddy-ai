@@ -166,4 +166,3 @@ class CalculatorTools(Toolkit):
         result = math.sqrt(n)
         log_debug(f"Calculating square root of {n} to get {result}")
         return json.dumps({"operation": "square_root", "result": result})
-

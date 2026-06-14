@@ -169,4 +169,3 @@ class ModelsLabTools(Toolkit):
             error_msg = f"Unexpected error while generating {self.file_type.value}: {e}"
             logger.error(error_msg)
             return f"Error: {error_msg}"
-

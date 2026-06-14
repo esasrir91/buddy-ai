@@ -57,4 +57,3 @@ class URLReader(Reader):
             meta_data={"url": url},
             content=content,
         )
-

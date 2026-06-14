@@ -20,4 +20,3 @@ def write_audio_to_file(audio, filename: str):
     with open(filename, "wb") as f:
         f.write(wav_bytes)
     log_info(f"Audio file saved to {filename}")
-

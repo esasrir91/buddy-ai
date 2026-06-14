@@ -31,4 +31,3 @@ class S3PDFKnowledgeBase(S3KnowledgeBase):
         for s3_object in self.s3_objects:
             if s3_object.name.endswith(".pdf"):
                 yield await self.reader.async_read(s3_object=s3_object)
-

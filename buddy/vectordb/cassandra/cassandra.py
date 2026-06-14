@@ -179,4 +179,3 @@ class Cassandra(VectorDb):
         log_debug(f"Cassandra VectorDB : Clearing the table {self.table_name}")
         self.table.clear()
         return True
-

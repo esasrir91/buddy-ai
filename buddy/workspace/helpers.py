@@ -50,5 +50,3 @@ def get_workspace_dir_path(ws_root_path: Path) -> Path:
 
     logger.error(f"Could not find a workspace at: {ws_root_path}")
     exit(0)
-
-

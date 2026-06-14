@@ -232,4 +232,3 @@ def get_json_schema(
             continue
 
     return json_schema
-

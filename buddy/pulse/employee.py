@@ -5,11 +5,11 @@ PulseEmployee extends Agent with a full professional identity, KT capabilities,
 meeting intelligence, task management, and proactive communication — making it
 behave like a real human team member.
 """
+
 from __future__ import annotations
 
-import json
 from datetime import datetime
-from typing import Any, Dict, Iterator, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 from uuid import uuid4
 
 from buddy.agent import Agent
@@ -24,7 +24,6 @@ from buddy.pulse.feedback import (
 from buddy.pulse.identity import EmployeeProfile
 from buddy.pulse.kt import KTManager, KTSession, KTSourceType, KTSummary
 from buddy.pulse.meeting import (
-    ActionItem,
     MeetingNotes,
     MeetingParticipant,
     MeetingPlatform,
@@ -35,7 +34,7 @@ from buddy.pulse.memory import (
     KTMemoryEntry,
     ProfessionalMemory,
 )
-from buddy.pulse.work import StatusUpdate, TaskManager, TaskPriority, TaskStatus, WorkCalendar, WorkItem
+from buddy.pulse.work import StatusUpdate, TaskManager, TaskPriority, WorkCalendar, WorkItem
 
 
 class PulseEmployee(Agent):
@@ -233,8 +232,7 @@ class PulseEmployee(Agent):
         """
         if not source_type.is_human_mode:
             raise ValueError(
-                f"source_type {source_type.value!r} is an async mode. "
-                "Use take_kt() for document-based KT."
+                f"source_type {source_type.value!r} is an async mode. " "Use take_kt() for document-based KT."
             )
         return self.kt_manager.create_session(
             session_name=session_name,
@@ -278,8 +276,7 @@ class PulseEmployee(Agent):
             return f"I don't have specific KT knowledge about '{topic}' yet. I should take a KT on it!"
 
         summaries = "\n\n".join(
-            f"From '{s.session_name}' (confidence: {s.confidence_score:.0%}):\n{s.mental_model}"
-            for s in relevant[:3]
+            f"From '{s.session_name}' (confidence: {s.confidence_score:.0%}):\n{s.mental_model}" for s in relevant[:3]
         )
         prompt = (
             f"I was asked: what do you know about '{topic}'?\n\n"
@@ -287,7 +284,9 @@ class PulseEmployee(Agent):
             f"Answer in first person, naturally, as {self.employee_profile.full_name}."
         )
         response = self.run(prompt, stream=False)
-        return response.content if hasattr(response, "content") else str(response)
+        if hasattr(response, "content") and response.content is not None:
+            return str(response.content)
+        return str(response)
 
     # ==========================================================================
     # MEETINGS
@@ -325,7 +324,7 @@ class PulseEmployee(Agent):
             title=title,
         )
         response = self.run(prompt, stream=False)
-        raw = response.content if hasattr(response, "content") else str(response)
+        raw = str(response.content) if hasattr(response, "content") and response.content is not None else str(response)
         data = KTSession._parse_json(raw)
         notes = self.meeting_participant.create_notes_from_dict(
             data=data,
@@ -335,14 +334,16 @@ class PulseEmployee(Agent):
         )
         # Auto-register my action items as work items
         for action in notes.my_action_items(self.employee_profile.full_name):
-            self.task_manager.assign(WorkItem(
-                title=action.description,
-                description=f"Action item from meeting: {notes.title or meeting_id}",
-                assigned_by=f"Meeting: {notes.title or meeting_id}",
-                priority=TaskPriority(action.priority.value),
-                deadline=action.due_date,
-                tags=["meeting_action_item"],
-            ))
+            self.task_manager.assign(
+                WorkItem(
+                    title=action.description,
+                    description=f"Action item from meeting: {notes.title or meeting_id}",
+                    assigned_by=f"Meeting: {notes.title or meeting_id}",
+                    priority=TaskPriority(action.priority.value),
+                    deadline=action.due_date,
+                    tags=["meeting_action_item"],
+                )
+            )
         return notes
 
     # ==========================================================================
@@ -400,7 +401,7 @@ class PulseEmployee(Agent):
             "}"
         )
         response = self.run(prompt, stream=False)
-        raw = response.content if hasattr(response, "content") else str(response)
+        raw = str(response.content) if hasattr(response, "content") and response.content is not None else str(response)
         data = KTSession._parse_json(raw)
         task_title = task.title if task_id and task else None
         return StatusUpdate(

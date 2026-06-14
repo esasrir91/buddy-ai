@@ -91,4 +91,3 @@ class GoogleSearchTools(Toolkit):
             )
 
         return json.dumps(res, indent=2)
-

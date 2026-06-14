@@ -46,4 +46,3 @@ class Document:
         import json
 
         return cls(**json.loads(document))
-

@@ -290,4 +290,3 @@ class BitbucketTools(Toolkit):
         except Exception as e:
             logger.error(f"Error retrieving issues for {self.repo_slug}: {str(e)}")
             return json.dumps({"error": str(e)})
-

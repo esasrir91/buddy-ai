@@ -247,5 +247,3 @@ def deploy_playground_app(
             status.stop()
             panels.pop()
             live_display.update(Group(*panels))
-
-

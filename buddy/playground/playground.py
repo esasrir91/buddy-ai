@@ -6,4 +6,3 @@ from buddy.app.playground.settings import PlaygroundSettings
 # to avoid circular import issues
 
 __all__ = ["PlaygroundSettings"]
-

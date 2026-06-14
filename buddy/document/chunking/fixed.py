@@ -55,4 +55,3 @@ class FixedSizeChunking(ChunkingStrategy):
             chunk_number += 1
             start = end - self.overlap
         return chunked_documents
-

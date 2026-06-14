@@ -1,6 +1,6 @@
 import json
-from typing import Any, Dict, List, Optional
 from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
 
 from buddy.tools import Toolkit
 from buddy.utils.log import log_debug, logger
@@ -60,16 +60,16 @@ class MicrosoftTeamsTools(Toolkit):
                 "grant_type": "client_credentials",
                 "client_id": self.client_id,
                 "client_secret": self.client_secret,
-                "scope": "https://graph.microsoft.com/.default"
+                "scope": "https://graph.microsoft.com/.default",
             }
 
             response = requests.post(url, data=data)
             response.raise_for_status()
-            
+
             token_data = response.json()
             self.access_token = token_data["access_token"]
             self.token_expiry = datetime.now() + timedelta(seconds=token_data["expires_in"] - 60)
-            
+
             return self.access_token
         except Exception as e:
             logger.error(f"Failed to get access token: {e}")
@@ -89,18 +89,14 @@ class MicrosoftTeamsTools(Toolkit):
             return json.dumps({"error": "Webhook URL not provided"})
 
         try:
-            payload = {
-                "@type": "MessageCard",
-                "@context": "http://schema.org/extensions",
-                "text": message
-            }
-            
+            payload = {"@type": "MessageCard", "@context": "http://schema.org/extensions", "text": message}
+
             if title:
                 payload["title"] = title
 
             response = requests.post(self.webhook_url, json=payload)
             response.raise_for_status()
-            
+
             return json.dumps({"success": "Message sent successfully"})
         except Exception as e:
             return json.dumps({"error": f"Failed to send message: {str(e)}"})
@@ -120,24 +116,21 @@ class MicrosoftTeamsTools(Toolkit):
             return json.dumps({"error": "Webhook URL not provided"})
 
         try:
-            card = {
-                "@type": "MessageCard",
-                "@context": "http://schema.org/extensions",
-                "title": title,
-                "text": message
-            }
-            
+            card = {"@type": "MessageCard", "@context": "http://schema.org/extensions", "title": title, "text": message}
+
             if actions:
                 card["potentialAction"] = actions
 
             response = requests.post(self.webhook_url, json=card)
             response.raise_for_status()
-            
+
             return json.dumps({"success": "Card message sent successfully"})
         except Exception as e:
             return json.dumps({"error": f"Failed to send card: {str(e)}"})
 
-    def create_meeting(self, subject: str, start_time: str, duration_minutes: int = 60, attendees: Optional[List[str]] = None) -> str:
+    def create_meeting(
+        self, subject: str, start_time: str, duration_minutes: int = 60, attendees: Optional[List[str]] = None
+    ) -> str:
         """Create a Teams meeting.
 
         Args:
@@ -154,38 +147,27 @@ class MicrosoftTeamsTools(Toolkit):
             return json.dumps({"error": "Authentication failed"})
 
         try:
-            headers = {
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json"
-            }
+            headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
             meeting_data = {
                 "subject": subject,
-                "start": {
-                    "dateTime": start_time,
-                    "timeZone": "UTC"
-                },
+                "start": {"dateTime": start_time, "timeZone": "UTC"},
                 "end": {
-                    "dateTime": (datetime.fromisoformat(start_time.replace('Z', '+00:00')) + 
-                              timedelta(minutes=duration_minutes)).isoformat(),
-                    "timeZone": "UTC"
+                    "dateTime": (
+                        datetime.fromisoformat(start_time.replace("Z", "+00:00")) + timedelta(minutes=duration_minutes)
+                    ).isoformat(),
+                    "timeZone": "UTC",
                 },
                 "isOnlineMeeting": True,
-                "onlineMeetingProvider": "teamsForBusiness"
+                "onlineMeetingProvider": "teamsForBusiness",
             }
 
             if attendees:
-                meeting_data["attendees"] = [
-                    {"emailAddress": {"address": email}} for email in attendees
-                ]
+                meeting_data["attendees"] = [{"emailAddress": {"address": email}} for email in attendees]
 
-            response = requests.post(
-                "https://graph.microsoft.com/v1.0/me/events",
-                headers=headers,
-                json=meeting_data
-            )
+            response = requests.post("https://graph.microsoft.com/v1.0/me/events", headers=headers, json=meeting_data)
             response.raise_for_status()
-            
+
             return json.dumps(response.json())
         except Exception as e:
             return json.dumps({"error": f"Failed to create meeting: {str(e)}"})
@@ -204,7 +186,7 @@ class MicrosoftTeamsTools(Toolkit):
             headers = {"Authorization": f"Bearer {token}"}
             response = requests.get("https://graph.microsoft.com/v1.0/me/joinedTeams", headers=headers)
             response.raise_for_status()
-            
+
             return json.dumps(response.json())
         except Exception as e:
             return json.dumps({"error": f"Failed to get teams: {str(e)}"})
@@ -226,7 +208,7 @@ class MicrosoftTeamsTools(Toolkit):
             headers = {"Authorization": f"Bearer {token}"}
             response = requests.get(f"https://graph.microsoft.com/v1.0/teams/{team_id}/channels", headers=headers)
             response.raise_for_status()
-            
+
             return json.dumps(response.json())
         except Exception as e:
             return json.dumps({"error": f"Failed to get channels: {str(e)}"})

@@ -34,4 +34,3 @@ class CombinedKnowledgeBase(AgentKnowledge):
             log_debug(f"Loading documents from {kb.__class__.__name__}")
             async for document in kb.async_document_lists:  # type: ignore
                 yield document
-

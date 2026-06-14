@@ -238,4 +238,3 @@ class InfraApp(InfraBase):
         if not self.enabled or self.skip_update:
             return False
         return self.matches_filters(group_filter)
-

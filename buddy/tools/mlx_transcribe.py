@@ -136,4 +136,3 @@ class MLXTranscribeTools(Toolkit):
         except Exception as e:
             logger.error(f"Error reading files: {e}")
             return f"Error reading files: {e}"
-

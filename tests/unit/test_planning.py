@@ -2,21 +2,19 @@
 Unit tests for the planning module — strategies, plan data models, and PlanningAgent.
 """
 
-import pytest
 from buddy.planning.planner import (
-    PlanStrategy,
-    PlanStatus,
-    PlanStepType,
-    PlanStep,
+    DeliberativePlanning,
     ExecutionPlan,
     HierarchicalPlanning,
-    ReactiveThinkPlanning,
-    DeliberativePlanning,
     HybridPlanning,
+    PlanStatus,
+    PlanStep,
+    PlanStepType,
+    ReactiveThinkPlanning,
 )
 
-
 # ── PlanStep ──────────────────────────────────────────────────────────────────
+
 
 def test_plan_step_defaults():
     step = PlanStep(name="test", step_type=PlanStepType.ACTION, description="a step")
@@ -33,6 +31,7 @@ def test_plan_step_duration_none_before_execution():
 
 
 # ── ExecutionPlan ─────────────────────────────────────────────────────────────
+
 
 def test_execution_plan_empty_completion():
     plan = ExecutionPlan(goal="test goal", description="desc")
@@ -60,13 +59,13 @@ def test_execution_plan_get_step():
 
 def test_execution_plan_failed_steps():
     plan = ExecutionPlan(goal="g", description="d")
-    step = PlanStep(name="s1", step_type=PlanStepType.ACTION, description="d",
-                    status=PlanStatus.FAILED)
+    step = PlanStep(name="s1", step_type=PlanStepType.ACTION, description="d", status=PlanStatus.FAILED)
     plan.add_step(step)
     assert len(plan.failed_steps) == 1
 
 
 # ── Hierarchical Planning ─────────────────────────────────────────────────────
+
 
 def test_hierarchical_planning_creates_plan():
     strategy = HierarchicalPlanning()
@@ -85,6 +84,7 @@ def test_hierarchical_planning_sets_dependencies():
 
 # ── Reactive Planning ─────────────────────────────────────────────────────────
 
+
 def test_reactive_planning_creates_plan():
     strategy = ReactiveThinkPlanning()
     plan = strategy.create_plan("respond to event", {"state": "active"})
@@ -94,6 +94,7 @@ def test_reactive_planning_creates_plan():
 
 
 # ── Deliberative Planning ─────────────────────────────────────────────────────
+
 
 def test_deliberative_planning_creates_plan():
     strategy = DeliberativePlanning()
@@ -114,6 +115,7 @@ def test_deliberative_planning_sequential_dependencies():
 
 # ── Hybrid Planning ───────────────────────────────────────────────────────────
 
+
 def test_hybrid_planning_creates_plan():
     strategy = HybridPlanning()
     plan = strategy.create_plan("complex task", {})
@@ -125,8 +127,10 @@ def test_hybrid_planning_creates_plan():
 
 # ── Circular dependency detection ─────────────────────────────────────────────
 
+
 def test_no_circular_dependency_in_hierarchical_plan():
     from buddy.planning.planner import PlanningAgent
+
     agent = PlanningAgent(name="test_agent")
     plan = agent.create_execution_plan("test goal")
     result = agent._validate_plan(plan)

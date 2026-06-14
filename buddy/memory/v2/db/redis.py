@@ -185,5 +185,3 @@ class RedisMemoryDb(MemoryDb):
         except Exception as e:
             logger.error(f"Error clearing memories: {e}")
             return False
-
-

@@ -408,4 +408,3 @@ class WebsiteReader(Reader):
         except (httpx.HTTPStatusError, httpx.RequestError) as e:
             logger.error(f"Error reading website asynchronously {url}: {e}")
             raise
-

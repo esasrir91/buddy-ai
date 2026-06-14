@@ -9,8 +9,9 @@ from fastapi.responses import StreamingResponse
 
 from buddy.agent.agent import Agent, RunResponse
 from buddy.app.playground.utils import process_audio, process_document, process_image, process_video
-from buddy.media import Audio, Image, Video
+from buddy.media import Audio
 from buddy.media import File as FileMedia
+from buddy.media import Image, Video
 from buddy.run.base import RunStatus
 from buddy.run.response import RunResponseEvent
 from buddy.run.team import RunResponseErrorEvent as TeamRunResponseErrorEvent
@@ -446,4 +447,3 @@ def get_sync_router(
                         return workflow.run(workflow_input, session_id=session_id, user_id=user_id).to_dict()
 
     return router
-

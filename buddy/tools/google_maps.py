@@ -266,4 +266,3 @@ class GoogleMapTools(Toolkit):
         except Exception as e:
             print(f"Error getting timezone: {str(e)}")
             return str({})
-

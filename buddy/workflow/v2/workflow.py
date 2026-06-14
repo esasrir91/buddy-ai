@@ -178,20 +178,24 @@ class Workflow:
                 if param_name not in ["workflow", "execution_input", "self"]:
                     parameters[param_name] = {
                         "name": param_name,
-                        "default": param.default.default
-                        if hasattr(param.default, "__class__") and param.default.__class__.__name__ == "FieldInfo"
-                        else (param.default if param.default is not Parameter.empty else None),
+                        "default": (
+                            param.default.default
+                            if hasattr(param.default, "__class__") and param.default.__class__.__name__ == "FieldInfo"
+                            else (param.default if param.default is not Parameter.empty else None)
+                        ),
                         "annotation": (
-                            param.annotation.__name__
-                            if hasattr(param.annotation, "__name__")
-                            else (
-                                str(param.annotation).replace("typing.Optional[", "").replace("]", "")
-                                if "typing.Optional" in str(param.annotation)
-                                else str(param.annotation)
+                            (
+                                param.annotation.__name__
+                                if hasattr(param.annotation, "__name__")
+                                else (
+                                    str(param.annotation).replace("typing.Optional[", "").replace("]", "")
+                                    if "typing.Optional" in str(param.annotation)
+                                    else str(param.annotation)
+                                )
                             )
-                        )
-                        if param.annotation is not Parameter.empty
-                        else None,
+                            if param.annotation is not Parameter.empty
+                            else None
+                        ),
                         "required": param.default is Parameter.empty,
                     }
         else:
@@ -3257,5 +3261,3 @@ class Workflow:
 
                             # Set workflow_session_state on team members
                             self._update_executor_workflow_session_state(member)
-
-

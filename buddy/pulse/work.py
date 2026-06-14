@@ -6,6 +6,7 @@ TaskManager     : Manages the employee's task list.
 WorkCalendar    : Tracks meetings and availability.
 StatusUpdate    : A formatted status report for a task or end-of-day.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -15,10 +16,10 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
-
 # ---------------------------------------------------------------------------
 # Enums
 # ---------------------------------------------------------------------------
+
 
 class TaskPriority(str, Enum):
     LOW = "low"
@@ -49,6 +50,7 @@ class TaskType(str, Enum):
 # ---------------------------------------------------------------------------
 # WorkItem
 # ---------------------------------------------------------------------------
+
 
 class WorkItem(BaseModel):
     """A task assigned to or created by a PULSE employee."""
@@ -101,6 +103,7 @@ class WorkItem(BaseModel):
 # StatusUpdate
 # ---------------------------------------------------------------------------
 
+
 class StatusUpdate(BaseModel):
     """A formatted status update produced by the PULSE employee."""
 
@@ -147,6 +150,7 @@ class StatusUpdate(BaseModel):
 # CalendarEvent
 # ---------------------------------------------------------------------------
 
+
 class CalendarEvent(BaseModel):
     """A meeting or event on the PULSE employee's calendar."""
 
@@ -163,6 +167,7 @@ class CalendarEvent(BaseModel):
 # ---------------------------------------------------------------------------
 # TaskManager
 # ---------------------------------------------------------------------------
+
 
 class TaskManager:
     """Manages a PULSE employee's task list."""
@@ -225,6 +230,7 @@ class TaskManager:
 # WorkCalendar
 # ---------------------------------------------------------------------------
 
+
 class WorkCalendar:
     """Tracks the PULSE employee's upcoming meetings and events."""
 
@@ -242,7 +248,4 @@ class WorkCalendar:
 
     def today(self) -> List[CalendarEvent]:
         now = datetime.utcnow()
-        return [
-            e for e in self._events.values()
-            if e.start_time.date() == now.date()
-        ]
+        return [e for e in self._events.values() if e.start_time.date() == now.date()]

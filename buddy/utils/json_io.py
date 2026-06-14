@@ -28,4 +28,3 @@ def write_json_file(file_path: Optional[Path], data: Optional[Union[Dict, List]]
     if file_path is not None and data is not None:
         log_debug(f"Writing {file_path}")
         file_path.write_text(json.dumps(data, cls=CustomJSONEncoder, indent=4, **kwargs))
-

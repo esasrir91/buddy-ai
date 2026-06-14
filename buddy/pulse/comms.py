@@ -5,6 +5,7 @@ CommunicationHub provides a unified interface for the PULSE employee to send
 messages via Slack, Gmail, Microsoft Teams, or Zoom, using the existing
 tool integrations in buddy/tools/.
 """
+
 from __future__ import annotations
 
 from enum import Enum
@@ -19,6 +20,7 @@ if TYPE_CHECKING:
 # ---------------------------------------------------------------------------
 # Enums / Models
 # ---------------------------------------------------------------------------
+
 
 class CommChannel(str, Enum):
     SLACK = "slack"
@@ -75,16 +77,13 @@ class MessageFormatter:
         )
 
     def format_task_complete(self, task_title: str, summary: str) -> str:
-        return (
-            f"✅ *Task Complete: {task_title}*\n\n"
-            f"{summary}\n\n"
-            f"— {self.employee_name}"
-        )
+        return f"✅ *Task Complete: {task_title}*\n\n" f"{summary}\n\n" f"— {self.employee_name}"
 
 
 # ---------------------------------------------------------------------------
 # CommunicationHub
 # ---------------------------------------------------------------------------
+
 
 class CommunicationHub:
     """
@@ -111,6 +110,7 @@ class CommunicationHub:
     def _load_tool(module_path: str, class_name: str) -> Optional[Any]:
         try:
             import importlib
+
             mod = importlib.import_module(module_path)
             return getattr(mod, class_name)()
         except Exception:
@@ -178,7 +178,9 @@ class CommunicationHub:
             return self.send_email(channel, f"EOD Update — {self.employee.employee_profile.full_name}", body)
         elif comm_channel == CommChannel.TEAMS:
             return self.send_teams_message(channel, body)
-        msg = OutboundMessage(channel=comm_channel, recipient=channel, body=body, sent=False, error="Channel not supported")
+        msg = OutboundMessage(
+            channel=comm_channel, recipient=channel, body=body, sent=False, error="Channel not supported"
+        )
         self._outbox.append(msg)
         return msg
 

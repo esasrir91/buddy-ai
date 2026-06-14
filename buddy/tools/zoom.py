@@ -379,4 +379,3 @@ class ZoomTools(Toolkit):
             A string containing instructions on how to use the ZoomTool.
         """
         return "Use this tool to schedule and manage Zoom meetings. You can schedule meetings by providing a topic, start time, and duration."
-

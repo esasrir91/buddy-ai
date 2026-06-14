@@ -203,4 +203,3 @@ class InfraResource(InfraBase):
             if other.get_resource_type() == self.get_resource_type():
                 return self.get_resource_name() == other.get_resource_name()
         return False
-

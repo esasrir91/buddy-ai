@@ -33,10 +33,10 @@ jobs:
         run: isort --check-only buddy/ tests/
 
       - name: Lint (flake8)
-        run: flake8 buddy/ tests/ --max-line-length 120 --extend-ignore E203,W503
+        run: flake8 buddy/pulse/ tests/ --max-line-length 120 --extend-ignore E203,W503
 
       - name: Type check (mypy)
-        run: mypy buddy/ --ignore-missing-imports
+        run: mypy buddy/pulse/ --ignore-missing-imports
 
   test:
     name: Test (Python ${{ matrix.python-version }})

@@ -17,4 +17,3 @@ class TextFile(File):
             self.name = Path(self.path).name
 
         return dataclass_to_dict(self, exclude_none=True)
-

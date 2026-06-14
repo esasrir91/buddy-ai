@@ -4,13 +4,14 @@ Provides browser automation capabilities with support for multiple browsers.
 Uses synchronous API to avoid event loop conflicts.
 """
 
-from typing import Any, Dict, List, Optional, Union
-from pathlib import Path
 import json
 import time
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
 
 try:
-    from playwright.sync_api import sync_playwright, Page, Browser, BrowserContext
+    from playwright.sync_api import Browser, BrowserContext, Page, sync_playwright
+
     playwright_available = True
 except ImportError:
     playwright_available = False
@@ -33,19 +34,19 @@ class PlaywrightTools(Toolkit):
         timeout: int = 30000,  # 30 seconds
         viewport: Optional[Dict[str, int]] = None,
         user_agent: Optional[str] = None,
-        **kwargs
+        **kwargs,
     ):
         if not playwright_available:
             raise ImportError(
                 "Playwright is not installed. Install it with: pip install playwright && playwright install"
             )
-        
+
         self.browser_type = browser_type
         self.headless = headless
         self.timeout = timeout
         self.viewport = viewport or {"width": 1280, "height": 720}
         self.user_agent = user_agent
-        
+
         # Use sync API
         self._playwright = None
         self._browser = None
@@ -79,7 +80,7 @@ class PlaywrightTools(Toolkit):
         """Ensure browser is running using sync API."""
         if self._playwright is None:
             self._playwright = sync_playwright().start()
-            
+
         if self._browser is None:
             if self.browser_type == "chromium":
                 self._browser = self._playwright.chromium.launch(headless=self.headless)
@@ -89,13 +90,13 @@ class PlaywrightTools(Toolkit):
                 self._browser = self._playwright.webkit.launch(headless=self.headless)
             else:
                 raise ValueError(f"Unsupported browser type: {self.browser_type}")
-                
+
         if self._context is None:
             context_options = {"viewport": self.viewport}
             if self.user_agent:
                 context_options["user_agent"] = self.user_agent
             self._context = self._browser.new_context(**context_options)
-            
+
         if self._page is None:
             self._page = self._context.new_page()
             self._page.set_default_timeout(self.timeout)
@@ -103,23 +104,25 @@ class PlaywrightTools(Toolkit):
     def start_browser(self) -> str:
         """
         Start the web browser.
-        
+
         Returns:
             Browser startup status
         """
         try:
             if self._browser is not None:
                 return "Browser is already running"
-            
+
             self._ensure_browser()
-            
-            return json.dumps({
-                'status': 'success',
-                'message': f'{self.browser_type.title()} browser started successfully',
-                'headless': self.headless,
-                'window_size': self.viewport
-            })
-            
+
+            return json.dumps(
+                {
+                    "status": "success",
+                    "message": f"{self.browser_type.title()} browser started successfully",
+                    "headless": self.headless,
+                    "window_size": self.viewport,
+                }
+            )
+
         except Exception as e:
             logger.error(f"Error starting browser: {e}")
             return f"Error starting browser: {e}"
@@ -168,21 +171,23 @@ class PlaywrightTools(Toolkit):
             selector = self._get_selector(locator_type, locator_value)
             if "Error:" in selector:
                 return selector
-            
+
             locator = self._page.locator(selector)
             if locator.count() == 0:
                 return f"Element not found: {locator_type}='{locator_value}'"
-            
+
             element = locator.first
-            return json.dumps({
-                'status': 'success',
-                'message': 'Element found',
-                'tag_name': element.evaluate('el => el.tagName'),
-                'text': element.text_content() or '',
-                'is_visible': element.is_visible(),
-                'is_enabled': element.is_enabled(),
-                'bounding_box': element.bounding_box()
-            })
+            return json.dumps(
+                {
+                    "status": "success",
+                    "message": "Element found",
+                    "tag_name": element.evaluate("el => el.tagName"),
+                    "text": element.text_content() or "",
+                    "is_visible": element.is_visible(),
+                    "is_enabled": element.is_enabled(),
+                    "bounding_box": element.bounding_box(),
+                }
+            )
         except Exception as e:
             logger.error(f"Error finding element: {e}")
             return f"Error finding element: {e}"
@@ -194,35 +199,29 @@ class PlaywrightTools(Toolkit):
             selector = self._get_selector(locator_type, locator_value)
             if "Error:" in selector:
                 return selector
-            
+
             locator = self._page.locator(selector)
             count = locator.count()
-            
+
             if count == 0:
-                return json.dumps({
-                    'status': 'success',
-                    'message': 'No elements found',
-                    'count': 0,
-                    'elements': []
-                })
-            
+                return json.dumps({"status": "success", "message": "No elements found", "count": 0, "elements": []})
+
             elements_info = []
             for i in range(min(count, 10)):  # Limit to first 10 elements
                 element = locator.nth(i)
-                elements_info.append({
-                    'index': i,
-                    'tag_name': element.evaluate('el => el.tagName'),
-                    'text': (element.text_content() or '')[:100],  # Truncate long text
-                    'is_visible': element.is_visible(),
-                    'bounding_box': element.bounding_box()
-                })
-            
-            return json.dumps({
-                'status': 'success',
-                'message': f'Found {count} elements',
-                'count': count,
-                'elements': elements_info
-            })
+                elements_info.append(
+                    {
+                        "index": i,
+                        "tag_name": element.evaluate("el => el.tagName"),
+                        "text": (element.text_content() or "")[:100],  # Truncate long text
+                        "is_visible": element.is_visible(),
+                        "bounding_box": element.bounding_box(),
+                    }
+                )
+
+            return json.dumps(
+                {"status": "success", "message": f"Found {count} elements", "count": count, "elements": elements_info}
+            )
         except Exception as e:
             logger.error(f"Error finding elements: {e}")
             return f"Error finding elements: {e}"
@@ -310,7 +309,7 @@ class PlaywrightTools(Toolkit):
             locator = self._page.locator(selector)
             if locator.count() == 0:
                 return f"Element not found: {locator_type}='{locator_value}'"
-            
+
             attrs = {}
             element = locator.first
             for attr in attributes:
@@ -342,12 +341,12 @@ class PlaywrightTools(Toolkit):
                 "down": f"window.scrollBy(0, {pixels})",
                 "up": f"window.scrollBy(0, -{pixels})",
                 "right": f"window.scrollBy({pixels}, 0)",
-                "left": f"window.scrollBy(-{pixels}, 0)"
+                "left": f"window.scrollBy(-{pixels}, 0)",
             }
-            
+
             if direction not in script_map:
                 return f"Invalid direction: {direction}. Use 'up', 'down', 'left', or 'right'."
-                
+
             self._page.evaluate(script_map[direction])
             return f"Scrolled {direction} by {pixels} pixels"
         except Exception as e:
@@ -377,17 +376,17 @@ class PlaywrightTools(Toolkit):
     def _get_selector(self, locator_type: str, locator_value: str) -> str:
         """Convert locator type and value to appropriate selector."""
         by_mapping = {
-            'id': f"#{locator_value}",
-            'name': f"[name='{locator_value}']",
-            'class_name': f".{locator_value}",
-            'tag_name': locator_value,
-            'css_selector': locator_value,
-            'xpath': f"xpath={locator_value}",
-            'link_text': f"text={locator_value}",
-            'partial_link_text': f"text*={locator_value}"
+            "id": f"#{locator_value}",
+            "name": f"[name='{locator_value}']",
+            "class_name": f".{locator_value}",
+            "tag_name": locator_value,
+            "css_selector": locator_value,
+            "xpath": f"xpath={locator_value}",
+            "link_text": f"text={locator_value}",
+            "partial_link_text": f"text*={locator_value}",
         }
-        
+
         if locator_type not in by_mapping:
             return f"Error: Invalid locator type: {locator_type}"
-        
+
         return by_mapping[locator_type]

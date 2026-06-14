@@ -181,4 +181,3 @@ def get_session_title_from_team_session(team_session: TeamSession) -> str:
             except Exception as e:
                 logger.error(f"Error parsing chat: {e}")
     return "Unnamed session"
-

@@ -326,5 +326,3 @@ class MongoDbStorage(Storage):
                 setattr(copied_obj, k, deepcopy(v, memo))
 
         return copied_obj
-
-

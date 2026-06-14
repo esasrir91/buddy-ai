@@ -54,4 +54,3 @@ class WikipediaTools(Toolkit):
 
         log_info(f"Searching wikipedia for: {query}")
         return json.dumps(Document(name=query, content=wikipedia.summary(query)).to_dict())
-

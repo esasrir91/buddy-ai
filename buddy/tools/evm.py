@@ -121,4 +121,3 @@ class EvmTools(Toolkit):
         except Exception as e:
             log_error(f"Error sending transaction: {e}")
             return f"error: {e}"
-

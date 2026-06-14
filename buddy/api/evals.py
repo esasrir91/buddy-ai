@@ -31,5 +31,3 @@ async def async_create_eval_run(eval_run: EvalRunCreate) -> None:
         except Exception as e:
             log_debug(f"Could not create evaluation run: {e}")
     return
-
-

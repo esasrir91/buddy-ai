@@ -79,4 +79,3 @@ async def aget_openai_reasoning(reasoning_agent: "Agent", messages: List[Message
     return Message(
         role="assistant", content=f"<thinking>\n{reasoning_content}\n</thinking>", reasoning_content=reasoning_content
     )
-

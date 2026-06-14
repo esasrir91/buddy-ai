@@ -78,4 +78,3 @@ class LangDBEmbedder(Embedder):
         if usage:
             return embedding, usage.model_dump()
         return embedding, None
-

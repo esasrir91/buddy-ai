@@ -175,4 +175,3 @@ async def apprint_run_response(
                     table.add_row(formatted_response)  # type: ignore
                 live_log.update(table)
             response_timer.stop()
-

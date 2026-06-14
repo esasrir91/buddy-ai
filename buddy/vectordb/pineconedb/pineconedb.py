@@ -479,4 +479,3 @@ class PineconeDb(VectorDb):
 
     async def async_drop(self) -> None:
         raise NotImplementedError(f"Async not supported on {self.__class__.__name__}.")
-

@@ -696,4 +696,3 @@ class AgentKnowledge(BaseModel):
                 log_info("No new documents to insert after filtering.")
 
         log_info(f"Finished loading documents from {source_info}.")
-

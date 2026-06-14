@@ -31,5 +31,3 @@ async def acreate_workflow(workflow: WorkflowCreate) -> None:
             )
         except Exception as e:
             log_debug(f"Could not create Team: {e}")
-
-

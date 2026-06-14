@@ -182,4 +182,3 @@ class CartesiaTools(Toolkit):
         except Exception as e:
             log_error(f"Error generating speech with Cartesia: {e}", exc_info=True)
             return f"Error generating speech: {e}"
-

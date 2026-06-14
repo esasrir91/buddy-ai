@@ -1,6 +1,6 @@
 import json
-from typing import Any, Dict, List, Optional
 from os import getenv
+from typing import Any, Dict, List, Optional
 
 from buddy.tools import Toolkit
 from buddy.utils.log import log_debug, logger
@@ -56,12 +56,12 @@ class YouTubeTools(Toolkit):
                 "client_id": self.client_id,
                 "client_secret": self.client_secret,
                 "refresh_token": self.refresh_token,
-                "grant_type": "refresh_token"
+                "grant_type": "refresh_token",
             }
 
             response = requests.post("https://oauth2.googleapis.com/token", data=data)
             response.raise_for_status()
-            
+
             token_data = response.json()
             self.access_token = token_data.get("access_token")
             return self.access_token
@@ -90,12 +90,12 @@ class YouTubeTools(Toolkit):
                 "maxResults": max_results,
                 "order": order,
                 "type": "video",
-                "key": self.api_key
+                "key": self.api_key,
             }
 
             response = requests.get(f"{self.base_url}/search", params=params)
             response.raise_for_status()
-            
+
             return json.dumps(response.json())
         except Exception as e:
             return json.dumps({"error": f"Failed to search videos: {str(e)}"})
@@ -113,15 +113,11 @@ class YouTubeTools(Toolkit):
             return json.dumps({"error": "API key not provided"})
 
         try:
-            params = {
-                "part": "snippet,statistics,contentDetails",
-                "id": video_id,
-                "key": self.api_key
-            }
+            params = {"part": "snippet,statistics,contentDetails", "id": video_id, "key": self.api_key}
 
             response = requests.get(f"{self.base_url}/videos", params=params)
             response.raise_for_status()
-            
+
             return json.dumps(response.json())
         except Exception as e:
             return json.dumps({"error": f"Failed to get video details: {str(e)}"})
@@ -139,15 +135,11 @@ class YouTubeTools(Toolkit):
             return json.dumps({"error": "API key not provided"})
 
         try:
-            params = {
-                "part": "snippet,statistics",
-                "id": channel_id,
-                "key": self.api_key
-            }
+            params = {"part": "snippet,statistics", "id": channel_id, "key": self.api_key}
 
             response = requests.get(f"{self.base_url}/channels", params=params)
             response.raise_for_status()
-            
+
             return json.dumps(response.json())
         except Exception as e:
             return json.dumps({"error": f"Failed to get channel info: {str(e)}"})
@@ -170,33 +162,19 @@ class YouTubeTools(Toolkit):
 
         try:
             metadata = {
-                "snippet": {
-                    "title": title,
-                    "description": description,
-                    "tags": tags or []
-                },
-                "status": {
-                    "privacyStatus": "private"
-                }
+                "snippet": {"title": title, "description": description, "tags": tags or []},
+                "status": {"privacyStatus": "private"},
             }
 
-            headers = {
-                "Authorization": f"Bearer {access_token}",
-                "Content-Type": "application/json"
-            }
+            headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
 
             # Note: This is a simplified version. Full video upload requires multipart upload
             # which is more complex and would need additional libraries
             params = {"part": "snippet,status"}
 
-            response = requests.post(
-                f"{self.base_url}/videos",
-                headers=headers,
-                params=params,
-                json=metadata
-            )
+            response = requests.post(f"{self.base_url}/videos", headers=headers, params=params, json=metadata)
             response.raise_for_status()
-            
+
             return json.dumps(response.json())
         except Exception as e:
             return json.dumps({"error": f"Failed to upload video: {str(e)}"})
@@ -215,16 +193,11 @@ class YouTubeTools(Toolkit):
             return json.dumps({"error": "API key not provided"})
 
         try:
-            params = {
-                "part": "snippet",
-                "playlistId": playlist_id,
-                "maxResults": max_results,
-                "key": self.api_key
-            }
+            params = {"part": "snippet", "playlistId": playlist_id, "maxResults": max_results, "key": self.api_key}
 
             response = requests.get(f"{self.base_url}/playlistItems", params=params)
             response.raise_for_status()
-            
+
             return json.dumps(response.json())
         except Exception as e:
             return json.dumps({"error": f"Failed to get playlist: {str(e)}"})
@@ -248,12 +221,12 @@ class YouTubeTools(Toolkit):
                 "videoId": video_id,
                 "maxResults": max_results,
                 "order": "relevance",
-                "key": self.api_key
+                "key": self.api_key,
             }
 
             response = requests.get(f"{self.base_url}/commentThreads", params=params)
             response.raise_for_status()
-            
+
             return json.dumps(response.json())
         except Exception as e:
             return json.dumps({"error": f"Failed to get comments: {str(e)}"})

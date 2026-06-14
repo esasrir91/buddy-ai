@@ -1,6 +1,6 @@
 import json
-from typing import Any, Dict, List, Optional
 from os import getenv
+from typing import Any, Dict, List, Optional
 
 from buddy.tools import Toolkit
 from buddy.utils.log import log_debug, logger
@@ -53,33 +53,21 @@ class InstagramTools(Toolkit):
 
         try:
             # First, create media object
-            create_data = {
-                "image_url": image_url,
-                "access_token": self.access_token
-            }
+            create_data = {"image_url": image_url, "access_token": self.access_token}
 
             if caption:
                 create_data["caption"] = caption
 
-            create_response = requests.post(
-                f"{self.base_url}/{self.user_id}/media",
-                data=create_data
-            )
+            create_response = requests.post(f"{self.base_url}/{self.user_id}/media", data=create_data)
             create_response.raise_for_status()
             creation_id = create_response.json()["id"]
 
             # Then, publish the media
-            publish_data = {
-                "creation_id": creation_id,
-                "access_token": self.access_token
-            }
+            publish_data = {"creation_id": creation_id, "access_token": self.access_token}
 
-            publish_response = requests.post(
-                f"{self.base_url}/{self.user_id}/media_publish",
-                data=publish_data
-            )
+            publish_response = requests.post(f"{self.base_url}/{self.user_id}/media_publish", data=publish_data)
             publish_response.raise_for_status()
-            
+
             return json.dumps(publish_response.json())
         except Exception as e:
             return json.dumps({"error": f"Failed to post photo: {str(e)}"})
@@ -100,15 +88,12 @@ class InstagramTools(Toolkit):
             params = {
                 "fields": "id,caption,media_type,media_url,permalink,timestamp",
                 "limit": limit,
-                "access_token": self.access_token
+                "access_token": self.access_token,
             }
 
-            response = requests.get(
-                f"{self.base_url}/{self.user_id}/media",
-                params=params
-            )
+            response = requests.get(f"{self.base_url}/{self.user_id}/media", params=params)
             response.raise_for_status()
-            
+
             return json.dumps(response.json())
         except Exception as e:
             return json.dumps({"error": f"Failed to get media: {str(e)}"})
@@ -130,17 +115,11 @@ class InstagramTools(Toolkit):
             metrics = ["impressions", "reach", "engagement"]
 
         try:
-            params = {
-                "metric": ",".join(metrics),
-                "access_token": self.access_token
-            }
+            params = {"metric": ",".join(metrics), "access_token": self.access_token}
 
-            response = requests.get(
-                f"{self.base_url}/{media_id}/insights",
-                params=params
-            )
+            response = requests.get(f"{self.base_url}/{media_id}/insights", params=params)
             response.raise_for_status()
-            
+
             return json.dumps(response.json())
         except Exception as e:
             return json.dumps({"error": f"Failed to get insights: {str(e)}"})
@@ -160,17 +139,11 @@ class InstagramTools(Toolkit):
 
         try:
             # First, get hashtag ID
-            search_params = {
-                "q": hashtag,
-                "access_token": self.access_token
-            }
+            search_params = {"q": hashtag, "access_token": self.access_token}
 
-            search_response = requests.get(
-                f"{self.base_url}/ig_hashtag_search",
-                params=search_params
-            )
+            search_response = requests.get(f"{self.base_url}/ig_hashtag_search", params=search_params)
             search_response.raise_for_status()
-            
+
             hashtag_data = search_response.json()
             if not hashtag_data.get("data"):
                 return json.dumps({"error": "Hashtag not found"})
@@ -181,15 +154,12 @@ class InstagramTools(Toolkit):
             media_params = {
                 "fields": "id,caption,media_type,comments_count,like_count,timestamp",
                 "limit": limit,
-                "access_token": self.access_token
+                "access_token": self.access_token,
             }
 
-            media_response = requests.get(
-                f"{self.base_url}/{hashtag_id}/recent_media",
-                params=media_params
-            )
+            media_response = requests.get(f"{self.base_url}/{hashtag_id}/recent_media", params=media_params)
             media_response.raise_for_status()
-            
+
             return json.dumps(media_response.json())
         except Exception as e:
             return json.dumps({"error": f"Failed to get hashtag data: {str(e)}"})
@@ -208,31 +178,18 @@ class InstagramTools(Toolkit):
 
         try:
             # Create story media object
-            create_data = {
-                "image_url": image_url,
-                "media_type": "STORIES",
-                "access_token": self.access_token
-            }
+            create_data = {"image_url": image_url, "media_type": "STORIES", "access_token": self.access_token}
 
-            create_response = requests.post(
-                f"{self.base_url}/{self.user_id}/media",
-                data=create_data
-            )
+            create_response = requests.post(f"{self.base_url}/{self.user_id}/media", data=create_data)
             create_response.raise_for_status()
             creation_id = create_response.json()["id"]
 
             # Publish the story
-            publish_data = {
-                "creation_id": creation_id,
-                "access_token": self.access_token
-            }
+            publish_data = {"creation_id": creation_id, "access_token": self.access_token}
 
-            publish_response = requests.post(
-                f"{self.base_url}/{self.user_id}/media_publish",
-                data=publish_data
-            )
+            publish_response = requests.post(f"{self.base_url}/{self.user_id}/media_publish", data=publish_data)
             publish_response.raise_for_status()
-            
+
             return json.dumps(publish_response.json())
         except Exception as e:
             return json.dumps({"error": f"Failed to post story: {str(e)}"})

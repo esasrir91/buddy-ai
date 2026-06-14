@@ -202,5 +202,3 @@ def log_error(msg, *args, **kwargs):
 def log_exception(msg, *args, **kwargs):
     global logger
     logger.exception(msg, *args, **kwargs)
-
-

@@ -79,4 +79,3 @@ class GiphyTools(Toolkit):
             logger.error(f"An error occurred: {e}")
 
         return "No gifs found"
-

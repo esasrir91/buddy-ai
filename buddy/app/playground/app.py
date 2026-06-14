@@ -14,11 +14,11 @@ from starlette.requests import Request
 from buddy.agent.agent import Agent
 from buddy.api.playground import PlaygroundEndpointCreate
 from buddy.app.playground.async_router import get_async_playground_router
+from buddy.app.playground.settings import PlaygroundSettings
 from buddy.app.playground.sync_router import get_sync_playground_router
 from buddy.app.utils import generate_id
 from buddy.cli.console import console
 from buddy.cli.settings import BUDDY_cli_settings
-from buddy.app.playground.settings import PlaygroundSettings
 from buddy.team.team import Team
 from buddy.utils.log import log_debug, logger
 from buddy.workflow.workflow import Workflow
@@ -226,5 +226,3 @@ class Playground:
         }
         payload = {k: v for k, v in payload.items() if v is not None}
         return payload
-
-

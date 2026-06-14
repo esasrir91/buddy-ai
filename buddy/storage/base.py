@@ -58,4 +58,3 @@ class Storage(ABC):
     @abstractmethod
     def upgrade_schema(self) -> None:
         raise NotImplementedError
-

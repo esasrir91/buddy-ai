@@ -356,4 +356,3 @@ class GoogleSheetsTools(Toolkit):
             return f"Spreadsheet duplicated successfully: https://docs.google.com/spreadsheets/d/{new_spreadsheet_id}"
         except Exception as e:
             return f"Error duplicating spreadsheet via Drive API: {e}"
-

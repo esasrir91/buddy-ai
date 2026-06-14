@@ -58,4 +58,3 @@ class DocxReader(Reader):
         except Exception as e:
             logger.error(f"Error reading file asynchronously: {e}")
             return []
-

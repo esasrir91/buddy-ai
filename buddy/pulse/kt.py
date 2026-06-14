@@ -9,6 +9,7 @@ KTSummary       : The final output of a completed KT session.
 KTSession       : Manages an active KT session (async OR live human mode).
 KTManager       : Factory and registry for KT sessions.
 """
+
 from __future__ import annotations
 
 import json
@@ -27,6 +28,7 @@ if TYPE_CHECKING:
 # ---------------------------------------------------------------------------
 # Enums
 # ---------------------------------------------------------------------------
+
 
 class KTSourceType(str, Enum):
     # Async / document modes
@@ -64,6 +66,7 @@ class KTPhase(str, Enum):
 # KTTurn — one PULSE response in a live dialogue
 # ---------------------------------------------------------------------------
 
+
 class KTTurn(BaseModel):
     """One PULSE response turn during a live KT dialogue."""
 
@@ -79,6 +82,7 @@ class KTTurn(BaseModel):
 # ---------------------------------------------------------------------------
 # KTSummary — final output of a completed KT session
 # ---------------------------------------------------------------------------
+
 
 class KTSummary(BaseModel):
     """The final structured output of a completed KT session."""
@@ -125,6 +129,7 @@ class KTSummary(BaseModel):
 # KTSessionState — mutable state of a running KT session
 # ---------------------------------------------------------------------------
 
+
 class KTSessionState(BaseModel):
     """Mutable state of an in-progress KT session."""
 
@@ -147,6 +152,7 @@ class KTSessionState(BaseModel):
 # ---------------------------------------------------------------------------
 # KTSession — the active session object
 # ---------------------------------------------------------------------------
+
 
 class KTSession:
     """
@@ -246,6 +252,7 @@ class KTSession:
         # Try pypdf first (pip install pypdf)
         try:
             import pypdf  # type: ignore
+
             reader = pypdf.PdfReader(str(path))
             for page in reader.pages:
                 t = page.extract_text()
@@ -261,8 +268,9 @@ class KTSession:
         # Try pdfplumber (pip install pdfplumber)
         try:
             import pdfplumber  # type: ignore
+
             with pdfplumber.open(str(path)) as pdf:
-                for page in pdf.pages:
+                for page in pdf.pages:  # type: ignore[assignment]
                     t = page.extract_text()
                     if t:
                         text_parts.append(t)
@@ -293,9 +301,10 @@ class KTSession:
         - Returns all page text joined together (capped at `total_chars`)
         """
         import re
-        import httpx
         from collections import deque
-        from urllib.parse import urljoin, urlparse, urldefrag
+        from urllib.parse import urldefrag, urljoin, urlparse
+
+        import httpx
 
         HEADERS = {"User-Agent": "BuddyAI-PULSE/2.1 (KT crawler; +https://github.com/esasrir91/buddy-ai)"}
 
@@ -358,10 +367,9 @@ class KTSession:
             return f"[Could not fetch any content from {start_url}]"
 
         header = (
-            f"Crawled {len(pages)} page(s) from {start_url} "
-            f"(domain: {allowed_netloc}, max depth: {max_depth})\n\n"
+            f"Crawled {len(pages)} page(s) from {start_url} " f"(domain: {allowed_netloc}, max depth: {max_depth})\n\n"
         )
-        return (header + "\n\n".join(pages))[:total_chars + len(header)]
+        return (header + "\n\n".join(pages))[: total_chars + len(header)]
 
     # --------------------------------------------------------------- Live KT
     def human_explains(self, text: str) -> KTTurn:
@@ -420,11 +428,13 @@ class KTSession:
             mental_model_draft=self.state.mental_model_draft,
             ready_to_commit=ready,
         )
-        self.state.dialogue_history.append({
-            "role": "pulse",
-            "text": turn.pulse_message,
-            "phase": turn.phase.value,
-        })
+        self.state.dialogue_history.append(
+            {
+                "role": "pulse",
+                "text": turn.pulse_message,
+                "phase": turn.phase.value,
+            }
+        )
         return turn
 
     # -------------------------------------------------------- Summary + Commit
@@ -484,10 +494,7 @@ Build your initial understanding. Respond in JSON:
     def _build_live_response_prompt(self) -> str:
         name = self.employee.employee_profile.full_name
         role = self.employee.employee_profile.role
-        history_text = "\n".join(
-            f"[{h['role'].upper()}]: {h['text']}"
-            for h in self.state.dialogue_history[-20:]
-        )
+        history_text = "\n".join(f"[{h['role'].upper()}]: {h['text']}" for h in self.state.dialogue_history[-20:])
         return f"""You are {name} ({role}) in a live KT session.
 
 Session: {self.state.session_name}
@@ -518,10 +525,7 @@ Rules:
 
     def _build_summary_prompt(self) -> str:
         name = self.employee.employee_profile.full_name
-        history_text = "\n".join(
-            f"[{h['role'].upper()}]: {h['text']}"
-            for h in self.state.dialogue_history
-        )
+        history_text = "\n".join(f"[{h['role'].upper()}]: {h['text']}" for h in self.state.dialogue_history)
         return f"""You are {name}. You have completed a KT session on "{self.state.session_name}".
 
 Full dialogue:
@@ -549,19 +553,21 @@ Produce a comprehensive KT summary in JSON:
                 return response.content or ""
             return str(response)
         except Exception as e:
-            return json.dumps({
-                "pulse_message": f"I need to think more about this. ({e})",
-                "questions": [],
-                "confidence_score": self.state.confidence_score,
-                "mental_model_draft": self.state.mental_model_draft,
-                "key_concepts": self.state.key_concepts,
-                "mental_model": self.state.mental_model_draft,
-                "open_questions": [],
-                "connections": [],
-                "domain": "",
-                "tags": [],
-                "clarifying_questions": [],
-            })
+            return json.dumps(
+                {
+                    "pulse_message": f"I need to think more about this. ({e})",
+                    "questions": [],
+                    "confidence_score": self.state.confidence_score,
+                    "mental_model_draft": self.state.mental_model_draft,
+                    "key_concepts": self.state.key_concepts,
+                    "mental_model": self.state.mental_model_draft,
+                    "open_questions": [],
+                    "connections": [],
+                    "domain": "",
+                    "tags": [],
+                    "clarifying_questions": [],
+                }
+            )
 
     @staticmethod
     def _parse_json(response: str) -> Dict[str, Any]:
@@ -577,7 +583,8 @@ Produce a comprehensive KT summary in JSON:
         if start != -1 and end > start:
             text = text[start:end]
         try:
-            return json.loads(text)
+            parsed: Dict[str, Any] = json.loads(text)
+            return parsed
         except json.JSONDecodeError:
             return {}
 
@@ -585,6 +592,7 @@ Produce a comprehensive KT summary in JSON:
 # ---------------------------------------------------------------------------
 # KTManager — factory and registry
 # ---------------------------------------------------------------------------
+
 
 class KTManager:
     """Factory and registry for KT sessions of a PULSE employee."""

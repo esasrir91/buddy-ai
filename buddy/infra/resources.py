@@ -53,4 +53,3 @@ class InfraResources(InfraBase):
         type_filter: Optional[str] = None,
     ) -> Tuple[int, int]:
         raise NotImplementedError
-

@@ -445,13 +445,11 @@ class PostgresStorage(Storage):
             if self.mode == "agent" and self.table_exists():
                 with self.Session() as sess:
                     # Check if team_session_id column exists
-                    column_exists_query = text(
-                        """
+                    column_exists_query = text("""
                         SELECT 1 FROM information_schema.columns
                         WHERE table_schema = :schema AND table_name = :table
                         AND column_name = 'team_session_id'
-                        """
-                    )
+                        """)
                     column_exists = (
                         sess.execute(column_exists_query, {"schema": self.schema, "table": self.table_name}).scalar()
                         is not None
@@ -680,4 +678,3 @@ class PostgresStorage(Storage):
         copied_obj.table = copied_obj.get_table()
 
         return copied_obj
-

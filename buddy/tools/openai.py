@@ -174,4 +174,3 @@ class OpenAITools(Toolkit):
             return f"Speech generated successfully with ID: {media_id}"
         except Exception as e:
             return f"Failed to generate speech: {str(e)}"
-

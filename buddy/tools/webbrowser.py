@@ -25,4 +25,3 @@ class WebBrowserTools(Toolkit):
             webbrowser.open_new(url)
         else:
             webbrowser.open_new_tab(url)
-

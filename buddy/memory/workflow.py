@@ -36,4 +36,3 @@ class WorkflowMemory(BaseModel):
         # clear the new memory to remove any references to the old memory
         new_memory.clear()
         return new_memory
-

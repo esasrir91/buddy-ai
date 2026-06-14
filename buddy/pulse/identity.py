@@ -6,18 +6,19 @@ ColleagueBook    : Directory of known colleagues.
 WorkingHours     : Availability windows per day.
 WorkStyle        : Personality traits that shape communication.
 """
+
 from __future__ import annotations
 
 from datetime import time
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
-
 
 # ---------------------------------------------------------------------------
 # Enums
 # ---------------------------------------------------------------------------
+
 
 class Department(str, Enum):
     ENGINEERING = "Engineering"
@@ -66,8 +67,10 @@ class WorkMode(str, Enum):
 # WorkingHours
 # ---------------------------------------------------------------------------
 
+
 class DaySchedule(BaseModel):
     """Availability window for a single weekday."""
+
     start: time = Field(default=time(9, 0), description="Work start time (local)")
     end: time = Field(default=time(18, 0), description="Work end time (local)")
     available: bool = Field(default=True)
@@ -113,6 +116,7 @@ class WorkingHours(BaseModel):
 # WorkStyle
 # ---------------------------------------------------------------------------
 
+
 class WorkStyle(BaseModel):
     """Personality traits that shape how the PULSE employee communicates and behaves."""
 
@@ -142,6 +146,7 @@ class WorkStyle(BaseModel):
 # ---------------------------------------------------------------------------
 # ColleagueRecord / ColleagueBook
 # ---------------------------------------------------------------------------
+
 
 class ColleagueRecord(BaseModel):
     """A record of a known colleague."""
@@ -186,6 +191,7 @@ class ColleagueBook(BaseModel):
 # EmployeeProfile — the core identity card
 # ---------------------------------------------------------------------------
 
+
 class EmployeeProfile(BaseModel):
     """
     The identity card of a PULSE virtual employee.
@@ -226,9 +232,7 @@ class EmployeeProfile(BaseModel):
     work_style: WorkStyle = Field(default_factory=WorkStyle)
 
     # --- Context ---
-    start_date: Optional[str] = Field(
-        default=None, description="ISO date when employee joined, e.g. '2024-01-15'"
-    )
+    start_date: Optional[str] = Field(default=None, description="ISO date when employee joined, e.g. '2024-01-15'")
     bio: Optional[str] = Field(
         default=None,
         description="Short professional bio used in introduction messages",

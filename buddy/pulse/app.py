@@ -8,6 +8,7 @@ One command starts everything:
 Or via CLI:
     buddy pulse start
 """
+
 from __future__ import annotations
 
 import os
@@ -69,6 +70,7 @@ class PulseApp:
 
         # Restore persisted employees on startup and launch autonomous worker
         from buddy.pulse.router import _load_employees, start_auto_worker
+
         @self.app.on_event("startup")
         async def _startup() -> None:
             _load_employees()
@@ -81,8 +83,8 @@ class PulseApp:
         """Mount the compiled React frontend at / if the build exists."""
         here = Path(__file__).parent
         candidates = [
-            here / "ui",                                      # bundled inside installed package
-            here.parent.parent / "pulse-ui" / "dist",        # project root (dev / editable install)
+            here / "ui",  # bundled inside installed package
+            here.parent.parent / "pulse-ui" / "dist",  # project root (dev / editable install)
             here.parent / "pulse-ui" / "dist",
             Path(os.getcwd()) / "pulse-ui" / "dist",
         ]
@@ -100,10 +102,13 @@ class PulseApp:
                 # Don't intercept API routes
                 if full_path.startswith("api/"):
                     from fastapi import HTTPException
+
                     raise HTTPException(status_code=404)
                 index = ui_dist / "index.html"  # type: ignore[operator]
                 return HTMLResponse(content=index.read_text(encoding="utf-8"))
+
         else:
+
             @self.app.get("/", response_class=HTMLResponse, include_in_schema=False)
             async def serve_placeholder() -> HTMLResponse:
                 return HTMLResponse(content=_placeholder_html(self.port))
@@ -119,13 +124,14 @@ class PulseApp:
 
         if self.open_browser:
             import threading
+
             threading.Timer(1.5, lambda: webbrowser.open(url)).start()
 
         uvicorn.run(self.app, host=self.host, port=self.port, log_level="info")
 
 
 def _placeholder_html(port: int) -> str:
-    return f"""<!DOCTYPE html>
+    return """<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />

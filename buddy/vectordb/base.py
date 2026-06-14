@@ -94,4 +94,3 @@ class VectorDb(ABC):
     @abstractmethod
     def delete(self) -> bool:
         raise NotImplementedError
-

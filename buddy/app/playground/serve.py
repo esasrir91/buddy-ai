@@ -53,5 +53,3 @@ def serve_playground_app(
     console.print(panel)
 
     uvicorn.run(app=app, host=host, port=port, reload=reload, **kwargs)
-
-

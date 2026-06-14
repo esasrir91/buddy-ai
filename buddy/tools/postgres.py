@@ -263,4 +263,3 @@ class PostgresTools(Toolkit):
         :return: The query result as a formatted string.
         """
         return self._execute_query(query)
-

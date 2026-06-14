@@ -13,4 +13,3 @@ class WhatsappAPI(BaseAPIApp):
 
     def get_async_router(self) -> APIRouter:
         return get_async_router(agent=self.agent, team=self.team)
-

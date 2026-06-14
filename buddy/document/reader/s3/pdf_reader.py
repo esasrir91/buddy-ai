@@ -57,4 +57,3 @@ class S3PDFReader(Reader):
             List[Document]: List of documents from the PDF file
         """
         return await asyncio.to_thread(self.read, s3_object)
-

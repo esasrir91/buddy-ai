@@ -5,6 +5,7 @@ FeedbackSystem      : Receives and stores feedback from colleagues.
 PerformanceTracker  : Tracks KPIs and performance trends.
 GrowthMetrics       : Aggregated growth view for the PULSE employee.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -14,10 +15,10 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
-
 # ---------------------------------------------------------------------------
 # Enums
 # ---------------------------------------------------------------------------
+
 
 class FeedbackSentiment(str, Enum):
     POSITIVE = "positive"
@@ -40,6 +41,7 @@ class FeedbackCategory(str, Enum):
 # ---------------------------------------------------------------------------
 # Models
 # ---------------------------------------------------------------------------
+
 
 class FeedbackEntry(BaseModel):
     """A single piece of feedback received by the PULSE employee."""
@@ -119,6 +121,7 @@ class GrowthMetrics(BaseModel):
 # FeedbackSystem
 # ---------------------------------------------------------------------------
 
+
 class FeedbackSystem:
     """Receives and organises feedback for the PULSE employee."""
 
@@ -146,10 +149,7 @@ class FeedbackSystem:
 
     def actionable_items(self) -> List[FeedbackEntry]:
         """Returns constructive feedback items that have not yet been acted upon."""
-        return [
-            f for f in self._feedback
-            if f.sentiment == FeedbackSentiment.CONSTRUCTIVE and not f.action_taken
-        ]
+        return [f for f in self._feedback if f.sentiment == FeedbackSentiment.CONSTRUCTIVE and not f.action_taken]
 
     def build_improvement_prompt(self) -> str:
         """Returns a prompt snippet for self-improvement based on recent constructive feedback."""
@@ -167,6 +167,7 @@ class FeedbackSystem:
 # ---------------------------------------------------------------------------
 # PerformanceTracker
 # ---------------------------------------------------------------------------
+
 
 class PerformanceTracker:
     """Tracks performance metrics across time periods for the PULSE employee."""

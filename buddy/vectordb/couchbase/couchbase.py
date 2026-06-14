@@ -18,15 +18,9 @@ try:
     from acouchbase.bucket import AsyncBucket
     from acouchbase.cluster import AsyncCluster
     from acouchbase.collection import AsyncCollection
-    from acouchbase.management.search import (
-        ScopeSearchIndexManager as AsyncScopeSearchIndexManager,
-    )
-    from acouchbase.management.search import (
-        SearchIndex as AsyncSearchIndex,
-    )
-    from acouchbase.management.search import (
-        SearchIndexManager as AsyncSearchIndexManager,
-    )
+    from acouchbase.management.search import ScopeSearchIndexManager as AsyncScopeSearchIndexManager
+    from acouchbase.management.search import SearchIndex as AsyncSearchIndex
+    from acouchbase.management.search import SearchIndexManager as AsyncSearchIndexManager
     from acouchbase.scope import AsyncScope
     from couchbase.bucket import Bucket
     from couchbase.cluster import Cluster
@@ -1069,4 +1063,3 @@ class CouchbaseSearch(VectorDb):
                     continue
 
         return documents
-

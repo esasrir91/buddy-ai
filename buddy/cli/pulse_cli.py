@@ -6,6 +6,7 @@ buddy pulse create         — Interactively create a PULSE employee
 buddy pulse kt             — Run a KT session from the CLI
 buddy pulse status         — Show employee status
 """
+
 from __future__ import annotations
 
 import json
@@ -39,6 +40,7 @@ console = Console(highlight=False)
 # buddy pulse start
 # ---------------------------------------------------------------------------
 
+
 @pulse_app.command("start")
 def start(
     host: str = typer.Option("localhost", "--host", "-H", help="Host to bind to"),
@@ -52,11 +54,12 @@ def start(
         console.print("[red]PULSE module not available. Make sure buddy-ai is properly installed.[/red]")
         raise typer.Exit(1)
 
-    console.print(Panel.fit(
-        f"[bold blue]>> Starting PULSE[/bold blue]\n"
-        f"[dim]http://{host}:{port}[/dim]",
-        border_style="blue",
-    ))
+    console.print(
+        Panel.fit(
+            f"[bold blue]>> Starting PULSE[/bold blue]\n" f"[dim]http://{host}:{port}[/dim]",
+            border_style="blue",
+        )
+    )
     app = PulseApp(host=host, port=port, open_browser=not no_browser)
     app.serve()
 
@@ -64,6 +67,7 @@ def start(
 # ---------------------------------------------------------------------------
 # buddy pulse create
 # ---------------------------------------------------------------------------
+
 
 @pulse_app.command("create")
 def create(
@@ -114,6 +118,7 @@ def create(
 # buddy pulse kt
 # ---------------------------------------------------------------------------
 
+
 @pulse_app.command("kt")
 def run_kt(
     source: str = typer.Argument(..., help="File path, URL, or text to learn from"),
@@ -124,8 +129,8 @@ def run_kt(
 ) -> None:
     """Run a document/URL KT session from the CLI."""
     try:
-        from buddy.pulse import PulseEmployee, EmployeeProfile, KTSourceType
         from buddy.models.openai import OpenAIChat
+        from buddy.pulse import EmployeeProfile, KTSourceType, PulseEmployee
     except ImportError as e:
         console.print(f"[red]Import error: {e}[/red]")
         raise typer.Exit(1)
@@ -150,15 +155,20 @@ def run_kt(
         )
 
     console.print("\n[bold green]✅ KT Complete[/bold green]")
-    console.print(Panel(
-        f"[bold]Confidence:[/bold] {summary.confidence_score:.0%}\n\n"
-        f"[bold]Mental Model:[/bold]\n{summary.mental_model}\n\n"
-        f"[bold]Key Concepts:[/bold] {', '.join(summary.key_concepts[:5])}\n\n"
-        f"[bold]Open Questions:[/bold]\n" +
-        "\n".join(f"  • {q}" for q in summary.open_questions[:3]) if summary.open_questions else "[dim]None[/dim]",
-        title=f"KT Summary — {summary.session_name}",
-        border_style="green",
-    ))
+    console.print(
+        Panel(
+            (
+                f"[bold]Confidence:[/bold] {summary.confidence_score:.0%}\n\n"
+                f"[bold]Mental Model:[/bold]\n{summary.mental_model}\n\n"
+                f"[bold]Key Concepts:[/bold] {', '.join(summary.key_concepts[:5])}\n\n"
+                f"[bold]Open Questions:[/bold]\n" + "\n".join(f"  • {q}" for q in summary.open_questions[:3])
+                if summary.open_questions
+                else "[dim]None[/dim]"
+            ),
+            title=f"KT Summary — {summary.session_name}",
+            border_style="green",
+        )
+    )
 
     if output:
         output.write_text(json.dumps(summary.model_dump(), indent=2, default=str))
@@ -169,11 +179,13 @@ def run_kt(
 # buddy pulse status
 # ---------------------------------------------------------------------------
 
+
 @pulse_app.command("status")
 def status() -> None:
     """Show PULSE module status and available features."""
     try:
         from buddy.pulse import __all__ as pulse_exports
+
         available = True
         export_count = len(pulse_exports)
     except ImportError:

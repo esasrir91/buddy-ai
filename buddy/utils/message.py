@@ -45,4 +45,3 @@ def get_text_from_message(message: Union[List, Dict, str, Message, BaseModel]) -
     if isinstance(message, Message) and message.content is not None:
         return get_text_from_message(message.content)
     return ""
-

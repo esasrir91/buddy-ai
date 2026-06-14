@@ -109,4 +109,3 @@ def get_response_model_format_prompt(response_model: Type[BaseModel]) -> str:
             message += f"\n- {field_name}"
 
     return message
-

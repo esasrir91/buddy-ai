@@ -85,4 +85,3 @@ class LocalFileSystemTools(Toolkit):
         if not file_path.exists():
             return f"File not found: {file_path}"
         return file_path.read_text()
-

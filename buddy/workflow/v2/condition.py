@@ -552,4 +552,3 @@ class Condition:
 
         for result in all_results:
             yield result
-

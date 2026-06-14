@@ -116,4 +116,3 @@ class CustomApiTools(Toolkit):
             error_message = f"Unexpected error: {str(e)}"
             logger.error(error_message)
             return json.dumps({"error": error_message}, indent=2)
-

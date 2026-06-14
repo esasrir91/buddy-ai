@@ -28,4 +28,3 @@ def verify_slack_signature(body: bytes, timestamp: str, slack_signature: str) ->
     )
 
     return hmac.compare_digest(my_signature, slack_signature)
-

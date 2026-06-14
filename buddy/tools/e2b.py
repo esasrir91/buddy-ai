@@ -694,4 +694,3 @@ class E2BTools(Toolkit):
 
         except Exception as e:
             return json.dumps({"status": "error", "message": f"Error listing running sandboxes: {str(e)}"})
-

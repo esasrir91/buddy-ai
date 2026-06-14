@@ -105,4 +105,3 @@ class FastAPIApp(BaseAPIApp):
         log_info(f"Starting API on {host}:{port}")
 
         uvicorn.run(app=app, host=host, port=port, reload=reload, workers=workers, **kwargs)
-

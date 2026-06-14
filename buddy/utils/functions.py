@@ -164,5 +164,3 @@ def cache_result(enable_cache: bool = True, cache_dir: Optional[str] = None, cac
         return wrapper
 
     return decorator
-
-

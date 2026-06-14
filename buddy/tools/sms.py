@@ -1,6 +1,6 @@
 import json
-from typing import Any, List, Optional
 from os import getenv
+from typing import Any, List, Optional
 
 from buddy.tools import Toolkit
 from buddy.utils.log import log_debug, logger
@@ -74,20 +74,12 @@ class SMSTools(Toolkit):
 
         try:
             url = f"https://api.twilio.com/2010-04-01/Accounts/{self.account_sid}/Messages.json"
-            
-            data = {
-                "From": self.from_number,
-                "To": to_number,
-                "Body": message
-            }
 
-            response = requests.post(
-                url,
-                data=data,
-                auth=(self.account_sid, self.auth_token)
-            )
+            data = {"From": self.from_number, "To": to_number, "Body": message}
+
+            response = requests.post(url, data=data, auth=(self.account_sid, self.auth_token))
             response.raise_for_status()
-            
+
             return json.dumps(response.json())
         except Exception as e:
             return json.dumps({"error": f"Failed to send SMS: {str(e)}"})
@@ -105,17 +97,14 @@ class SMSTools(Toolkit):
 
         try:
             sns_client = boto3.client(
-                'sns',
+                "sns",
                 aws_access_key_id=self.aws_access_key,
                 aws_secret_access_key=self.aws_secret_key,
-                region_name=self.aws_region
+                region_name=self.aws_region,
             )
 
-            response = sns_client.publish(
-                PhoneNumber=to_number,
-                Message=message
-            )
-            
+            response = sns_client.publish(PhoneNumber=to_number, Message=message)
+
             return json.dumps({"message_id": response["MessageId"], "status": "sent"})
         except ClientError as e:
             return json.dumps({"error": f"AWS SNS error: {str(e)}"})
@@ -133,13 +122,10 @@ class SMSTools(Toolkit):
             str: Bulk send results
         """
         results = []
-        
+
         for number in phone_numbers:
             result = self.send_sms(number, message)
-            results.append({
-                "number": number,
-                "result": json.loads(result)
-            })
+            results.append({"number": number, "result": json.loads(result)})
 
         return json.dumps({"bulk_results": results})
 
@@ -160,10 +146,10 @@ class SMSTools(Toolkit):
 
         try:
             url = f"https://api.twilio.com/2010-04-01/Accounts/{self.account_sid}/Messages/{message_sid}.json"
-            
+
             response = requests.get(url, auth=(self.account_sid, self.auth_token))
             response.raise_for_status()
-            
+
             return json.dumps(response.json())
         except Exception as e:
             return json.dumps({"error": f"Failed to get message status: {str(e)}"})

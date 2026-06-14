@@ -244,4 +244,3 @@ class SerperTools(Toolkit):
         except Exception as e:
             log_error(f"Unexpected error scraping webpage {url}: {e}")
             return json.dumps({"error": f"An unexpected error occurred: {str(e)}"}, indent=2)
-

@@ -105,4 +105,3 @@ class GeminiEmbedder(Embedder):
         except Exception as e:
             log_error(f"Error extracting embeddings: {e}")
             return [], usage
-

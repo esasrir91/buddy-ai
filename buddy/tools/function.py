@@ -856,5 +856,3 @@ class FunctionCall(BaseModel):
             self._handle_post_hook()
 
         return FunctionExecutionResult(status="success", result=self.result)
-
-

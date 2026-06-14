@@ -519,4 +519,3 @@ class Router:
 
         for result in all_results:
             yield result
-

@@ -64,4 +64,3 @@ class LlamaIndexKnowledgeBase(AgentKnowledge):
     def exists(self) -> bool:
         logger.warning("LlamaIndexKnowledgeBase.exists() not supported - please check the vectorstore manually.")
         return True
-

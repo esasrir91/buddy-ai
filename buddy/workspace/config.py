@@ -323,4 +323,3 @@ class WorkspaceConfig(BaseModel):
                     infra_resources_list.append(_infra_resources)
 
         return infra_resources_list
-

@@ -18,4 +18,3 @@ class ContainerContext(BaseModel):
     workspace_parent: str
     # Path to the requirements.txt file relative to the workspace_root
     requirements_file: Optional[str] = None
-

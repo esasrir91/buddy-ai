@@ -565,4 +565,3 @@ class WorkflowRunResponse:
     def has_completed(self) -> bool:
         """Check if the workflow run is completed (either successfully or with error)"""
         return self.status in [RunStatus.completed, RunStatus.error]
-

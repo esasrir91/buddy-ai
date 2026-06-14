@@ -195,4 +195,3 @@ def get_sync_router(agent: Optional[Agent] = None, team: Optional[Team] = None) 
             )
 
     return router
-

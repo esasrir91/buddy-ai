@@ -23,4 +23,3 @@ def write_yaml_file(file_path: Optional[Path], data: Optional[Dict[str, Any]], *
 
         log_debug(f"Writing {file_path}")
         file_path.write_text(yaml.safe_dump(data, **kwargs))
-

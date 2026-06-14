@@ -1,13 +1,13 @@
+import hashlib
 import json
+import mimetypes
 import os
+import re
 import shutil
 import stat
-import hashlib
-import mimetypes
-import re
 from datetime import datetime
 from pathlib import Path
-from typing import Any, List, Optional, Dict, Union
+from typing import Any, Dict, List, Optional, Union
 
 from buddy.tools import Toolkit
 from buddy.utils.log import log_debug, log_error, log_info
@@ -60,16 +60,18 @@ class FileTools(Toolkit):
         if text_operations:
             tools.extend([self.find_in_file, self.replace_in_file, self.count_lines])
         if advanced_search:
-            tools.extend([
-                self.search_text_in_files, 
-                self.search_by_extension, 
-                self.search_by_size,
-                self.search_by_date,
-                self.search_with_regex,
-                self.find_duplicates,
-                self.search_empty_files,
-                self.grep_search
-            ])
+            tools.extend(
+                [
+                    self.search_text_in_files,
+                    self.search_by_extension,
+                    self.search_by_size,
+                    self.search_by_date,
+                    self.search_with_regex,
+                    self.find_duplicates,
+                    self.search_empty_files,
+                    self.grep_search,
+                ]
+            )
 
         super().__init__(name="file_tools", tools=tools, **kwargs)
 
@@ -162,11 +164,11 @@ class FileTools(Toolkit):
             file_path = self.base_dir.joinpath(file_name)
             if file_path.exists():
                 return f"File {file_name} already exists"
-            
+
             # Create parent directories if they don't exist
             if not file_path.parent.exists():
                 file_path.parent.mkdir(parents=True, exist_ok=True)
-            
+
             file_path.write_text(contents, encoding="utf-8")
             log_info(f"Created file: {file_path}")
             return f"Created file: {file_name}"
@@ -184,7 +186,7 @@ class FileTools(Toolkit):
             dir_path = self.base_dir.joinpath(dir_name)
             if dir_path.exists():
                 return f"Directory {dir_name} already exists"
-            
+
             dir_path.mkdir(parents=True, exist_ok=True)
             log_info(f"Created directory: {dir_path}")
             return f"Created directory: {dir_name}"
@@ -202,14 +204,14 @@ class FileTools(Toolkit):
         try:
             if not confirm:
                 return "Confirmation required. Set confirm=True to delete the file."
-            
+
             file_path = self.base_dir.joinpath(file_name)
             if not file_path.exists():
                 return f"File {file_name} does not exist"
-            
+
             if file_path.is_dir():
                 return f"{file_name} is a directory, use delete_directory instead"
-            
+
             file_path.unlink()
             log_info(f"Deleted file: {file_path}")
             return f"Deleted file: {file_name}"
@@ -227,14 +229,14 @@ class FileTools(Toolkit):
         try:
             if not confirm:
                 return "Confirmation required. Set confirm=True to delete the directory."
-            
+
             dir_path = self.base_dir.joinpath(dir_name)
             if not dir_path.exists():
                 return f"Directory {dir_name} does not exist"
-            
+
             if not dir_path.is_dir():
                 return f"{dir_name} is not a directory"
-            
+
             shutil.rmtree(dir_path)
             log_info(f"Deleted directory: {dir_path}")
             return f"Deleted directory: {dir_name}"
@@ -252,14 +254,14 @@ class FileTools(Toolkit):
         try:
             source_path = self.base_dir.joinpath(source)
             dest_path = self.base_dir.joinpath(destination)
-            
+
             if not source_path.exists():
                 return f"Source file {source} does not exist"
-            
+
             # Create destination directory if it doesn't exist
             if not dest_path.parent.exists():
                 dest_path.parent.mkdir(parents=True, exist_ok=True)
-            
+
             shutil.move(str(source_path), str(dest_path))
             log_info(f"Moved file from {source_path} to {dest_path}")
             return f"Moved file from {source} to {destination}"
@@ -277,13 +279,13 @@ class FileTools(Toolkit):
         try:
             old_path = self.base_dir.joinpath(old_name)
             new_path = self.base_dir.joinpath(new_name)
-            
+
             if not old_path.exists():
                 return f"File {old_name} does not exist"
-            
+
             if new_path.exists():
                 return f"File {new_name} already exists"
-            
+
             old_path.rename(new_path)
             log_info(f"Renamed file from {old_path} to {new_path}")
             return f"Renamed file from {old_name} to {new_name}"
@@ -302,17 +304,17 @@ class FileTools(Toolkit):
         try:
             source_path = self.base_dir.joinpath(source)
             dest_path = self.base_dir.joinpath(destination)
-            
+
             if not source_path.exists():
                 return f"Source file {source} does not exist"
-            
+
             if dest_path.exists() and not overwrite:
                 return f"Destination file {destination} already exists"
-            
+
             # Create destination directory if it doesn't exist
             if not dest_path.parent.exists():
                 dest_path.parent.mkdir(parents=True, exist_ok=True)
-            
+
             shutil.copy2(str(source_path), str(dest_path))
             log_info(f"Copied file from {source_path} to {dest_path}")
             return f"Copied file from {source} to {destination}"
@@ -330,9 +332,9 @@ class FileTools(Toolkit):
             file_path = self.base_dir.joinpath(file_name)
             if not file_path.exists():
                 return f"File/directory {file_name} does not exist"
-            
+
             stat_info = file_path.stat()
-            
+
             info = {
                 "name": file_name,
                 "absolute_path": str(file_path.absolute()),
@@ -347,11 +349,11 @@ class FileTools(Toolkit):
                 "is_writable": os.access(file_path, os.W_OK),
                 "is_executable": os.access(file_path, os.X_OK),
             }
-            
+
             if file_path.is_file():
                 info["mime_type"] = mimetypes.guess_type(str(file_path))[0]
                 info["suffix"] = file_path.suffix
-            
+
             return json.dumps(info, indent=2)
         except Exception as e:
             log_error(f"Error getting file info: {e}")
@@ -386,13 +388,13 @@ class FileTools(Toolkit):
             file_path = self.base_dir.joinpath(file_name)
             if not file_path.exists():
                 return f"File {file_name} does not exist"
-            
+
             if file_path.is_dir():
                 # Calculate directory size
-                total_size = sum(f.stat().st_size for f in file_path.rglob('*') if f.is_file())
+                total_size = sum(f.stat().st_size for f in file_path.rglob("*") if f.is_file())
             else:
                 total_size = file_path.stat().st_size
-            
+
             result = {
                 "file_name": file_name,
                 "size_bytes": total_size,
@@ -414,19 +416,19 @@ class FileTools(Toolkit):
             file_path = self.base_dir.joinpath(file_name)
             if not file_path.exists():
                 return f"File {file_name} does not exist"
-            
+
             if file_path.is_dir():
                 return f"{file_name} is a directory"
-            
+
             # Validate algorithm
-            if algorithm.lower() not in ['md5', 'sha1', 'sha256', 'sha512']:
+            if algorithm.lower() not in ["md5", "sha1", "sha256", "sha512"]:
                 return f"Unsupported hash algorithm: {algorithm}"
-            
+
             hash_obj = hashlib.new(algorithm.lower())
-            with open(file_path, 'rb') as f:
+            with open(file_path, "rb") as f:
                 for chunk in iter(lambda: f.read(4096), b""):
                     hash_obj.update(chunk)
-            
+
             result = {
                 "file_name": file_name,
                 "algorithm": algorithm.lower(),
@@ -446,14 +448,14 @@ class FileTools(Toolkit):
         """
         try:
             file_path = self.base_dir.joinpath(file_name)
-            
+
             # Create file if it doesn't exist
             if not file_path.exists():
                 file_path.touch()
-            
-            with open(file_path, 'a', encoding='utf-8') as f:
+
+            with open(file_path, "a", encoding="utf-8") as f:
                 f.write(contents)
-            
+
             log_info(f"Appended to file: {file_path}")
             return f"Appended content to {file_name}"
         except Exception as e:
@@ -471,12 +473,12 @@ class FileTools(Toolkit):
             file_path = self.base_dir.joinpath(file_name)
             if not file_path.exists():
                 return f"File {file_name} does not exist"
-            
+
             # Add timestamp to backup suffix
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             backup_name = f"{file_name}{backup_suffix}_{timestamp}"
             backup_path = self.base_dir.joinpath(backup_name)
-            
+
             shutil.copy2(str(file_path), str(backup_path))
             log_info(f"Created backup: {backup_path}")
             return f"Created backup: {backup_name}"
@@ -494,10 +496,10 @@ class FileTools(Toolkit):
         try:
             backup_path = self.base_dir.joinpath(backup_file_name)
             original_path = self.base_dir.joinpath(original_file_name)
-            
+
             if not backup_path.exists():
                 return f"Backup file {backup_file_name} does not exist"
-            
+
             shutil.copy2(str(backup_path), str(original_path))
             log_info(f"Restored file from backup: {original_path}")
             return f"Restored {original_file_name} from {backup_file_name}"
@@ -517,29 +519,31 @@ class FileTools(Toolkit):
             file_path = self.base_dir.joinpath(file_name)
             if not file_path.exists():
                 return f"File {file_name} does not exist"
-            
+
             if file_path.is_dir():
                 return f"{file_name} is a directory"
-            
+
             matches = []
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 for line_num, line in enumerate(f, 1):
                     line_to_search = line if case_sensitive else line.lower()
                     text_to_find = search_text if case_sensitive else search_text.lower()
-                    
+
                     if text_to_find in line_to_search:
-                        matches.append({
-                            "line_number": line_num,
-                            "line_content": line.rstrip('\n\r'),
-                            "column": line_to_search.find(text_to_find) + 1
-                        })
-            
+                        matches.append(
+                            {
+                                "line_number": line_num,
+                                "line_content": line.rstrip("\n\r"),
+                                "column": line_to_search.find(text_to_find) + 1,
+                            }
+                        )
+
             result = {
                 "file_name": file_name,
                 "search_text": search_text,
                 "case_sensitive": case_sensitive,
                 "matches_found": len(matches),
-                "matches": matches
+                "matches": matches,
             }
             return json.dumps(result, indent=2)
         except Exception as e:
@@ -559,14 +563,14 @@ class FileTools(Toolkit):
             file_path = self.base_dir.joinpath(file_name)
             if not file_path.exists():
                 return f"File {file_name} does not exist"
-            
+
             if file_path.is_dir():
                 return f"{file_name} is a directory"
-            
+
             # Read file content
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
-            
+
             # Perform replacement
             if case_sensitive:
                 new_content = content.replace(search_text, replace_text)
@@ -574,14 +578,15 @@ class FileTools(Toolkit):
             else:
                 # Case insensitive replacement
                 import re
+
                 pattern = re.compile(re.escape(search_text), re.IGNORECASE)
                 new_content = pattern.sub(replace_text, content)
                 count = len(pattern.findall(content))
-            
+
             # Write back to file
-            with open(file_path, 'w', encoding='utf-8') as f:
+            with open(file_path, "w", encoding="utf-8") as f:
                 f.write(new_content)
-            
+
             log_info(f"Replaced {count} occurrences in {file_path}")
             return f"Replaced {count} occurrences of '{search_text}' with '{replace_text}' in {file_name}"
         except Exception as e:
@@ -598,17 +603,17 @@ class FileTools(Toolkit):
             file_path = self.base_dir.joinpath(file_name)
             if not file_path.exists():
                 return f"File {file_name} does not exist"
-            
+
             if file_path.is_dir():
                 return f"{file_name} is a directory"
-            
-            with open(file_path, 'r', encoding='utf-8') as f:
+
+            with open(file_path, "r", encoding="utf-8") as f:
                 lines = f.readlines()
-            
+
             total_lines = len(lines)
             non_empty_lines = sum(1 for line in lines if line.strip())
             empty_lines = total_lines - non_empty_lines
-            
+
             result = {
                 "file_name": file_name,
                 "total_lines": total_lines,
@@ -628,15 +633,18 @@ class FileTools(Toolkit):
         """
         if size_bytes == 0:
             return "0 B"
-        
+
         size_names = ["B", "KB", "MB", "GB", "TB"]
         import math
+
         i = int(math.floor(math.log(size_bytes, 1024)))
         p = math.pow(1024, i)
         s = round(size_bytes / p, 2)
         return f"{s} {size_names[i]}"
 
-    def search_text_in_files(self, search_text: str, file_pattern: str = "**/*", case_sensitive: bool = True, max_results: int = 100) -> str:
+    def search_text_in_files(
+        self, search_text: str, file_pattern: str = "**/*", case_sensitive: bool = True, max_results: int = 100
+    ) -> str:
         """Searches for text across multiple files in the directory tree.
 
         :param search_text: The text to search for.
@@ -650,53 +658,57 @@ class FileTools(Toolkit):
                 return "Error: Search text cannot be empty"
 
             log_debug(f"Searching for '{search_text}' in files matching '{file_pattern}'")
-            
+
             matching_files = list(self.base_dir.glob(file_pattern))
             results = []
             total_matches = 0
-            
+
             for file_path in matching_files:
                 if not file_path.is_file():
                     continue
-                    
+
                 try:
                     # Skip binary files by checking for null bytes in first 1024 bytes
-                    with open(file_path, 'rb') as f:
+                    with open(file_path, "rb") as f:
                         sample = f.read(1024)
-                        if b'\0' in sample:
+                        if b"\0" in sample:
                             continue
-                    
-                    with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+
+                    with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
                         file_matches = []
                         for line_num, line in enumerate(f, 1):
                             line_to_search = line if case_sensitive else line.lower()
                             text_to_find = search_text if case_sensitive else search_text.lower()
-                            
+
                             if text_to_find in line_to_search:
-                                file_matches.append({
-                                    "line_number": line_num,
-                                    "line_content": line.rstrip('\n\r'),
-                                    "column": line_to_search.find(text_to_find) + 1
-                                })
+                                file_matches.append(
+                                    {
+                                        "line_number": line_num,
+                                        "line_content": line.rstrip("\n\r"),
+                                        "column": line_to_search.find(text_to_find) + 1,
+                                    }
+                                )
                                 total_matches += 1
-                                
+
                                 if total_matches >= max_results:
                                     break
-                        
+
                         if file_matches:
-                            results.append({
-                                "file_path": str(file_path.relative_to(self.base_dir)),
-                                "absolute_path": str(file_path),
-                                "matches_in_file": len(file_matches),
-                                "matches": file_matches
-                            })
-                            
+                            results.append(
+                                {
+                                    "file_path": str(file_path.relative_to(self.base_dir)),
+                                    "absolute_path": str(file_path),
+                                    "matches_in_file": len(file_matches),
+                                    "matches": file_matches,
+                                }
+                            )
+
                         if total_matches >= max_results:
                             break
-                            
+
                 except (UnicodeDecodeError, PermissionError):
                     continue
-            
+
             result = {
                 "search_text": search_text,
                 "file_pattern": file_pattern,
@@ -705,11 +717,11 @@ class FileTools(Toolkit):
                 "files_with_matches": len(results),
                 "total_matches": total_matches,
                 "max_results_reached": total_matches >= max_results,
-                "results": results
+                "results": results,
             }
-            
+
             return json.dumps(result, indent=2)
-            
+
         except Exception as e:
             log_error(f"Error searching text in files: {e}")
             return f"Error searching text in files: {e}"
@@ -724,40 +736,38 @@ class FileTools(Toolkit):
         try:
             if isinstance(extensions, str):
                 extensions = [extensions]
-            
+
             # Ensure extensions start with dot
-            extensions = [ext if ext.startswith('.') else f'.{ext}' for ext in extensions]
-            
+            extensions = [ext if ext.startswith(".") else f".{ext}" for ext in extensions]
+
             log_debug(f"Searching for files with extensions: {extensions}")
-            
+
             results = []
-            for file_path in self.base_dir.rglob('*'):
+            for file_path in self.base_dir.rglob("*"):
                 if file_path.is_file() and file_path.suffix.lower() in [ext.lower() for ext in extensions]:
                     file_info = {
                         "file_path": str(file_path.relative_to(self.base_dir)),
                         "absolute_path": str(file_path),
                         "extension": file_path.suffix,
-                        "name": file_path.name
+                        "name": file_path.name,
                     }
-                    
+
                     if include_info:
                         stat_info = file_path.stat()
-                        file_info.update({
-                            "size_bytes": stat_info.st_size,
-                            "size_readable": self._format_size(stat_info.st_size),
-                            "modified": datetime.fromtimestamp(stat_info.st_mtime).isoformat(),
-                        })
-                    
+                        file_info.update(
+                            {
+                                "size_bytes": stat_info.st_size,
+                                "size_readable": self._format_size(stat_info.st_size),
+                                "modified": datetime.fromtimestamp(stat_info.st_mtime).isoformat(),
+                            }
+                        )
+
                     results.append(file_info)
-            
-            result = {
-                "extensions": extensions,
-                "files_found": len(results),
-                "files": results
-            }
-            
+
+            result = {"extensions": extensions, "files_found": len(results), "files": results}
+
             return json.dumps(result, indent=2)
-            
+
         except Exception as e:
             log_error(f"Error searching by extension: {e}")
             return f"Error searching by extension: {e}"
@@ -772,48 +782,45 @@ class FileTools(Toolkit):
         """
         try:
             # Convert sizes to bytes
-            multipliers = {
-                'bytes': 1,
-                'kb': 1024,
-                'mb': 1024 * 1024,
-                'gb': 1024 * 1024 * 1024
-            }
-            
+            multipliers = {"bytes": 1, "kb": 1024, "mb": 1024 * 1024, "gb": 1024 * 1024 * 1024}
+
             if size_unit.lower() not in multipliers:
                 return f"Invalid size unit: {size_unit}. Use: bytes, kb, mb, gb"
-            
+
             multiplier = multipliers[size_unit.lower()]
             min_bytes = min_size * multiplier
             max_bytes = max_size * multiplier if max_size is not None else None
-            
+
             log_debug(f"Searching for files with size range: {min_bytes} - {max_bytes} bytes")
-            
+
             results = []
-            for file_path in self.base_dir.rglob('*'):
+            for file_path in self.base_dir.rglob("*"):
                 if file_path.is_file():
                     size = file_path.stat().st_size
-                    
+
                     if size >= min_bytes and (max_bytes is None or size <= max_bytes):
-                        results.append({
-                            "file_path": str(file_path.relative_to(self.base_dir)),
-                            "absolute_path": str(file_path),
-                            "size_bytes": size,
-                            "size_readable": self._format_size(size),
-                            "name": file_path.name
-                        })
-            
+                        results.append(
+                            {
+                                "file_path": str(file_path.relative_to(self.base_dir)),
+                                "absolute_path": str(file_path),
+                                "size_bytes": size,
+                                "size_readable": self._format_size(size),
+                                "name": file_path.name,
+                            }
+                        )
+
             # Sort by size (largest first)
             results.sort(key=lambda x: x["size_bytes"], reverse=True)
-            
+
             result = {
                 "min_size": f"{min_size} {size_unit}",
                 "max_size": f"{max_size} {size_unit}" if max_size else "unlimited",
                 "files_found": len(results),
-                "files": results
+                "files": results,
             }
-            
+
             return json.dumps(result, indent=2)
-            
+
         except Exception as e:
             log_error(f"Error searching by size: {e}")
             return f"Error searching by size: {e}"
@@ -827,54 +834,58 @@ class FileTools(Toolkit):
         :return: JSON with files matching the date criteria.
         """
         try:
-            if date_type not in ['modified', 'created', 'accessed']:
+            if date_type not in ["modified", "created", "accessed"]:
                 return "Invalid date_type. Use: modified, created, accessed"
-            
-            if comparison not in ['newer', 'older']:
+
+            if comparison not in ["newer", "older"]:
                 return "Invalid comparison. Use: newer, older"
-            
+
             from datetime import datetime, timedelta
+
             reference_date = datetime.now() - timedelta(days=days_ago)
             reference_timestamp = reference_date.timestamp()
-            
+
             log_debug(f"Searching for files {comparison} than {days_ago} days ago ({reference_date})")
-            
+
             results = []
-            for file_path in self.base_dir.rglob('*'):
+            for file_path in self.base_dir.rglob("*"):
                 if file_path.is_file():
                     stat_info = file_path.stat()
-                    
-                    if date_type == 'modified':
+
+                    if date_type == "modified":
                         file_timestamp = stat_info.st_mtime
-                    elif date_type == 'created':
+                    elif date_type == "created":
                         file_timestamp = stat_info.st_ctime
                     else:  # accessed
                         file_timestamp = stat_info.st_atime
-                    
-                    if (comparison == 'newer' and file_timestamp > reference_timestamp) or \
-                       (comparison == 'older' and file_timestamp < reference_timestamp):
-                        results.append({
-                            "file_path": str(file_path.relative_to(self.base_dir)),
-                            "absolute_path": str(file_path),
-                            "name": file_path.name,
-                            f"{date_type}_date": datetime.fromtimestamp(file_timestamp).isoformat(),
-                            "size_readable": self._format_size(stat_info.st_size)
-                        })
-            
+
+                    if (comparison == "newer" and file_timestamp > reference_timestamp) or (
+                        comparison == "older" and file_timestamp < reference_timestamp
+                    ):
+                        results.append(
+                            {
+                                "file_path": str(file_path.relative_to(self.base_dir)),
+                                "absolute_path": str(file_path),
+                                "name": file_path.name,
+                                f"{date_type}_date": datetime.fromtimestamp(file_timestamp).isoformat(),
+                                "size_readable": self._format_size(stat_info.st_size),
+                            }
+                        )
+
             # Sort by date (newest first)
             results.sort(key=lambda x: x[f"{date_type}_date"], reverse=True)
-            
+
             result = {
                 "date_type": date_type,
                 "days_ago": days_ago,
                 "comparison": comparison,
                 "reference_date": reference_date.isoformat(),
                 "files_found": len(results),
-                "files": results
+                "files": results,
             }
-            
+
             return json.dumps(result, indent=2)
-            
+
         except Exception as e:
             log_error(f"Error searching by date: {e}")
             return f"Error searching by date: {e}"
@@ -890,57 +901,61 @@ class FileTools(Toolkit):
         try:
             compiled_pattern = re.compile(pattern)
             log_debug(f"Searching with regex pattern: {pattern}")
-            
+
             matching_files = list(self.base_dir.glob(file_pattern))
             results = []
             total_matches = 0
-            
+
             for file_path in matching_files:
                 if not file_path.is_file():
                     continue
-                    
+
                 try:
                     # Skip binary files
-                    with open(file_path, 'rb') as f:
+                    with open(file_path, "rb") as f:
                         sample = f.read(1024)
-                        if b'\0' in sample:
+                        if b"\0" in sample:
                             continue
-                    
-                    with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+
+                    with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
                         file_matches = []
                         for line_num, line in enumerate(f, 1):
                             matches = list(compiled_pattern.finditer(line))
                             for match in matches:
-                                file_matches.append({
-                                    "line_number": line_num,
-                                    "line_content": line.rstrip('\n\r'),
-                                    "match": match.group(),
-                                    "start_column": match.start() + 1,
-                                    "end_column": match.end() + 1,
-                                    "groups": match.groups() if match.groups() else []
-                                })
+                                file_matches.append(
+                                    {
+                                        "line_number": line_num,
+                                        "line_content": line.rstrip("\n\r"),
+                                        "match": match.group(),
+                                        "start_column": match.start() + 1,
+                                        "end_column": match.end() + 1,
+                                        "groups": match.groups() if match.groups() else [],
+                                    }
+                                )
                                 total_matches += 1
-                                
+
                                 if total_matches >= max_results:
                                     break
-                            
+
                             if total_matches >= max_results:
                                 break
-                        
+
                         if file_matches:
-                            results.append({
-                                "file_path": str(file_path.relative_to(self.base_dir)),
-                                "absolute_path": str(file_path),
-                                "matches_in_file": len(file_matches),
-                                "matches": file_matches
-                            })
-                            
+                            results.append(
+                                {
+                                    "file_path": str(file_path.relative_to(self.base_dir)),
+                                    "absolute_path": str(file_path),
+                                    "matches_in_file": len(file_matches),
+                                    "matches": file_matches,
+                                }
+                            )
+
                         if total_matches >= max_results:
                             break
-                            
+
                 except (UnicodeDecodeError, PermissionError, re.error):
                     continue
-            
+
             result = {
                 "regex_pattern": pattern,
                 "file_pattern": file_pattern,
@@ -948,11 +963,11 @@ class FileTools(Toolkit):
                 "files_with_matches": len(results),
                 "total_matches": total_matches,
                 "max_results_reached": total_matches >= max_results,
-                "results": results
+                "results": results,
             }
-            
+
             return json.dumps(result, indent=2)
-            
+
         except re.error as e:
             return f"Invalid regex pattern: {e}"
         except Exception as e:
@@ -967,47 +982,47 @@ class FileTools(Toolkit):
         :return: JSON with duplicate file groups.
         """
         try:
-            if algorithm.lower() not in ['md5', 'sha1', 'sha256', 'sha512']:
+            if algorithm.lower() not in ["md5", "sha1", "sha256", "sha512"]:
                 return f"Unsupported hash algorithm: {algorithm}"
-            
+
             log_debug(f"Finding duplicates using {algorithm} hash")
-            
+
             file_hashes = {}
             processed_files = 0
-            
-            for file_path in self.base_dir.rglob('*'):
+
+            for file_path in self.base_dir.rglob("*"):
                 if file_path.is_file() and file_path.stat().st_size >= min_size:
                     try:
                         hash_obj = hashlib.new(algorithm.lower())
-                        with open(file_path, 'rb') as f:
+                        with open(file_path, "rb") as f:
                             for chunk in iter(lambda: f.read(4096), b""):
                                 hash_obj.update(chunk)
-                        
+
                         file_hash = hash_obj.hexdigest()
                         file_info = {
                             "path": str(file_path.relative_to(self.base_dir)),
                             "absolute_path": str(file_path),
                             "size": file_path.stat().st_size,
-                            "size_readable": self._format_size(file_path.stat().st_size)
+                            "size_readable": self._format_size(file_path.stat().st_size),
                         }
-                        
+
                         if file_hash not in file_hashes:
                             file_hashes[file_hash] = []
                         file_hashes[file_hash].append(file_info)
                         processed_files += 1
-                        
+
                     except (PermissionError, OSError):
                         continue
-            
+
             # Find duplicates (groups with more than one file)
             duplicate_groups = {hash_val: files for hash_val, files in file_hashes.items() if len(files) > 1}
-            
+
             # Calculate total duplicate size
             total_duplicate_size = 0
             for files in duplicate_groups.values():
                 # Size of duplicates (excluding the original)
                 total_duplicate_size += files[0]["size"] * (len(files) - 1)
-            
+
             result = {
                 "algorithm": algorithm,
                 "min_size_bytes": min_size,
@@ -1022,14 +1037,14 @@ class FileTools(Toolkit):
                         "count": len(files),
                         "size": files[0]["size"],
                         "size_readable": files[0]["size_readable"],
-                        "files": files
+                        "files": files,
                     }
                     for hash_val, files in duplicate_groups.items()
-                ]
+                ],
             }
-            
+
             return json.dumps(result, indent=2)
-            
+
         except Exception as e:
             log_error(f"Error finding duplicates: {e}")
             return f"Error finding duplicates: {e}"
@@ -1042,43 +1057,55 @@ class FileTools(Toolkit):
         """
         try:
             log_debug("Searching for empty files and directories")
-            
+
             empty_files = []
             empty_dirs = []
-            
-            for item_path in self.base_dir.rglob('*'):
+
+            for item_path in self.base_dir.rglob("*"):
                 if item_path.is_file() and item_path.stat().st_size == 0:
-                    empty_files.append({
-                        "path": str(item_path.relative_to(self.base_dir)),
-                        "absolute_path": str(item_path),
-                        "name": item_path.name
-                    })
+                    empty_files.append(
+                        {
+                            "path": str(item_path.relative_to(self.base_dir)),
+                            "absolute_path": str(item_path),
+                            "name": item_path.name,
+                        }
+                    )
                 elif include_directories and item_path.is_dir():
                     # Check if directory is empty
                     try:
                         if not any(item_path.iterdir()):
-                            empty_dirs.append({
-                                "path": str(item_path.relative_to(self.base_dir)),
-                                "absolute_path": str(item_path),
-                                "name": item_path.name
-                            })
+                            empty_dirs.append(
+                                {
+                                    "path": str(item_path.relative_to(self.base_dir)),
+                                    "absolute_path": str(item_path),
+                                    "name": item_path.name,
+                                }
+                            )
                     except PermissionError:
                         continue
-            
+
             result = {
                 "empty_files_found": len(empty_files),
                 "empty_directories_found": len(empty_dirs) if include_directories else "not_searched",
                 "empty_files": empty_files,
-                "empty_directories": empty_dirs if include_directories else []
+                "empty_directories": empty_dirs if include_directories else [],
             }
-            
+
             return json.dumps(result, indent=2)
-            
+
         except Exception as e:
             log_error(f"Error searching for empty files: {e}")
             return f"Error searching for empty files: {e}"
 
-    def grep_search(self, pattern: str, file_pattern: str = "**/*", context_lines: int = 0, case_sensitive: bool = True, whole_word: bool = False, max_results: int = 100) -> str:
+    def grep_search(
+        self,
+        pattern: str,
+        file_pattern: str = "**/*",
+        context_lines: int = 0,
+        case_sensitive: bool = True,
+        whole_word: bool = False,
+        max_results: int = 100,
+    ) -> str:
         """Advanced grep-like search with context lines and options.
 
         :param pattern: Text pattern to search for.
@@ -1092,42 +1119,43 @@ class FileTools(Toolkit):
         try:
             if not pattern or not pattern.strip():
                 return "Error: Search pattern cannot be empty"
-            
+
             log_debug(f"Grep search for pattern: {pattern}")
-            
+
             # Prepare search pattern
             if whole_word:
-                search_pattern = re.compile(r'\b' + re.escape(pattern) + r'\b', 
-                                          re.IGNORECASE if not case_sensitive else 0)
+                search_pattern = re.compile(
+                    r"\b" + re.escape(pattern) + r"\b", re.IGNORECASE if not case_sensitive else 0
+                )
             else:
                 if case_sensitive:
                     search_func = lambda line: pattern in line
                 else:
                     pattern_lower = pattern.lower()
                     search_func = lambda line: pattern_lower in line.lower()
-            
+
             matching_files = list(self.base_dir.glob(file_pattern))
             results = []
             total_matches = 0
-            
+
             for file_path in matching_files:
                 if not file_path.is_file():
                     continue
-                    
+
                 try:
                     # Skip binary files
-                    with open(file_path, 'rb') as f:
+                    with open(file_path, "rb") as f:
                         sample = f.read(1024)
-                        if b'\0' in sample:
+                        if b"\0" in sample:
                             continue
-                    
-                    with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+
+                    with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
                         lines = f.readlines()
-                    
+
                     file_matches = []
                     for line_num, line in enumerate(lines):
-                        line_content = line.rstrip('\n\r')
-                        
+                        line_content = line.rstrip("\n\r")
+
                         # Check for match
                         if whole_word:
                             match = search_pattern.search(line_content)
@@ -1145,55 +1173,53 @@ class FileTools(Toolkit):
                                 else:
                                     match_start = line_content.lower().find(pattern.lower())
                                 match_end = match_start + len(pattern)
-                        
+
                         if match_found:
                             # Get context lines
                             context_before = []
                             context_after = []
-                            
+
                             if context_lines > 0:
                                 start_idx = max(0, line_num - context_lines)
                                 end_idx = min(len(lines), line_num + context_lines + 1)
-                                
+
                                 for i in range(start_idx, line_num):
-                                    context_before.append({
-                                        "line_number": i + 1,
-                                        "content": lines[i].rstrip('\n\r')
-                                    })
-                                
+                                    context_before.append({"line_number": i + 1, "content": lines[i].rstrip("\n\r")})
+
                                 for i in range(line_num + 1, end_idx):
-                                    context_after.append({
-                                        "line_number": i + 1,
-                                        "content": lines[i].rstrip('\n\r')
-                                    })
-                            
-                            file_matches.append({
-                                "line_number": line_num + 1,
-                                "line_content": line_content,
-                                "match_start_column": match_start + 1,
-                                "match_end_column": match_end + 1,
-                                "context_before": context_before,
-                                "context_after": context_after
-                            })
-                            
+                                    context_after.append({"line_number": i + 1, "content": lines[i].rstrip("\n\r")})
+
+                            file_matches.append(
+                                {
+                                    "line_number": line_num + 1,
+                                    "line_content": line_content,
+                                    "match_start_column": match_start + 1,
+                                    "match_end_column": match_end + 1,
+                                    "context_before": context_before,
+                                    "context_after": context_after,
+                                }
+                            )
+
                             total_matches += 1
                             if total_matches >= max_results:
                                 break
-                    
+
                     if file_matches:
-                        results.append({
-                            "file_path": str(file_path.relative_to(self.base_dir)),
-                            "absolute_path": str(file_path),
-                            "matches_in_file": len(file_matches),
-                            "matches": file_matches
-                        })
-                    
+                        results.append(
+                            {
+                                "file_path": str(file_path.relative_to(self.base_dir)),
+                                "absolute_path": str(file_path),
+                                "matches_in_file": len(file_matches),
+                                "matches": file_matches,
+                            }
+                        )
+
                     if total_matches >= max_results:
                         break
-                        
+
                 except (UnicodeDecodeError, PermissionError):
                     continue
-            
+
             result = {
                 "pattern": pattern,
                 "file_pattern": file_pattern,
@@ -1204,12 +1230,11 @@ class FileTools(Toolkit):
                 "files_with_matches": len(results),
                 "total_matches": total_matches,
                 "max_results_reached": total_matches >= max_results,
-                "results": results
+                "results": results,
             }
-            
+
             return json.dumps(result, indent=2)
-            
+
         except Exception as e:
             log_error(f"Error in grep search: {e}")
             return f"Error in grep search: {e}"
-

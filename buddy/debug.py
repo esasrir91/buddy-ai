@@ -16,4 +16,3 @@ def disable_debug_mode() -> None:
     from buddy.utils.log import set_log_level_to_info
 
     set_log_level_to_info()
-

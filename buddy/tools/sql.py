@@ -5,12 +5,24 @@ from buddy.tools import Toolkit
 from buddy.utils.log import log_debug, logger
 
 try:
-    from sqlalchemy import Engine, create_engine, MetaData, Table, Column, Integer, String, DateTime, Boolean, Float, Text
+    from sqlalchemy import (
+        Boolean,
+        Column,
+        DateTime,
+        Engine,
+        Float,
+        Integer,
+        MetaData,
+        String,
+        Table,
+        Text,
+        create_engine,
+    )
     from sqlalchemy.inspection import inspect
     from sqlalchemy.orm import Session, sessionmaker
+    from sqlalchemy.schema import CreateIndex, CreateTable, DropIndex, DropTable
+    from sqlalchemy.sql import delete, func, insert, select, update
     from sqlalchemy.sql.expression import text
-    from sqlalchemy.sql import select, insert, update, delete, func
-    from sqlalchemy.schema import CreateTable, DropTable, CreateIndex, DropIndex
     from sqlalchemy.types import TypeEngine
 except ImportError:
     raise ImportError("`sqlalchemy` not installed")
@@ -161,20 +173,20 @@ class SQLTools(Toolkit):
         try:
             log_debug(f"Describing table: {table_name}")
             inspector = inspect(self.db_engine)
-            
+
             # Get column information
             table_schema = inspector.get_columns(table_name, schema=self.schema)
             columns = [
                 {
-                    "name": column["name"], 
-                    "type": str(column["type"]), 
+                    "name": column["name"],
+                    "type": str(column["type"]),
                     "nullable": column["nullable"],
                     "default": column.get("default"),
-                    "autoincrement": column.get("autoincrement", False)
+                    "autoincrement": column.get("autoincrement", False),
                 }
                 for column in table_schema
             ]
-            
+
             # Get constraints
             try:
                 primary_keys = inspector.get_pk_constraint(table_name, schema=self.schema)
@@ -183,13 +195,13 @@ class SQLTools(Toolkit):
                 check_constraints = inspector.get_check_constraints(table_name, schema=self.schema)
             except:
                 primary_keys = foreign_keys = unique_constraints = check_constraints = []
-            
+
             # Get indexes
             try:
                 indexes = inspector.get_indexes(table_name, schema=self.schema)
             except:
                 indexes = []
-            
+
             table_description = {
                 "table_name": table_name,
                 "columns": columns,
@@ -197,11 +209,11 @@ class SQLTools(Toolkit):
                 "foreign_keys": foreign_keys,
                 "unique_constraints": unique_constraints,
                 "check_constraints": check_constraints,
-                "indexes": indexes
+                "indexes": indexes,
             }
-            
+
             return json.dumps(table_description, default=str)
-            
+
         except Exception as e:
             logger.error(f"Error getting table schema: {e}")
             return f"Error getting table schema: {e}"
@@ -263,7 +275,7 @@ class SQLTools(Toolkit):
         """
         try:
             log_debug(f"Creating table: {table_name}")
-            
+
             # Map string types to SQLAlchemy types
             type_mapping = {
                 "Integer": Integer,
@@ -273,11 +285,11 @@ class SQLTools(Toolkit):
                 "Float": Float,
                 "DateTime": DateTime,
             }
-            
+
             table_columns = []
             for col in columns:
                 col_type = col.get("type", "String")
-                
+
                 # Handle parameterized types like String(100)
                 if "(" in col_type:
                     type_name = col_type.split("(")[0]
@@ -291,24 +303,24 @@ class SQLTools(Toolkit):
                         sql_type = String(100)  # Default fallback
                 else:
                     sql_type = type_mapping.get(col_type, String)
-                
+
                 column = Column(
                     col["name"],
                     sql_type,
                     nullable=col.get("nullable", True),
                     primary_key=col.get("primary_key", False),
-                    default=col.get("default")
+                    default=col.get("default"),
                 )
                 table_columns.append(column)
-            
+
             table = Table(table_name, self.metadata, *table_columns)
             create_stmt = CreateTable(table)
-            
+
             with self.Session() as sess, sess.begin():
                 sess.execute(create_stmt)
-                
+
             return f"Table '{table_name}' created successfully."
-            
+
         except Exception as e:
             logger.error(f"Error creating table: {e}")
             return f"Error creating table: {e}"
@@ -324,16 +336,16 @@ class SQLTools(Toolkit):
         """
         try:
             log_debug(f"Dropping table: {table_name}")
-            
+
             # Reflect the table
             table = Table(table_name, self.metadata, autoload_with=self.db_engine, schema=self.schema)
             drop_stmt = DropTable(table)
-            
+
             with self.Session() as sess, sess.begin():
                 sess.execute(drop_stmt)
-                
+
             return f"Table '{table_name}' dropped successfully."
-            
+
         except Exception as e:
             logger.error(f"Error dropping table: {e}")
             return f"Error dropping table: {e}"
@@ -350,20 +362,20 @@ class SQLTools(Toolkit):
         """
         try:
             log_debug(f"Inserting data into table: {table_name}")
-            
+
             # Ensure data is a list
             if isinstance(data, dict):
                 data = [data]
-            
+
             # Reflect the table
             table = Table(table_name, self.metadata, autoload_with=self.db_engine, schema=self.schema)
-            
+
             with self.Session() as sess, sess.begin():
                 result = sess.execute(insert(table), data)
                 rows_affected = result.rowcount
-                
+
             return f"Successfully inserted {rows_affected} row(s) into '{table_name}'."
-            
+
         except Exception as e:
             logger.error(f"Error inserting data: {e}")
             return f"Error inserting data: {e}"
@@ -381,18 +393,18 @@ class SQLTools(Toolkit):
         """
         try:
             log_debug(f"Updating data in table: {table_name}")
-            
+
             # Reflect the table
             table = Table(table_name, self.metadata, autoload_with=self.db_engine, schema=self.schema)
-            
+
             stmt = update(table).values(**set_values).where(text(where_clause))
-            
+
             with self.Session() as sess, sess.begin():
                 result = sess.execute(stmt)
                 rows_affected = result.rowcount
-                
+
             return f"Successfully updated {rows_affected} row(s) in '{table_name}'."
-            
+
         except Exception as e:
             logger.error(f"Error updating data: {e}")
             return f"Error updating data: {e}"
@@ -409,18 +421,18 @@ class SQLTools(Toolkit):
         """
         try:
             log_debug(f"Deleting data from table: {table_name}")
-            
+
             # Reflect the table
             table = Table(table_name, self.metadata, autoload_with=self.db_engine, schema=self.schema)
-            
+
             stmt = delete(table).where(text(where_clause))
-            
+
             with self.Session() as sess, sess.begin():
                 result = sess.execute(stmt)
                 rows_affected = result.rowcount
-                
+
             return f"Successfully deleted {rows_affected} row(s) from '{table_name}'."
-            
+
         except Exception as e:
             logger.error(f"Error deleting data: {e}")
             return f"Error deleting data: {e}"
@@ -439,21 +451,22 @@ class SQLTools(Toolkit):
         """
         try:
             log_debug(f"Creating index: {index_name} on table: {table_name}")
-            
+
             # Reflect the table
             table = Table(table_name, self.metadata, autoload_with=self.db_engine, schema=self.schema)
-            
+
             columns = [table.c[col_name] for col_name in column_names]
-            
+
             from sqlalchemy import Index
+
             index = Index(index_name, *columns, unique=unique)
             create_stmt = CreateIndex(index)
-            
+
             with self.Session() as sess, sess.begin():
                 sess.execute(create_stmt)
-                
+
             return f"Index '{index_name}' created successfully on table '{table_name}'."
-            
+
         except Exception as e:
             logger.error(f"Error creating index: {e}")
             return f"Error creating index: {e}"
@@ -470,23 +483,24 @@ class SQLTools(Toolkit):
         """
         try:
             log_debug(f"Dropping index: {index_name}")
-            
+
             if table_name:
                 # Reflect the table
                 table = Table(table_name, self.metadata, autoload_with=self.db_engine, schema=self.schema)
-                
+
                 from sqlalchemy import Index
+
                 index = Index(index_name, table.c.keys()[0])  # Dummy index for drop
                 drop_stmt = DropIndex(index)
             else:
                 # Direct SQL for databases that support dropping by name
                 drop_stmt = text(f"DROP INDEX {index_name}")
-            
+
             with self.Session() as sess, sess.begin():
                 sess.execute(drop_stmt)
-                
+
             return f"Index '{index_name}' dropped successfully."
-            
+
         except Exception as e:
             logger.error(f"Error dropping index: {e}")
             return f"Error dropping index: {e}"
@@ -504,16 +518,16 @@ class SQLTools(Toolkit):
         try:
             if backup_table_name is None:
                 backup_table_name = f"{table_name}_backup"
-                
+
             log_debug(f"Creating backup of table: {table_name} as {backup_table_name}")
-            
+
             sql = f"CREATE TABLE {backup_table_name} AS SELECT * FROM {table_name}"
-            
+
             with self.Session() as sess, sess.begin():
                 sess.execute(text(sql))
-                
+
             return f"Backup table '{backup_table_name}' created successfully from '{table_name}'."
-            
+
         except Exception as e:
             logger.error(f"Error creating backup: {e}")
             return f"Error creating backup: {e}"
@@ -529,37 +543,37 @@ class SQLTools(Toolkit):
         """
         try:
             log_debug(f"Getting table info for: {table_name}")
-            
+
             inspector = inspect(self.db_engine)
-            
+
             # Get table schema
             columns = inspector.get_columns(table_name, schema=self.schema)
-            
+
             # Get row count
             with self.Session() as sess:
                 count_result = sess.execute(text(f"SELECT COUNT(*) FROM {table_name}"))
                 row_count = count_result.scalar()
-            
+
             # Get indexes
             indexes = inspector.get_indexes(table_name, schema=self.schema)
-            
+
             # Get foreign keys
             foreign_keys = inspector.get_foreign_keys(table_name, schema=self.schema)
-            
+
             # Get primary keys
             primary_keys = inspector.get_pk_constraint(table_name, schema=self.schema)
-            
+
             table_info = {
                 "table_name": table_name,
                 "row_count": row_count,
                 "columns": columns,
                 "indexes": indexes,
                 "foreign_keys": foreign_keys,
-                "primary_keys": primary_keys
+                "primary_keys": primary_keys,
             }
-            
+
             return json.dumps(table_info, default=str)
-            
+
         except Exception as e:
             logger.error(f"Error getting table info: {e}")
             return f"Error getting table info: {e}"
@@ -575,29 +589,30 @@ class SQLTools(Toolkit):
         """
         try:
             log_debug(f"Analyzing table: {table_name}")
-            
+
             inspector = inspect(self.db_engine)
             columns = inspector.get_columns(table_name, schema=self.schema)
-            
+
             analysis = {"table_name": table_name, "column_stats": {}}
-            
+
             with self.Session() as sess:
                 for column in columns:
                     col_name = column["name"]
                     col_type = str(column["type"])
-                    
+
                     # Basic stats for all columns
                     count_query = f"SELECT COUNT({col_name}) as count, COUNT(DISTINCT {col_name}) as distinct_count FROM {table_name}"
                     result = sess.execute(text(count_query))
                     stats = result.fetchone()._asdict()
-                    
+
                     analysis["column_stats"][col_name] = {
                         "type": col_type,
                         "count": stats["count"],
                         "distinct_count": stats["distinct_count"],
-                        "null_count": stats["count"] - stats["count"]  # This would need adjustment based on actual null handling
+                        "null_count": stats["count"]
+                        - stats["count"],  # This would need adjustment based on actual null handling
                     }
-                    
+
                     # Additional stats for numeric columns
                     if any(num_type in col_type.lower() for num_type in ["int", "float", "decimal", "numeric"]):
                         try:
@@ -607,9 +622,9 @@ class SQLTools(Toolkit):
                             analysis["column_stats"][col_name].update(numeric_stats)
                         except:
                             pass  # Skip if numeric operations fail
-            
+
             return json.dumps(analysis, default=str)
-            
+
         except Exception as e:
             logger.error(f"Error analyzing table: {e}")
             return f"Error analyzing table: {e}"
@@ -622,17 +637,17 @@ class SQLTools(Toolkit):
         """
         try:
             log_debug("Getting database size information")
-            
+
             # This query works for many databases but may need adjustment for specific ones
             size_queries = {
                 "postgresql": "SELECT pg_size_pretty(pg_database_size(current_database())) as size",
                 "mysql": "SELECT ROUND(SUM(data_length + index_length) / 1024 / 1024, 1) AS size_mb FROM information_schema.tables WHERE table_schema = DATABASE()",
                 "sqlite": "SELECT page_count * page_size as size FROM pragma_page_count(), pragma_page_size()",
-                "mssql": "SELECT SUM(size) * 8 / 1024 AS size_mb FROM sys.master_files WHERE database_id = DB_ID()"
+                "mssql": "SELECT SUM(size) * 8 / 1024 AS size_mb FROM sys.master_files WHERE database_id = DB_ID()",
             }
-            
+
             dialect_name = self.db_engine.dialect.name.lower()
-            
+
             if dialect_name in size_queries:
                 with self.Session() as sess:
                     result = sess.execute(text(size_queries[dialect_name]))
@@ -640,7 +655,7 @@ class SQLTools(Toolkit):
                     return json.dumps({"database_size": size_info})
             else:
                 return json.dumps({"database_size": "Size information not available for this database type"})
-                
+
         except Exception as e:
             logger.error(f"Error getting database size: {e}")
             return f"Error getting database size: {e}"
@@ -653,12 +668,12 @@ class SQLTools(Toolkit):
         """
         try:
             log_debug("Listing views in the database")
-            
+
             inspector = inspect(self.db_engine)
             view_names = inspector.get_view_names(schema=self.schema)
-            
+
             return json.dumps(view_names)
-            
+
         except Exception as e:
             logger.error(f"Error listing views: {e}")
             return f"Error listing views: {e}"
@@ -674,9 +689,9 @@ class SQLTools(Toolkit):
         """
         try:
             log_debug(f"Listing indexes for table: {table_name if table_name else 'all tables'}")
-            
+
             inspector = inspect(self.db_engine)
-            
+
             if table_name:
                 indexes = inspector.get_indexes(table_name, schema=self.schema)
                 return json.dumps({table_name: indexes})
@@ -690,9 +705,9 @@ class SQLTools(Toolkit):
                             all_indexes[table] = indexes
                     except:
                         continue  # Skip tables that can't be inspected
-                
+
                 return json.dumps(all_indexes)
-                
+
         except Exception as e:
             logger.error(f"Error listing indexes: {e}")
             return f"Error listing indexes: {e}"
@@ -708,12 +723,12 @@ class SQLTools(Toolkit):
         """
         try:
             log_debug(f"Getting foreign keys for table: {table_name}")
-            
+
             inspector = inspect(self.db_engine)
             foreign_keys = inspector.get_foreign_keys(table_name, schema=self.schema)
-            
+
             return json.dumps(foreign_keys)
-            
+
         except Exception as e:
             logger.error(f"Error getting foreign keys: {e}")
             return f"Error getting foreign keys: {e}"
@@ -729,12 +744,12 @@ class SQLTools(Toolkit):
         """
         try:
             log_debug(f"Getting primary keys for table: {table_name}")
-            
+
             inspector = inspect(self.db_engine)
             primary_keys = inspector.get_pk_constraint(table_name, schema=self.schema)
-            
+
             return json.dumps(primary_keys)
-            
+
         except Exception as e:
             logger.error(f"Error getting primary keys: {e}")
             return f"Error getting primary keys: {e}"
@@ -750,15 +765,15 @@ class SQLTools(Toolkit):
         """
         try:
             log_debug(f"Executing transaction with {len(queries)} queries")
-            
+
             with self.Session() as sess, sess.begin():
                 results = []
                 for i, query in enumerate(queries):
                     result = sess.execute(text(query))
                     results.append(f"Query {i+1}: {result.rowcount} rows affected")
-                
+
             return f"Transaction completed successfully. {'; '.join(results)}"
-            
+
         except Exception as e:
             logger.error(f"Error executing transaction: {e}")
             return f"Error executing transaction: {e}"
@@ -774,9 +789,9 @@ class SQLTools(Toolkit):
         """
         try:
             log_debug(f"Getting size for table: {table_name}")
-            
+
             dialect_name = self.db_engine.dialect.name.lower()
-            
+
             size_queries = {
                 "postgresql": f"""
                     SELECT 
@@ -792,17 +807,19 @@ class SQLTools(Toolkit):
                     FROM information_schema.TABLES 
                     WHERE table_name = '{table_name}' AND table_schema = DATABASE()
                 """,
-                "sqlite": f"SELECT COUNT(*) * 1024 as approximate_size FROM {table_name}"
+                "sqlite": f"SELECT COUNT(*) * 1024 as approximate_size FROM {table_name}",
             }
-            
+
             if dialect_name in size_queries:
                 with self.Session() as sess:
                     result = sess.execute(text(size_queries[dialect_name]))
                     size_info = result.fetchone()._asdict() if result else {}
                     return json.dumps({"table_name": table_name, "size_info": size_info}, default=str)
             else:
-                return json.dumps({"table_name": table_name, "size_info": "Size information not available for this database type"})
-                
+                return json.dumps(
+                    {"table_name": table_name, "size_info": "Size information not available for this database type"}
+                )
+
         except Exception as e:
             logger.error(f"Error getting table size: {e}")
             return f"Error getting table size: {e}"
@@ -818,7 +835,7 @@ class SQLTools(Toolkit):
         """
         try:
             dialect_name = self.db_engine.dialect.name.lower()
-            
+
             if dialect_name == "postgresql":
                 if table_name:
                     query = f"VACUUM ANALYZE {table_name}"
@@ -831,14 +848,14 @@ class SQLTools(Toolkit):
                     query = "VACUUM; ANALYZE"
             else:
                 return f"VACUUM/ANALYZE not supported for {dialect_name}"
-            
+
             log_debug(f"Running maintenance: {query}")
-            
+
             with self.Session() as sess, sess.begin():
                 sess.execute(text(query))
-                
+
             return f"Maintenance completed successfully for {table_name if table_name else 'database'}"
-            
+
         except Exception as e:
             logger.error(f"Error during maintenance: {e}")
             return f"Error during maintenance: {e}"
@@ -854,9 +871,9 @@ class SQLTools(Toolkit):
         """
         try:
             log_debug(f"Getting query plan for: {query}")
-            
+
             dialect_name = self.db_engine.dialect.name.lower()
-            
+
             if dialect_name == "postgresql":
                 explain_query = f"EXPLAIN (FORMAT JSON) {query}"
             elif dialect_name == "mysql":
@@ -865,14 +882,14 @@ class SQLTools(Toolkit):
                 explain_query = f"EXPLAIN QUERY PLAN {query}"
             else:
                 explain_query = f"EXPLAIN {query}"
-            
+
             with self.Session() as sess:
                 result = sess.execute(text(explain_query))
                 plan = result.fetchall()
                 plan_data = [row._asdict() for row in plan]
-                
+
             return json.dumps({"query": query, "execution_plan": plan_data}, default=str)
-            
+
         except Exception as e:
             logger.error(f"Error getting query plan: {e}")
             return f"Error getting query plan: {e}"
@@ -890,9 +907,9 @@ class SQLTools(Toolkit):
         """
         try:
             log_debug(f"Duplicating table structure from {source_table} to {target_table}")
-            
+
             dialect_name = self.db_engine.dialect.name.lower()
-            
+
             if copy_data:
                 if dialect_name in ["postgresql", "mysql"]:
                     query = f"CREATE TABLE {target_table} AS SELECT * FROM {source_table}"
@@ -911,25 +928,24 @@ class SQLTools(Toolkit):
                     # Generic approach - get structure and recreate
                     inspector = inspect(self.db_engine)
                     columns = inspector.get_columns(source_table, schema=self.schema)
-                    
+
                     column_defs = []
                     for col in columns:
                         col_def = f"{col['name']} {col['type']}"
-                        if not col['nullable']:
+                        if not col["nullable"]:
                             col_def += " NOT NULL"
-                        if col.get('default'):
+                        if col.get("default"):
                             col_def += f" DEFAULT {col['default']}"
                         column_defs.append(col_def)
-                    
+
                     query = f"CREATE TABLE {target_table} ({', '.join(column_defs)})"
-            
+
             with self.Session() as sess, sess.begin():
                 sess.execute(text(query))
-                
+
             action = "copied with data" if copy_data else "structure copied"
             return f"Table '{target_table}' created successfully - {action} from '{source_table}'."
-            
+
         except Exception as e:
             logger.error(f"Error duplicating table: {e}")
             return f"Error duplicating table: {e}"
-

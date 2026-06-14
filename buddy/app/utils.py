@@ -3,8 +3,9 @@ from uuid import uuid4
 
 from fastapi import HTTPException, UploadFile
 
-from buddy.media import Audio, Image, Video
+from buddy.media import Audio
 from buddy.media import File as FileMedia
+from buddy.media import Image, Video
 from buddy.utils.log import logger
 
 
@@ -52,4 +53,3 @@ def generate_id(name: Optional[str] = None) -> str:
         return name.lower().replace(" ", "-").replace("_", "-")
     else:
         return str(uuid4())
-

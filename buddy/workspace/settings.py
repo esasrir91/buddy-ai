@@ -156,4 +156,3 @@ class WorkspaceSettings(BaseSettings):
         aws_private_subnets = info.data.get("aws_private_subnets", [])
 
         return aws_public_subnets + aws_private_subnets
-

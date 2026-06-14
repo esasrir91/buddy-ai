@@ -1,6 +1,6 @@
 import json
-from typing import Any, Dict, List, Optional
 from os import getenv
+from typing import Any, Dict, List, Optional
 
 from buddy.tools import Toolkit
 from buddy.utils.log import log_debug, logger
@@ -58,20 +58,14 @@ class FacebookTools(Toolkit):
             return json.dumps({"error": "Access token and page ID not provided"})
 
         try:
-            data = {
-                "message": message,
-                "access_token": self.access_token
-            }
+            data = {"message": message, "access_token": self.access_token}
 
             if link:
                 data["link"] = link
 
-            response = requests.post(
-                f"{self.base_url}/{self.page_id}/feed",
-                data=data
-            )
+            response = requests.post(f"{self.base_url}/{self.page_id}/feed", data=data)
             response.raise_for_status()
-            
+
             return json.dumps(response.json())
         except Exception as e:
             return json.dumps({"error": f"Failed to post: {str(e)}"})
@@ -90,20 +84,14 @@ class FacebookTools(Toolkit):
             return json.dumps({"error": "Access token and page ID not provided"})
 
         try:
-            data = {
-                "url": image_url,
-                "access_token": self.access_token
-            }
+            data = {"url": image_url, "access_token": self.access_token}
 
             if caption:
                 data["caption"] = caption
 
-            response = requests.post(
-                f"{self.base_url}/{self.page_id}/photos",
-                data=data
-            )
+            response = requests.post(f"{self.base_url}/{self.page_id}/photos", data=data)
             response.raise_for_status()
-            
+
             return json.dumps(response.json())
         except Exception as e:
             return json.dumps({"error": f"Failed to post photo: {str(e)}"})
@@ -122,18 +110,11 @@ class FacebookTools(Toolkit):
             return json.dumps({"error": "Access token and page ID not provided"})
 
         try:
-            params = {
-                "metric": metric,
-                "period": period,
-                "access_token": self.access_token
-            }
+            params = {"metric": metric, "period": period, "access_token": self.access_token}
 
-            response = requests.get(
-                f"{self.base_url}/{self.page_id}/insights",
-                params=params
-            )
+            response = requests.get(f"{self.base_url}/{self.page_id}/insights", params=params)
             response.raise_for_status()
-            
+
             return json.dumps(response.json())
         except Exception as e:
             return json.dumps({"error": f"Failed to get insights: {str(e)}"})
@@ -154,15 +135,12 @@ class FacebookTools(Toolkit):
             params = {
                 "limit": limit,
                 "fields": "id,message,created_time,likes.summary(true),comments.summary(true)",
-                "access_token": self.access_token
+                "access_token": self.access_token,
             }
 
-            response = requests.get(
-                f"{self.base_url}/{self.page_id}/posts",
-                params=params
-            )
+            response = requests.get(f"{self.base_url}/{self.page_id}/posts", params=params)
             response.raise_for_status()
-            
+
             return json.dumps(response.json())
         except Exception as e:
             return json.dumps({"error": f"Failed to get posts: {str(e)}"})
@@ -182,12 +160,9 @@ class FacebookTools(Toolkit):
         try:
             params = {"access_token": self.access_token}
 
-            response = requests.delete(
-                f"{self.base_url}/{post_id}",
-                params=params
-            )
+            response = requests.delete(f"{self.base_url}/{post_id}", params=params)
             response.raise_for_status()
-            
+
             return json.dumps({"success": "Post deleted successfully"})
         except Exception as e:
             return json.dumps({"error": f"Failed to delete post: {str(e)}"})

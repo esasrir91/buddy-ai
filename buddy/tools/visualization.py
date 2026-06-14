@@ -474,4 +474,3 @@ class VisualizationTools(Toolkit):
         except Exception as e:
             logger.error(f"Error creating histogram: {str(e)}")
             return json.dumps({"chart_type": "histogram", "error": str(e), "status": "error"})
-

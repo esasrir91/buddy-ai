@@ -64,4 +64,3 @@ class JSONReader(Reader):
             List[Document]: List of documents from the JSON file
         """
         return await asyncio.to_thread(self.read, path)
-

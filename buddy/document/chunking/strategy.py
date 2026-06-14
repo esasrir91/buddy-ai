@@ -29,4 +29,3 @@ class ChunkingStrategy(ABC):
         cleaned_text = re.sub(r"\v+", "\v", cleaned_text)
 
         return cleaned_text
-

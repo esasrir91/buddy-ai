@@ -6,4 +6,3 @@ __all__ = [
     "VectorIndex",
     "Weaviate",
 ]
-

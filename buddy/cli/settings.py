@@ -103,6 +103,3 @@ class BuddyCliSettings(BaseSettings):
 
 
 BUDDY_cli_settings = BuddyCliSettings()
-
-
-

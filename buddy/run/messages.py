@@ -30,4 +30,3 @@ class RunMessages:
         if self.extra_messages is not None:
             input_messages.extend(self.extra_messages)
         return input_messages
-

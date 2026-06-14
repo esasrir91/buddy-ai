@@ -213,4 +213,3 @@ class SessionSummarizer:
             except Exception as e:
                 log_warning(f"Failed to convert session_summary response to SessionSummaryResponse: {e}")
         return None
-

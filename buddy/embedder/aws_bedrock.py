@@ -210,4 +210,3 @@ class AwsBedrockEmbedder(Embedder):
             usage = response["usage"]
 
         return embedding, usage
-

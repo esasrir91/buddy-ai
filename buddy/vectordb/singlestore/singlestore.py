@@ -91,8 +91,7 @@ class SingleStore(VectorDb):
         if not self.table_exists():
             log_info(f"Creating table: {self.collection}")
             with self.db_engine.connect() as connection:
-                connection.execute(
-                    text(f"""
+                connection.execute(text(f"""
                     CREATE TABLE IF NOT EXISTS {self.schema}.{self.collection} (
                         id TEXT,
                         name TEXT,
@@ -104,8 +103,7 @@ class SingleStore(VectorDb):
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                         content_hash TEXT
                     );
-                    """)
-                )
+                    """))
             # Call optimize to create indexes
             self.optimize()
 
@@ -418,4 +416,3 @@ class SingleStore(VectorDb):
 
     async def async_name_exists(self, name: str) -> bool:
         raise NotImplementedError(f"Async not supported on {self.__class__.__name__}.")
-

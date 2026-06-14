@@ -755,5 +755,3 @@ def set_workspace_as_active(ws_dir_name: Optional[str]) -> None:
     BUDDY_config.set_active_ws_dir(active_ws_config.ws_root_path)
     print_info("Active workspace updated")
     return
-
-

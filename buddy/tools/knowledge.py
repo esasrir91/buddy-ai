@@ -80,11 +80,9 @@ class KnowledgeTools(Toolkit):
 
             # Return the full log of thoughts and the new thought
             thoughts = "\n".join([f"- {t}" for t in agent.session_state["thoughts"]])
-            formatted_thoughts = dedent(
-                f"""Thoughts:
+            formatted_thoughts = dedent(f"""Thoughts:
                 {thoughts}
-                """
-            ).strip()
+                """).strip()
             return formatted_thoughts
         except Exception as e:
             logger.error(f"Error recording thought: {e}")
@@ -134,11 +132,9 @@ class KnowledgeTools(Toolkit):
 
             # Return the full log of thoughts and the new thought
             analysis = "\n".join([f"- {a}" for a in agent.session_state["analysis"]])
-            formatted_analysis = dedent(
-                f"""Analysis:
+            formatted_analysis = dedent(f"""Analysis:
                 {analysis}
-                """
-            ).strip()
+                """).strip()
             return formatted_analysis
         except Exception as e:
             logger.error(f"Error recording analysis: {e}")
@@ -217,4 +213,3 @@ class KnowledgeTools(Toolkit):
 
         Final Answer: Quantum computers differ from classical computers in three key ways: [synthesized explanation with specific examples]...\
     """)
-

@@ -1,6 +1,6 @@
 import json
-from typing import Any, Dict, List, Optional
 from os import getenv
+from typing import Any, Dict, List, Optional
 
 from buddy.tools import Toolkit
 from buddy.utils.log import log_debug, logger
@@ -12,12 +12,7 @@ except ImportError:
 
 
 class IPGeolocationTools(Toolkit):
-    def __init__(
-        self,
-        ipapi_key: Optional[str] = None,
-        ipgeolocation_key: Optional[str] = None,
-        **kwargs
-    ):
+    def __init__(self, ipapi_key: Optional[str] = None, ipgeolocation_key: Optional[str] = None, **kwargs):
         """Initialize IP Geolocation Tools.
 
         Args:
@@ -26,7 +21,7 @@ class IPGeolocationTools(Toolkit):
         """
         self.ipapi_key = ipapi_key or getenv("IPAPI_KEY")
         self.ipgeolocation_key = ipgeolocation_key or getenv("IPGEOLOCATION_KEY")
-        
+
         tools: List[Any] = [
             self.get_ip_location,
             self.get_current_ip_location,
@@ -61,27 +56,29 @@ class IPGeolocationTools(Toolkit):
         try:
             url = f"http://api.ipapi.com/{ip_address}"
             params = {}
-            
+
             if self.ipapi_key:
                 params["access_key"] = self.ipapi_key
 
             response = requests.get(url, params=params)
             response.raise_for_status()
-            
+
             data = response.json()
-            
-            return json.dumps({
-                "ip": data.get("ip"),
-                "country": data.get("country_name"),
-                "country_code": data.get("country_code"),
-                "region": data.get("region_name"),
-                "city": data.get("city"),
-                "latitude": data.get("latitude"),
-                "longitude": data.get("longitude"),
-                "timezone": data.get("time_zone", {}).get("id"),
-                "isp": data.get("connection", {}).get("isp"),
-                "provider": "ipapi"
-            })
+
+            return json.dumps(
+                {
+                    "ip": data.get("ip"),
+                    "country": data.get("country_name"),
+                    "country_code": data.get("country_code"),
+                    "region": data.get("region_name"),
+                    "city": data.get("city"),
+                    "latitude": data.get("latitude"),
+                    "longitude": data.get("longitude"),
+                    "timezone": data.get("time_zone", {}).get("id"),
+                    "isp": data.get("connection", {}).get("isp"),
+                    "provider": "ipapi",
+                }
+            )
         except Exception as e:
             return json.dumps({"error": f"ipapi lookup failed: {str(e)}"})
 
@@ -90,27 +87,29 @@ class IPGeolocationTools(Toolkit):
         try:
             url = "https://api.ipgeolocation.io/ipgeo"
             params = {"ip": ip_address}
-            
+
             if self.ipgeolocation_key:
                 params["apiKey"] = self.ipgeolocation_key
 
             response = requests.get(url, params=params)
             response.raise_for_status()
-            
+
             data = response.json()
-            
-            return json.dumps({
-                "ip": data.get("ip"),
-                "country": data.get("country_name"),
-                "country_code": data.get("country_code2"),
-                "region": data.get("state_prov"),
-                "city": data.get("city"),
-                "latitude": float(data.get("latitude", 0)),
-                "longitude": float(data.get("longitude", 0)),
-                "timezone": data.get("time_zone", {}).get("name"),
-                "isp": data.get("isp"),
-                "provider": "ipgeolocation"
-            })
+
+            return json.dumps(
+                {
+                    "ip": data.get("ip"),
+                    "country": data.get("country_name"),
+                    "country_code": data.get("country_code2"),
+                    "region": data.get("state_prov"),
+                    "city": data.get("city"),
+                    "latitude": float(data.get("latitude", 0)),
+                    "longitude": float(data.get("longitude", 0)),
+                    "timezone": data.get("time_zone", {}).get("name"),
+                    "isp": data.get("isp"),
+                    "provider": "ipgeolocation",
+                }
+            )
         except Exception as e:
             return json.dumps({"error": f"ipgeolocation lookup failed: {str(e)}"})
 
@@ -125,7 +124,7 @@ class IPGeolocationTools(Toolkit):
             ip_response = requests.get("https://httpbin.org/ip")
             ip_response.raise_for_status()
             current_ip = ip_response.json()["origin"]
-            
+
             # Then get location for that IP
             return self.get_ip_location(current_ip)
         except Exception as e:
@@ -143,23 +142,15 @@ class IPGeolocationTools(Toolkit):
         """
         try:
             results = []
-            
+
             for ip in ip_addresses:
                 try:
                     location_result = self.get_ip_location(ip, provider)
                     location_data = json.loads(location_result)
-                    results.append({
-                        "ip": ip,
-                        "status": "success",
-                        "data": location_data
-                    })
+                    results.append({"ip": ip, "status": "success", "data": location_data})
                 except Exception as e:
-                    results.append({
-                        "ip": ip,
-                        "status": "error",
-                        "error": str(e)
-                    })
-            
+                    results.append({"ip": ip, "status": "error", "error": str(e)})
+
             return json.dumps({"results": results})
         except Exception as e:
             return json.dumps({"error": f"Bulk lookup failed: {str(e)}"})
@@ -178,30 +169,28 @@ class IPGeolocationTools(Toolkit):
                 return json.dumps({"error": "ipgeolocation API key required for security info"})
 
             url = "https://api.ipgeolocation.io/ipgeo"
-            params = {
-                "ip": ip_address,
-                "apiKey": self.ipgeolocation_key,
-                "fields": "security"
-            }
+            params = {"ip": ip_address, "apiKey": self.ipgeolocation_key, "fields": "security"}
 
             response = requests.get(url, params=params)
             response.raise_for_status()
-            
+
             data = response.json()
             security = data.get("security", {})
-            
-            return json.dumps({
-                "ip": ip_address,
-                "is_threat": security.get("is_threat"),
-                "threat_types": security.get("threat_types", []),
-                "is_bogon": security.get("is_bogon"),
-                "is_cloud_provider": security.get("is_cloud_provider"),
-                "is_tor": security.get("is_tor"),
-                "is_proxy": security.get("is_proxy"),
-                "is_anonymous": security.get("is_anonymous"),
-                "is_known_attacker": security.get("is_known_attacker"),
-                "is_known_abuser": security.get("is_known_abuser"),
-                "is_spam": security.get("is_spam")
-            })
+
+            return json.dumps(
+                {
+                    "ip": ip_address,
+                    "is_threat": security.get("is_threat"),
+                    "threat_types": security.get("threat_types", []),
+                    "is_bogon": security.get("is_bogon"),
+                    "is_cloud_provider": security.get("is_cloud_provider"),
+                    "is_tor": security.get("is_tor"),
+                    "is_proxy": security.get("is_proxy"),
+                    "is_anonymous": security.get("is_anonymous"),
+                    "is_known_attacker": security.get("is_known_attacker"),
+                    "is_known_abuser": security.get("is_known_abuser"),
+                    "is_spam": security.get("is_spam"),
+                }
+            )
         except Exception as e:
             return json.dumps({"error": f"Failed to get security info: {str(e)}"})

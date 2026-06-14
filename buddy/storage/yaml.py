@@ -239,4 +239,3 @@ class YamlStorage(Storage):
     def upgrade_schema(self) -> None:
         """Upgrade the schema of the storage."""
         pass
-

@@ -30,4 +30,3 @@ class CsvFile(File):
                 log_debug(f"Error getting columns from file: {e}")
 
         return dataclass_to_dict(self, exclude_none=True)
-

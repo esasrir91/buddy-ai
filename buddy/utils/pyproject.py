@@ -16,6 +16,3 @@ def read_pyproject_buddy(pyproject_file: Path) -> Optional[Dict]:
     except Exception as e:
         logger.error(f"Could not read {pyproject_file}: {e}")
     return None
-
-
-

@@ -32,4 +32,3 @@ class FireCrawlKnowledgeBase(AgentKnowledge):
             documents = await self.reader.async_read(url=url)
             if documents:
                 yield documents
-

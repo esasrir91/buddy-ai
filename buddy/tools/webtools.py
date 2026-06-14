@@ -35,4 +35,3 @@ class WebTools(Toolkit):
                 logger.error(f"Error expanding URL {url} on attempt {attempt}: {e}")
 
         return url
-

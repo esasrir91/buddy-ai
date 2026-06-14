@@ -9,6 +9,7 @@ Note: Memory v2 is a plain Python class (not a Pydantic BaseModel), so
 ProfessionalMemory is also a plain Python class that composes a Memory v2
 instance for episodic storage while adding typed employee-specific stores.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -18,10 +19,10 @@ from pydantic import BaseModel, Field
 
 from buddy.memory.v2.memory import Memory
 
-
 # ---------------------------------------------------------------------------
 # Typed memory entries (Pydantic models for serialisation)
 # ---------------------------------------------------------------------------
+
 
 class KTMemoryEntry(BaseModel):
     """A record of a completed KT session stored in professional memory."""
@@ -74,6 +75,7 @@ class ProjectMemoryEntry(BaseModel):
 # ---------------------------------------------------------------------------
 # ProfessionalMemory — plain Python class (composes Memory v2)
 # ---------------------------------------------------------------------------
+
 
 class ProfessionalMemory:
     """

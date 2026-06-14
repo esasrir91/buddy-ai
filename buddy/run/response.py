@@ -465,4 +465,3 @@ class RunResponse:
             return self.content.model_dump_json(exclude_none=True, **kwargs)
         else:
             return json.dumps(self.content, **kwargs)
-

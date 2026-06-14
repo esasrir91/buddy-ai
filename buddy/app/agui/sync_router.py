@@ -118,5 +118,3 @@ def get_sync_agui_router(agent: Optional[Agent] = None, team: Optional[Team] = N
         return {"status": "available"}
 
     return router
-
-

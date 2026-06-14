@@ -199,4 +199,3 @@ class MemorySummarizer(BaseModel):
             except Exception as e:
                 logger.warning(f"Failed to convert response to session_summary: {e}")
         return None
-

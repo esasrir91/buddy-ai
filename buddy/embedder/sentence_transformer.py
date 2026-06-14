@@ -42,4 +42,3 @@ class SentenceTransformerEmbedder(Embedder):
 
     def get_embedding_and_usage(self, text: str) -> Tuple[List[float], Optional[Dict]]:
         return self.get_embedding(text=text), None
-

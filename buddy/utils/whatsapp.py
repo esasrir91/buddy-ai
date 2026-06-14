@@ -303,4 +303,3 @@ async def typing_indicator_async(message_id: Optional[str] = None):
             response.raise_for_status()  # Raise an HTTPError for bad responses (4xx and 5xx)
     except httpx.HTTPStatusError as e:
         return {"error": str(e)}
-

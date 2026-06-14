@@ -205,4 +205,3 @@ def get_async_router(agent: Optional[Agent] = None, team: Optional[Team] = None)
                 await WhatsAppTools().send_text_message_async(recipient=recipient, text=batch_message)
 
     return router
-

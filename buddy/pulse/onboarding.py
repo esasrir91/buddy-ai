@@ -8,18 +8,18 @@ OnboardingWorkflow is a Workflow v1 subclass that orchestrates:
   4. Send introduction message
   5. Return structured OnboardingResult
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Dict, Iterator, List, Optional
-
-from buddy.run.response import RunResponse
-from buddy.workflow.workflow import Workflow
+from typing import Any, Iterator, List, Optional
 
 from buddy.pulse.identity import ColleagueRecord
 from buddy.pulse.kt import KTSourceType
-from buddy.pulse.work import TaskPriority, WorkItem
+from buddy.pulse.work import WorkItem
+from buddy.run.response import RunResponse
+from buddy.workflow.workflow import Workflow
 
 
 @dataclass
@@ -92,14 +92,14 @@ class OnboardingWorkflow(Workflow):
     name: str = "PULSE Onboarding Workflow"
     description: str = "Automates the first-day onboarding experience for a PULSE virtual employee"
 
-    def __init__(self, employee: "PulseEmployee", **kwargs) -> None:  # type: ignore[name-defined]
+    def __init__(self, employee: "PulseEmployee", **kwargs: Any) -> None:  # type: ignore[name-defined]
         super().__init__(**kwargs)
         self.employee = employee
 
     def run(  # type: ignore[override]
         self,
         config: Optional[OnboardingConfig] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> Iterator[RunResponse]:
         if config is None:
             config = OnboardingConfig()
@@ -119,7 +119,10 @@ class OnboardingWorkflow(Workflow):
                     )
                     result.kt_sessions.append(summary.session_name)
                     yield RunResponse(
-                        content=f"  ✅ KT complete: {summary.session_name} (confidence: {summary.confidence_score:.0%})\n"
+                        content=(
+                            f"  ✅ KT complete: {summary.session_name} "
+                            f"(confidence: {summary.confidence_score:.0%})\n"
+                        )
                     )
                 except Exception as e:
                     result.kt_failed.append(f"{doc_path}: {e}")
@@ -130,6 +133,7 @@ class OnboardingWorkflow(Workflow):
             yield RunResponse(content=f"\n👥 Learning about {len(config.team_members)} team member(s)...\n")
             for member in config.team_members:
                 from buddy.pulse.memory import ColleagueMemoryEntry
+
                 entry = ColleagueMemoryEntry(
                     colleague_name=member.full_name,
                     role=member.role,
@@ -152,7 +156,7 @@ class OnboardingWorkflow(Workflow):
         result.introduction_message = intro
         if config.send_introduction_to:
             yield RunResponse(content=f"\n💬 Sending introduction to #{config.introduction_channel}...\n")
-            from buddy.pulse.comms import CommChannel
+
             msg = self.employee.communication_hub.send_slack_message(
                 channel_or_user=config.introduction_channel,
                 message=intro,
@@ -167,4 +171,5 @@ class OnboardingWorkflow(Workflow):
 
 # Resolve forward reference
 from buddy.pulse.employee import PulseEmployee  # noqa: E402
+
 OnboardingWorkflow.__annotations__["employee"] = PulseEmployee

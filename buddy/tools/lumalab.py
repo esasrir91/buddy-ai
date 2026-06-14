@@ -169,4 +169,3 @@ class LumaLabTools(Toolkit):
         except Exception as e:
             logger.error(f"Failed to generate video: {e}")
             return f"Error: {e}"
-

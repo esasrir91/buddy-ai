@@ -3,6 +3,7 @@ PULSE FastAPI Router — REST + WebSocket endpoints for the PULSE web UI.
 
 All routes are prefixed with /api/pulse and mounted onto PulseApp.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -11,18 +12,17 @@ import os
 import pathlib
 from collections import deque
 from datetime import datetime
+from functools import partial
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from buddy.pulse.employee import PulseEmployee
-from buddy.pulse.identity import EmployeeProfile, SeniorityLevel, WorkMode, WorkStyle
+from buddy.pulse.identity import EmployeeProfile
 from buddy.pulse.kt import KTSession, KTSourceType
 from buddy.pulse.meeting import MeetingPlatform
-from buddy.pulse.work import TaskPriority
 
 router = APIRouter(prefix="/api/pulse", tags=["PULSE"])
 
@@ -38,12 +38,20 @@ _EMPLOYEES_FILE = _PULSE_DATA_DIR / "employees.json"
 # Employee conversation memory  —  per-employee, persisted to disk
 # ---------------------------------------------------------------------------
 # Short-term: rolling window of raw chat messages (max 30 per employee)
-_chat_history: Dict[str, deque] = {}      # employee_id -> deque[{role,content,ts}]
+_chat_history: Dict[str, deque] = {}  # employee_id -> deque[{role,content,ts}]
 # Long-term: key facts extracted from conversations (max 100 per employee)
-_long_term_memories: Dict[str, List[Dict[str, Any]]] = {}   # employee_id -> [{id,fact,ts,source}]
+_long_term_memories: Dict[str, List[Dict[str, Any]]] = {}  # employee_id -> [{id,fact,ts,source}]
 
-_HISTORY_MAXLEN = 30    # messages kept in sliding window
-_MEMORY_MAXLEN  = 100   # long-term facts kept per employee
+_HISTORY_MAXLEN = 30  # messages kept in sliding window
+_MEMORY_MAXLEN = 100  # long-term facts kept per employee
+
+
+def _response_text(response: Any) -> str:
+    """Extract plain text from an LLM RunResponse or similar object."""
+    if hasattr(response, "content"):
+        content = response.content
+        return str(content) if content is not None else ""
+    return str(response)
 
 
 def _get_history(employee_id: str) -> deque:
@@ -54,11 +62,13 @@ def _get_history(employee_id: str) -> deque:
 
 def _add_history(employee_id: str, role: str, content: str) -> None:
     """Append one message to the conversation history."""
-    _get_history(employee_id).append({
-        "role": role,
-        "content": content,
-        "ts": datetime.utcnow().isoformat(),
-    })
+    _get_history(employee_id).append(
+        {
+            "role": role,
+            "content": content,
+            "ts": datetime.utcnow().isoformat(),
+        }
+    )
 
 
 def _build_history_block(employee_id: str, limit: int = 10) -> str:
@@ -83,8 +93,10 @@ def _build_memory_block(employee_id: str) -> str:
 
 
 async def _extract_and_store_memories(
-    employee_id: str, emp: "PulseEmployee",
-    user_message: str, assistant_reply: str,
+    employee_id: str,
+    emp: "PulseEmployee",
+    user_message: str,
+    assistant_reply: str,
 ) -> None:
     """
     Background coroutine: ask LLM to extract 0-3 important facts worth
@@ -106,7 +118,7 @@ async def _extract_and_store_memories(
             loop.run_in_executor(None, lambda: emp.run(prompt, stream=False)),
             timeout=20.0,
         )
-        raw = (response.content if hasattr(response, "content") else str(response)).strip()
+        raw = _response_text(response).strip()
         if raw.upper() == "NONE" or not raw:
             return
         if employee_id not in _long_term_memories:
@@ -119,12 +131,14 @@ async def _extract_and_store_memories(
             # Deduplicate: skip if very similar fact already exists
             if any(line.lower()[:40] in m["fact"].lower() for m in mem_list[-20:]):
                 continue
-            mem_list.append({
-                "id": str(uuid4())[:8],
-                "fact": line[:300],
-                "ts": datetime.utcnow().isoformat(),
-                "source": "chat",
-            })
+            mem_list.append(
+                {
+                    "id": str(uuid4())[:8],
+                    "fact": line[:300],
+                    "ts": datetime.utcnow().isoformat(),
+                    "source": "chat",
+                }
+            )
         # Keep only the most recent MEMORY_MAXLEN facts
         _long_term_memories[employee_id] = mem_list[-_MEMORY_MAXLEN:]
         _save_employees()
@@ -179,6 +193,7 @@ def _load_employees() -> None:
 
             # Restore KT summaries
             from buddy.pulse.kt import KTSummary
+
             for s_data in data.get("kt_summaries", []):
                 try:
                     summary = KTSummary(**s_data)
@@ -189,6 +204,7 @@ def _load_employees() -> None:
 
             # Restore tasks
             from buddy.pulse.work import WorkItem
+
             for t_data in data.get("tasks", []):
                 try:
                     task = WorkItem(**t_data)
@@ -221,20 +237,27 @@ _kt_sessions: Dict[str, KTSession] = {}
 # Activity log — every autonomous action PULSE takes is recorded here
 # ---------------------------------------------------------------------------
 
+
 class ActivityEvent:
     def __init__(self, employee_id: str, event_type: str, title: str, detail: str = "") -> None:
         self.employee_id = employee_id
-        self.event_type = event_type   # task_started | task_done | kt_learned | standup | suggestion | message
+        self.event_type = event_type  # task_started | task_done | kt_learned | standup | suggestion | message
         self.title = title
         self.detail = detail
         self.ts = datetime.utcnow().isoformat()
 
     def to_dict(self) -> Dict[str, Any]:
-        return {"employee_id": self.employee_id, "event_type": self.event_type,
-                "title": self.title, "detail": self.detail, "ts": self.ts}
+        return {
+            "employee_id": self.employee_id,
+            "event_type": self.event_type,
+            "title": self.title,
+            "detail": self.detail,
+            "ts": self.ts,
+        }
+
 
 # Per-employee capped activity log (last 200 events)
-_activity_log: Dict[str, deque] = {}   # employee_id -> deque[ActivityEvent]
+_activity_log: Dict[str, deque] = {}  # employee_id -> deque[ActivityEvent]
 
 # Notifications queue — proactive messages from PULSE to the user
 _notifications: Dict[str, deque] = {}  # employee_id -> deque[dict]
@@ -249,13 +272,15 @@ def _log(employee_id: str, event_type: str, title: str, detail: str = "") -> Non
 def _notify(employee_id: str, message: str, notif_type: str = "info") -> None:
     if employee_id not in _notifications:
         _notifications[employee_id] = deque(maxlen=50)
-    _notifications[employee_id].appendleft({
-        "id": str(uuid4())[:8],
-        "message": message,
-        "type": notif_type,
-        "ts": datetime.utcnow().isoformat(),
-        "read": False,
-    })
+    _notifications[employee_id].appendleft(
+        {
+            "id": str(uuid4())[:8],
+            "message": message,
+            "type": notif_type,
+            "ts": datetime.utcnow().isoformat(),
+            "read": False,
+        }
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -281,7 +306,10 @@ def _detect_output_format(title: str, description: str) -> tuple[str, str]:
     e.g. ("py", "Python script"), ("md", "Markdown document")
     """
     text = (title + " " + description).lower()
-    if any(k in text for k in ("python", "script", "code", ".py", "function", "class", "module", "api endpoint", "fastapi", "flask")):
+    if any(
+        k in text
+        for k in ("python", "script", "code", ".py", "function", "class", "module", "api endpoint", "fastapi", "flask")
+    ):
         return "py", "Python script"
     if any(k in text for k in ("sql", "query", "database", "schema", "migration")):
         return "sql", "SQL script"
@@ -303,6 +331,7 @@ def _detect_output_format(title: str, description: str) -> tuple[str, str]:
 
 def _safe_filename(title: str, task_id: str, ext: str) -> str:
     import re as _re
+
     slug = _re.sub(r"[^a-zA-Z0-9_-]", "_", title.lower())[:40].strip("_")
     return f"{task_id}_{slug}.{ext}"
 
@@ -311,10 +340,11 @@ def _build_kt_block(emp: "PulseEmployee", max_summaries: int = 3, max_chars: int
     kt_summaries = emp.kt_manager.all_summaries()
     if not kt_summaries:
         return ""
-    return "KNOWLEDGE BASE:\n" + "\n\n".join(
-        f"[{s.session_name}] {s.mental_model[:max_chars]}"
-        for s in kt_summaries[-max_summaries:]
-    ) + "\n\n---\n"
+    return (
+        "KNOWLEDGE BASE:\n"
+        + "\n\n".join(f"[{s.session_name}] {s.mental_model[:max_chars]}" for s in kt_summaries[-max_summaries:])
+        + "\n\n---\n"
+    )
 
 
 async def _autonomous_worker() -> None:
@@ -362,16 +392,18 @@ async def _autonomous_worker() -> None:
                             f"Priority: {task.priority.value}\n\n"
                             f"Complete this task by producing a real {fmt_hint}.\n"
                             f"Output ONLY the file content — no preamble, no explanation, no markdown code fences. "
-                            f"Just the raw {fmt_hint} content that would be saved directly to a file named '{filename}'.\n"
+                            f"Just the raw {fmt_hint} content that would be saved directly "
+                            f"to a file named '{filename}'.\n"
                             f"The content must be complete, professional, and ready to use.\n"
-                            f"After the file content, on a NEW LINE write exactly: SUMMARY: <one sentence summary>"
+                            f"After the file content, on a NEW LINE write exactly: "
+                            f"SUMMARY: <one sentence summary>"
                         )
 
                         response = await asyncio.wait_for(
-                            loop.run_in_executor(None, lambda p=prompt: emp.run(p, stream=False)),
+                            loop.run_in_executor(None, partial(emp.run, prompt, stream=False)),
                             timeout=90.0,
                         )
-                        raw_output = response.content if hasattr(response, "content") else str(response)
+                        raw_output = _response_text(response)
 
                         # Separate file content from summary line
                         lines = raw_output.strip().split("\n")
@@ -386,6 +418,7 @@ async def _autonomous_worker() -> None:
 
                         # Strip any accidental markdown code fences
                         import re as _re
+
                         file_content = _re.sub(r"^```[a-z]*\n?", "", file_content, flags=_re.M)
                         file_content = _re.sub(r"\n?```$", "", file_content, flags=_re.M)
                         file_content = file_content.strip()
@@ -400,9 +433,7 @@ async def _autonomous_worker() -> None:
                         task.updated_at = task.completed_at
                         _save_employees()
                         _log(employee_id, "task_done", f"Completed: {task.title}", f"Created {filename}")
-                        _notify(employee_id,
-                                f"Finished '{task.title}' — created {filename}. {summary_line}",
-                                "success")
+                        _notify(employee_id, f"Finished '{task.title}' — created {filename}. {summary_line}", "success")
 
                     except asyncio.TimeoutError:
                         task.add_note("[AUTO] Timed out. Will retry.")
@@ -439,10 +470,10 @@ async def _autonomous_worker() -> None:
                             f"Be concise and professional."
                         )
                         response = await asyncio.wait_for(
-                            loop.run_in_executor(None, lambda p=prompt: emp.run(p, stream=False)),
+                            loop.run_in_executor(None, partial(emp.run, prompt, stream=False)),
                             timeout=60.0,
                         )
-                        standup = response.content if hasattr(response, "content") else str(response)
+                        standup = _response_text(response)
                         last_standup_date[employee_id] = today
                         _log(employee_id, "standup", "Daily standup", standup.strip())
                         _notify(employee_id, standup.strip(), "standup")
@@ -467,12 +498,13 @@ async def _autonomous_worker() -> None:
                             f"No other text."
                         )
                         response = await asyncio.wait_for(
-                            loop.run_in_executor(None, lambda p=prompt: emp.run(p, stream=False)),
+                            loop.run_in_executor(None, partial(emp.run, prompt, stream=False)),
                             timeout=60.0,
                         )
-                        raw = response.content if hasattr(response, "content") else str(response)
+                        raw = _response_text(response)
                         import re as _re
-                        m = _re.search(r'\[.*\]', raw, _re.S)
+
+                        m = _re.search(r"\[.*\]", raw, _re.S)
                         if m:
                             suggestions = json.loads(m.group())
                             for s in suggestions[:3]:
@@ -507,6 +539,7 @@ def _get_employee(employee_id: str) -> PulseEmployee:
 # ---------------------------------------------------------------------------
 # Request / Response models
 # ---------------------------------------------------------------------------
+
 
 class CreateEmployeeRequest(BaseModel):
     full_name: str
@@ -593,6 +626,7 @@ class FeedbackRequest(BaseModel):
 # Employee management
 # ---------------------------------------------------------------------------
 
+
 @router.post("/employees")
 async def create_employee(req: CreateEmployeeRequest) -> Dict[str, Any]:
     """Create a new PULSE employee and register it."""
@@ -660,6 +694,7 @@ async def onboard_employee(employee_id: str, req: OnboardRequest) -> Dict[str, A
 # KT — async source mode
 # ---------------------------------------------------------------------------
 
+
 @router.post("/{employee_id}/kt/async")
 async def kt_async(employee_id: str, req: AsyncKTRequest) -> Dict[str, Any]:
     emp = _get_employee(employee_id)
@@ -692,6 +727,7 @@ async def kt_async(employee_id: str, req: AsyncKTRequest) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 # KT — live human mode
 # ---------------------------------------------------------------------------
+
 
 @router.post("/{employee_id}/kt/live")
 async def kt_live_create(employee_id: str, req: LiveKTCreateRequest) -> Dict[str, Any]:
@@ -778,21 +814,22 @@ async def list_kt_sessions(employee_id: str) -> Dict[str, Any]:
 
 @router.get("/{employee_id}/kt/{session_id}")
 async def get_kt_session(employee_id: str, session_id: str) -> Dict[str, Any]:
-    _get_employee(employee_id)
+    emp = _get_employee(employee_id)
     session = _kt_sessions.get(session_id)
     if not session:
         raise HTTPException(status_code=404, detail=f"KT session '{session_id}' not found")
+    summary_obj = emp.kt_manager._summaries.get(session_id)
     return {
         "session_id": session_id,
         "state": session.state.model_dump(),
-        "summary": emp.kt_manager._summaries.get(session_id, {}).model_dump()  # type: ignore[attr-defined]
-        if session_id in (emp := _get_employee(employee_id)).kt_manager._summaries else None,
+        "summary": summary_obj.model_dump() if summary_obj is not None else None,
     }
 
 
 # ---------------------------------------------------------------------------
 # Meetings
 # ---------------------------------------------------------------------------
+
 
 @router.post("/{employee_id}/meetings")
 async def process_meeting(employee_id: str, req: MeetingRequest) -> Dict[str, Any]:
@@ -830,6 +867,7 @@ async def list_meetings(employee_id: str) -> Dict[str, Any]:
 # Tasks
 # ---------------------------------------------------------------------------
 
+
 @router.post("/{employee_id}/tasks")
 async def assign_task(employee_id: str, req: TaskRequest) -> Dict[str, Any]:
     emp = _get_employee(employee_id)
@@ -859,10 +897,12 @@ async def update_task(employee_id: str, task_id: str, updates: Dict[str, Any]) -
         raise HTTPException(status_code=404, detail=f"Task '{task_id}' not found")
     if "status" in updates:
         from buddy.pulse.work import TaskStatus
+
         new_status = TaskStatus(updates["status"])
         task.status = new_status
         # Generate completion note in background thread (non-blocking)
         if new_status == TaskStatus.DONE and not any("✅" in n for n in task.progress_notes):
+
             async def _add_completion_note() -> None:
                 try:
                     prompt = (
@@ -878,12 +918,13 @@ async def update_task(employee_id: str, task_id: str, updates: Dict[str, Any]) -
                         loop.run_in_executor(None, lambda: emp.run(prompt, stream=False)),
                         timeout=60.0,
                     )
-                    note = resp.content if hasattr(resp, "content") else str(resp)
+                    note = _response_text(resp)
                     task.add_note(f"✅ {note.strip()}")
                 except Exception:
                     task.add_note("✅ Task marked as done.")
                 finally:
                     _save_employees()
+
             asyncio.create_task(_add_completion_note())
     if "note" in updates:
         task.add_note(updates["note"])
@@ -902,6 +943,7 @@ async def task_status_update(employee_id: str, task_id: str) -> Dict[str, Any]:
         )
     except asyncio.TimeoutError:
         from buddy.pulse.work import StatusUpdate
+
         update = StatusUpdate(
             employee_name=emp.employee_profile.full_name,
             update_type="task_update",
@@ -914,6 +956,7 @@ async def task_status_update(employee_id: str, task_id: str) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Chat
 # ---------------------------------------------------------------------------
+
 
 @router.post("/{employee_id}/chat")
 async def chat(employee_id: str, req: ChatRequest) -> Dict[str, Any]:
@@ -961,7 +1004,7 @@ async def chat(employee_id: str, req: ChatRequest) -> Dict[str, Any]:
     except asyncio.TimeoutError:
         return {"response": "Sorry, response timed out. Please try again.", "employee": emp.employee_profile.full_name}
 
-    content = response.content if hasattr(response, "content") else str(response)
+    content = _response_text(response)
 
     # Store assistant turn in history
     _add_history(employee_id, "assistant", content)
@@ -1018,10 +1061,10 @@ async def chat_stream(websocket: WebSocket, employee_id: str) -> None:
 
             try:
                 response = await asyncio.wait_for(
-                    loop.run_in_executor(None, lambda msg=augmented: emp.run(msg, stream=False)),
+                    loop.run_in_executor(None, partial(emp.run, augmented, stream=False)),
                     timeout=60.0,
                 )
-                content = response.content if hasattr(response, "content") else str(response)
+                content = _response_text(response)
             except asyncio.TimeoutError:
                 await websocket.send_json({"chunk": "Sorry, the response timed out. Please try again.", "done": False})
                 await websocket.send_json({"chunk": "", "done": True})
@@ -1051,6 +1094,7 @@ async def chat_stream(websocket: WebSocket, employee_id: str) -> None:
 # Knowledge explorer
 # ---------------------------------------------------------------------------
 
+
 @router.get("/{employee_id}/knowledge/search")
 async def knowledge_search(employee_id: str, q: str = "") -> Dict[str, Any]:
     emp = _get_employee(employee_id)
@@ -1072,6 +1116,7 @@ async def knowledge_summary(employee_id: str) -> Dict[str, Any]:
 # EOD summary
 # ---------------------------------------------------------------------------
 
+
 @router.get("/{employee_id}/eod-summary")
 async def eod_summary(employee_id: str) -> Dict[str, Any]:
     emp = _get_employee(employee_id)
@@ -1082,6 +1127,7 @@ async def eod_summary(employee_id: str) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Feedback
 # ---------------------------------------------------------------------------
+
 
 @router.post("/{employee_id}/feedback")
 async def receive_feedback(employee_id: str, req: FeedbackRequest) -> Dict[str, Any]:
@@ -1101,13 +1147,13 @@ async def receive_feedback(employee_id: str, req: FeedbackRequest) -> Dict[str, 
 
 # Provider → env var name
 _PROVIDER_ENV_KEYS: Dict[str, str] = {
-    "openai":    "OPENAI_API_KEY",
+    "openai": "OPENAI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
-    "claude":    "ANTHROPIC_API_KEY",
-    "google":    "GOOGLE_API_KEY",
-    "gemini":    "GOOGLE_API_KEY",
-    "groq":      "GROQ_API_KEY",
-    "ollama":    "",   # no key needed
+    "claude": "ANTHROPIC_API_KEY",
+    "google": "GOOGLE_API_KEY",
+    "gemini": "GOOGLE_API_KEY",
+    "groq": "GROQ_API_KEY",
+    "ollama": "",  # no key needed
 }
 
 # Active LLM config (single global for the server process)
@@ -1128,6 +1174,7 @@ class LLMSettingsRequest(BaseModel):
 # Workspace — files PULSE creates when working on tasks
 # ---------------------------------------------------------------------------
 
+
 @router.get("/{employee_id}/workspace")
 async def list_workspace_files(employee_id: str) -> Dict[str, Any]:
     """List all files PULSE has created in its workspace."""
@@ -1137,12 +1184,14 @@ async def list_workspace_files(employee_id: str) -> Dict[str, Any]:
     for f in sorted(ws.iterdir(), key=lambda x: x.stat().st_mtime, reverse=True):
         if f.is_file():
             stat = f.stat()
-            files.append({
-                "filename": f.name,
-                "size_bytes": stat.st_size,
-                "modified_at": datetime.utcfromtimestamp(stat.st_mtime).isoformat(),
-                "extension": f.suffix.lstrip("."),
-            })
+            files.append(
+                {
+                    "filename": f.name,
+                    "size_bytes": stat.st_size,
+                    "modified_at": datetime.utcfromtimestamp(stat.st_mtime).isoformat(),
+                    "extension": f.suffix.lstrip("."),
+                }
+            )
     return {"workspace_path": str(ws), "files": files}
 
 
@@ -1151,7 +1200,8 @@ async def get_workspace_file(employee_id: str, filename: str) -> Dict[str, Any]:
     """Return the content of a workspace file."""
     _get_employee(employee_id)
     import re as _re
-    if not _re.match(r'^[\w\-. ]+$', filename):
+
+    if not _re.match(r"^[\w\-. ]+$", filename):
         raise HTTPException(status_code=400, detail="Invalid filename")
     ws = _employee_workspace(employee_id)
     filepath = ws / filename
@@ -1171,7 +1221,8 @@ async def delete_workspace_file(employee_id: str, filename: str) -> Dict[str, An
     """Delete a file from the workspace."""
     _get_employee(employee_id)
     import re as _re
-    if not _re.match(r'^[\w\-. ]+$', filename):
+
+    if not _re.match(r"^[\w\-. ]+$", filename):
         raise HTTPException(status_code=400, detail="Invalid filename")
     ws = _employee_workspace(employee_id)
     filepath = ws / filename
@@ -1185,6 +1236,7 @@ async def delete_workspace_file(employee_id: str, filename: str) -> Dict[str, An
 # Memory — conversation history + long-term facts
 # ---------------------------------------------------------------------------
 
+
 @router.get("/{employee_id}/memory")
 async def get_memory(employee_id: str) -> Dict[str, Any]:
     """Return all long-term memories + recent history for this employee."""
@@ -1192,8 +1244,8 @@ async def get_memory(employee_id: str) -> Dict[str, Any]:
     history = list(_get_history(employee_id))
     facts = _long_term_memories.get(employee_id, [])
     return {
-        "long_term_memories": list(reversed(facts)),   # newest first
-        "chat_history": list(reversed(history)),        # newest first
+        "long_term_memories": list(reversed(facts)),  # newest first
+        "chat_history": list(reversed(history)),  # newest first
         "history_count": len(history),
         "memory_count": len(facts),
     }
@@ -1233,6 +1285,7 @@ async def clear_chat_history(employee_id: str) -> Dict[str, Any]:
 # Auto-work settings
 # ---------------------------------------------------------------------------
 
+
 @router.get("/settings/auto-work")
 async def get_auto_work_settings() -> Dict[str, Any]:
     return {"enabled": _auto_work_enabled, "poll_interval_seconds": _TASK_POLL_INTERVAL}
@@ -1252,6 +1305,7 @@ async def set_auto_work_settings(body: Dict[str, Any]) -> Dict[str, Any]:
 # Activity log
 # ---------------------------------------------------------------------------
 
+
 @router.get("/{employee_id}/activity")
 async def get_activity(employee_id: str, limit: int = 50) -> Dict[str, Any]:
     _get_employee(employee_id)
@@ -1262,6 +1316,7 @@ async def get_activity(employee_id: str, limit: int = 50) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Notifications
 # ---------------------------------------------------------------------------
+
 
 @router.get("/{employee_id}/notifications")
 async def get_notifications(employee_id: str) -> Dict[str, Any]:
@@ -1291,10 +1346,12 @@ async def mark_all_read(employee_id: str) -> Dict[str, Any]:
 # Daily standup (on-demand trigger)
 # ---------------------------------------------------------------------------
 
+
 @router.post("/{employee_id}/standup")
 async def generate_standup(employee_id: str) -> Dict[str, Any]:
     emp = _get_employee(employee_id)
     from buddy.pulse.work import TaskStatus
+
     done_tasks = emp.task_manager.list_tasks(TaskStatus.DONE)[-5:]
     todo_tasks = emp.task_manager.list_tasks(TaskStatus.TODO)[:3]
     task_ctx = ""
@@ -1316,7 +1373,7 @@ async def generate_standup(employee_id: str) -> Dict[str, Any]:
             loop.run_in_executor(None, lambda: emp.run(prompt, stream=False)),
             timeout=60.0,
         )
-        standup = response.content if hasattr(response, "content") else str(response)
+        standup = _response_text(response)
     except asyncio.TimeoutError:
         standup = "Standup generation timed out."
     _log(employee_id, "standup", "Daily standup", standup.strip())
@@ -1327,6 +1384,7 @@ async def generate_standup(employee_id: str) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Task suggestions — PULSE proactively suggests what it should work on
 # ---------------------------------------------------------------------------
+
 
 @router.post("/{employee_id}/suggest-tasks")
 async def suggest_tasks(employee_id: str) -> Dict[str, Any]:
@@ -1349,9 +1407,10 @@ async def suggest_tasks(employee_id: str) -> Dict[str, Any]:
             loop.run_in_executor(None, lambda: emp.run(prompt, stream=False)),
             timeout=60.0,
         )
-        raw = response.content if hasattr(response, "content") else str(response)
+        raw = _response_text(response)
         import re as _re
-        m = _re.search(r'\[.*\]', raw, _re.S)
+
+        m = _re.search(r"\[.*\]", raw, _re.S)
         suggestions = json.loads(m.group()) if m else []
     except Exception:
         suggestions = []
@@ -1362,17 +1421,18 @@ async def suggest_tasks(employee_id: str) -> Dict[str, Any]:
 async def get_llm_settings() -> Dict[str, Any]:
     """Return current LLM configuration (key is masked)."""
     import os
+
     provider = _llm_config.get("provider", "openai")
-    env_var  = _PROVIDER_ENV_KEYS.get(provider.lower(), "")
-    raw_key  = os.environ.get(env_var, "") if env_var else ""
-    masked   = ("*" * 8 + raw_key[-4:]) if len(raw_key) > 4 else ("*" * len(raw_key) if raw_key else "")
+    env_var = _PROVIDER_ENV_KEYS.get(provider.lower(), "")
+    raw_key = os.environ.get(env_var, "") if env_var else ""
+    masked = ("*" * 8 + raw_key[-4:]) if len(raw_key) > 4 else ("*" * len(raw_key) if raw_key else "")
     return {
-        "provider":    provider,
-        "model_id":    _llm_config.get("model_id", "gpt-4o"),
-        "env_var":     env_var,
-        "key_set":     bool(raw_key),
-        "key_masked":  masked,
-        "base_url":    _llm_config.get("base_url", ""),
+        "provider": provider,
+        "model_id": _llm_config.get("model_id", "gpt-4o"),
+        "env_var": env_var,
+        "key_set": bool(raw_key),
+        "key_masked": masked,
+        "base_url": _llm_config.get("base_url", ""),
     }
 
 
@@ -1385,8 +1445,9 @@ async def save_llm_settings(req: LLMSettingsRequest) -> Dict[str, Any]:
     - Re-wires the model on all registered employees.
     """
     import os
+
     _llm_config["provider"] = req.provider
-    _llm_config["model_id"]  = req.model_id
+    _llm_config["model_id"] = req.model_id
     if req.base_url is not None:
         _llm_config["base_url"] = req.base_url
 
@@ -1404,13 +1465,13 @@ async def save_llm_settings(req: LLMSettingsRequest) -> Dict[str, Any]:
             errors.append(f"{emp_id}: {exc}")
 
     return {
-        "saved":    True,
+        "saved": True,
         "provider": req.provider,
         "model_id": req.model_id,
-        "env_var":  env_var,
-        "key_set":  bool(req.api_key or (env_var and os.environ.get(env_var))),
-        "rewired":  len(_employees),
-        "errors":   errors,
+        "env_var": env_var,
+        "key_set": bool(req.api_key or (env_var and os.environ.get(env_var))),
+        "rewired": len(_employees),
+        "errors": errors,
     }
 
 
@@ -1421,6 +1482,7 @@ async def test_llm_connection(req: LLMSettingsRequest) -> Dict[str, Any]:
     Returns success/failure without persisting anything.
     """
     import os
+
     env_var = _PROVIDER_ENV_KEYS.get(req.provider.lower(), "")
     if req.api_key and env_var:
         os.environ[env_var] = req.api_key
@@ -1429,6 +1491,7 @@ async def test_llm_connection(req: LLMSettingsRequest) -> Dict[str, Any]:
         model = _build_model(req.provider, req.model_id, req.base_url)
         # Minimal call — just create a throwaway employee and run a ping
         from buddy.pulse.identity import EmployeeProfile
+
         test_profile = EmployeeProfile(
             full_name="Test",
             role="Test",
@@ -1438,7 +1501,7 @@ async def test_llm_connection(req: LLMSettingsRequest) -> Dict[str, Any]:
         )
         test_emp = PulseEmployee(employee_profile=test_profile, model=model)
         resp = test_emp.run("Reply with exactly: OK", stream=False)
-        content = resp.content if hasattr(resp, "content") else str(resp)
+        content = _response_text(resp)
         return {"success": True, "response": content[:120]}
     except Exception as exc:
         return {"success": False, "error": str(exc)}
@@ -1448,29 +1511,36 @@ async def test_llm_connection(req: LLMSettingsRequest) -> Dict[str, Any]:
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _build_model(provider: str, model_id: str, base_url: Optional[str] = None) -> Any:
     provider_lower = provider.lower()
     if provider_lower == "openai":
         from buddy.models.openai import OpenAIChat
+
         kwargs: Dict[str, Any] = {"id": model_id}
         if base_url:
             kwargs["base_url"] = base_url
         return OpenAIChat(**kwargs)
     if provider_lower in ("anthropic", "claude"):
         from buddy.models.anthropic import Claude
+
         return Claude(id=model_id)
     if provider_lower in ("google", "gemini"):
         from buddy.models.google import Gemini
+
         return Gemini(id=model_id)
     if provider_lower in ("groq",):
         from buddy.models.groq import Groq
+
         return Groq(id=model_id)
     if provider_lower in ("ollama",):
         from buddy.models.ollama import Ollama
+
         kwargs = {"id": model_id}
         if base_url:
             kwargs["base_url"] = base_url
         return Ollama(**kwargs)
     # Default fallback
     from buddy.models.openai import OpenAIChat
+
     return OpenAIChat(id=model_id)

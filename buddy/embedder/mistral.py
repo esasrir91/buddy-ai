@@ -80,4 +80,3 @@ class MistralEmbedder(Embedder):
         except Exception as e:
             logger.warning(f"Error getting embedding and usage: {e}")
             return [], {}
-

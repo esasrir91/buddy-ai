@@ -221,4 +221,3 @@ class DocumentKnowledgeBase(AgentKnowledge):
             skip_existing=skip_existing,
             source_info=f"document: {document.name or document.id}",
         )
-

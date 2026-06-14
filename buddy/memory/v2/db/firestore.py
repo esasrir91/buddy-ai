@@ -337,4 +337,3 @@ class FirestoreMemoryDb(MemoryDb):
         except Exception as e:
             logger.error(f"Error checking collection existence: {e}")
             return False
-

@@ -102,4 +102,3 @@ class MemoryClassifier(BaseModel):
         response = await self.model.aresponse(messages=messages_for_model)
         log_debug("*********** Async MemoryClassifier End ***********")
         return response.content
-

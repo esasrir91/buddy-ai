@@ -158,5 +158,3 @@ def create_anon_user() -> Optional[UserSchema]:
         except Exception as e:
             logger.debug(f"Could not create anon user: {e}")
     return None
-
-

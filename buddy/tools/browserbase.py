@@ -198,4 +198,3 @@ class BrowserbaseTools(Toolkit):
             )
         except Exception as e:
             return json.dumps({"status": "warning", "message": f"Cleanup completed with warning: {str(e)}"})
-

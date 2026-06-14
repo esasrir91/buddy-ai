@@ -1,6 +1,6 @@
 import json
-from typing import Any, Dict, List, Optional
 from os import getenv
+from typing import Any, Dict, List, Optional
 
 from buddy.tools import Toolkit
 from buddy.utils.log import log_debug, logger
@@ -50,7 +50,7 @@ class AWSTools(Toolkit):
             service_name,
             aws_access_key_id=self.access_key_id,
             aws_secret_access_key=self.secret_access_key,
-            region_name=self.region
+            region_name=self.region,
         )
 
     def list_s3_buckets(self) -> str:
@@ -60,16 +60,13 @@ class AWSTools(Toolkit):
             str: List of S3 buckets or error message
         """
         try:
-            s3_client = self._get_boto3_client('s3')
+            s3_client = self._get_boto3_client("s3")
             response = s3_client.list_buckets()
-            
+
             buckets = []
-            for bucket in response['Buckets']:
-                buckets.append({
-                    'name': bucket['Name'],
-                    'creation_date': bucket['CreationDate'].isoformat()
-                })
-            
+            for bucket in response["Buckets"]:
+                buckets.append({"name": bucket["Name"], "creation_date": bucket["CreationDate"].isoformat()})
+
             return json.dumps({"buckets": buckets})
         except Exception as e:
             return json.dumps({"error": f"Failed to list S3 buckets: {str(e)}"})
@@ -86,12 +83,10 @@ class AWSTools(Toolkit):
             str: Upload result or error message
         """
         try:
-            s3_client = self._get_boto3_client('s3')
+            s3_client = self._get_boto3_client("s3")
             s3_client.upload_file(file_path, bucket_name, object_key)
-            
-            return json.dumps({
-                "success": f"File uploaded to s3://{bucket_name}/{object_key}"
-            })
+
+            return json.dumps({"success": f"File uploaded to s3://{bucket_name}/{object_key}"})
         except Exception as e:
             return json.dumps({"error": f"Failed to upload to S3: {str(e)}"})
 
@@ -107,12 +102,10 @@ class AWSTools(Toolkit):
             str: Download result or error message
         """
         try:
-            s3_client = self._get_boto3_client('s3')
+            s3_client = self._get_boto3_client("s3")
             s3_client.download_file(bucket_name, object_key, file_path)
-            
-            return json.dumps({
-                "success": f"File downloaded from s3://{bucket_name}/{object_key} to {file_path}"
-            })
+
+            return json.dumps({"success": f"File downloaded from s3://{bucket_name}/{object_key} to {file_path}"})
         except Exception as e:
             return json.dumps({"error": f"Failed to download from S3: {str(e)}"})
 
@@ -123,21 +116,23 @@ class AWSTools(Toolkit):
             str: List of EC2 instances or error message
         """
         try:
-            ec2_client = self._get_boto3_client('ec2')
+            ec2_client = self._get_boto3_client("ec2")
             response = ec2_client.describe_instances()
-            
+
             instances = []
-            for reservation in response['Reservations']:
-                for instance in reservation['Instances']:
-                    instances.append({
-                        'instance_id': instance['InstanceId'],
-                        'instance_type': instance['InstanceType'],
-                        'state': instance['State']['Name'],
-                        'public_ip': instance.get('PublicIpAddress'),
-                        'private_ip': instance.get('PrivateIpAddress'),
-                        'launch_time': instance['LaunchTime'].isoformat()
-                    })
-            
+            for reservation in response["Reservations"]:
+                for instance in reservation["Instances"]:
+                    instances.append(
+                        {
+                            "instance_id": instance["InstanceId"],
+                            "instance_type": instance["InstanceType"],
+                            "state": instance["State"]["Name"],
+                            "public_ip": instance.get("PublicIpAddress"),
+                            "private_ip": instance.get("PrivateIpAddress"),
+                            "launch_time": instance["LaunchTime"].isoformat(),
+                        }
+                    )
+
             return json.dumps({"instances": instances})
         except Exception as e:
             return json.dumps({"error": f"Failed to list EC2 instances: {str(e)}"})
@@ -152,13 +147,15 @@ class AWSTools(Toolkit):
             str: Start result or error message
         """
         try:
-            ec2_client = self._get_boto3_client('ec2')
+            ec2_client = self._get_boto3_client("ec2")
             response = ec2_client.start_instances(InstanceIds=[instance_id])
-            
-            return json.dumps({
-                "success": f"Instance {instance_id} start initiated",
-                "current_state": response['StartingInstances'][0]['CurrentState']['Name']
-            })
+
+            return json.dumps(
+                {
+                    "success": f"Instance {instance_id} start initiated",
+                    "current_state": response["StartingInstances"][0]["CurrentState"]["Name"],
+                }
+            )
         except Exception as e:
             return json.dumps({"error": f"Failed to start instance: {str(e)}"})
 
@@ -172,13 +169,15 @@ class AWSTools(Toolkit):
             str: Stop result or error message
         """
         try:
-            ec2_client = self._get_boto3_client('ec2')
+            ec2_client = self._get_boto3_client("ec2")
             response = ec2_client.stop_instances(InstanceIds=[instance_id])
-            
-            return json.dumps({
-                "success": f"Instance {instance_id} stop initiated",
-                "current_state": response['StoppingInstances'][0]['CurrentState']['Name']
-            })
+
+            return json.dumps(
+                {
+                    "success": f"Instance {instance_id} stop initiated",
+                    "current_state": response["StoppingInstances"][0]["CurrentState"]["Name"],
+                }
+            )
         except Exception as e:
             return json.dumps({"error": f"Failed to stop instance: {str(e)}"})
 
@@ -193,20 +192,19 @@ class AWSTools(Toolkit):
             str: Lambda response or error message
         """
         try:
-            lambda_client = self._get_boto3_client('lambda')
-            
+            lambda_client = self._get_boto3_client("lambda")
+
             invoke_payload = json.dumps(payload or {})
-            response = lambda_client.invoke(
-                FunctionName=function_name,
-                Payload=invoke_payload
+            response = lambda_client.invoke(FunctionName=function_name, Payload=invoke_payload)
+
+            response_payload = response["Payload"].read().decode("utf-8")
+
+            return json.dumps(
+                {
+                    "status_code": response["StatusCode"],
+                    "payload": json.loads(response_payload) if response_payload else None,
+                }
             )
-            
-            response_payload = response['Payload'].read().decode('utf-8')
-            
-            return json.dumps({
-                "status_code": response['StatusCode'],
-                "payload": json.loads(response_payload) if response_payload else None
-            })
         except Exception as e:
             return json.dumps({"error": f"Failed to invoke Lambda function: {str(e)}"})
 
@@ -222,21 +220,15 @@ class AWSTools(Toolkit):
             str: SNS response or error message
         """
         try:
-            sns_client = self._get_boto3_client('sns')
-            
-            publish_args = {
-                'TopicArn': topic_arn,
-                'Message': message
-            }
-            
+            sns_client = self._get_boto3_client("sns")
+
+            publish_args = {"TopicArn": topic_arn, "Message": message}
+
             if subject:
-                publish_args['Subject'] = subject
-                
+                publish_args["Subject"] = subject
+
             response = sns_client.publish(**publish_args)
-            
-            return json.dumps({
-                "message_id": response['MessageId'],
-                "success": "Message sent successfully"
-            })
+
+            return json.dumps({"message_id": response["MessageId"], "success": "Message sent successfully"})
         except Exception as e:
             return json.dumps({"error": f"Failed to send SNS message: {str(e)}"})

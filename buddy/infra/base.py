@@ -142,4 +142,3 @@ class InfraBase(BaseModel):
             # logger.debug(f"Setting AWS Region to {aws_region} using workspace_settings")
             env_dict[AWS_REGION_ENV_VAR] = self.workspace_settings.aws_region
             env_dict[AWS_DEFAULT_REGION_ENV_VAR] = self.workspace_settings.aws_region
-

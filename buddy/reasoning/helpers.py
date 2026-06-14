@@ -63,4 +63,3 @@ def update_messages_with_reasoning(
             add_to_agent_memory=False,
         )
     )
-

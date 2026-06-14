@@ -247,5 +247,3 @@ def get_auth_token_from_web_flow(port: int) -> Optional[str]:
         BUDDY_cli_settings.tmp_token_path.unlink()
         return auth_token_json.get("AuthToken", None)
     return None
-
-

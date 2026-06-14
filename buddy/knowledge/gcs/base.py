@@ -37,4 +37,3 @@ class GCSKnowledgeBase(AgentKnowledge):
     @property
     def async_document_lists(self) -> AsyncIterator[List[Document]]:
         raise NotImplementedError
-

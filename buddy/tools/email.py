@@ -62,4 +62,3 @@ class EmailTools(Toolkit):
             logger.error(f"Error sending email: {e}")
             return f"error: {e}"
         return "email sent successfully"
-

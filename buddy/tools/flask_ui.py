@@ -1,7 +1,7 @@
 import json
-from typing import Any, Dict, List, Optional, Union
-import tempfile
 import os
+import tempfile
+from typing import Any, Dict, List, Optional, Union
 
 from buddy.tools import Toolkit
 from buddy.utils.log import log_debug, logger
@@ -10,7 +10,7 @@ from buddy.utils.log import log_debug, logger
 class FlaskUITools(Toolkit):
     def __init__(self, **kwargs):
         """Initialize Flask UI Tools."""
-        
+
         tools: List[Any] = [
             self.create_flask_app,
             self.add_route,
@@ -63,16 +63,25 @@ if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
 '''
 
-            return json.dumps({
-                "success": "Flask app created successfully",
-                "app_name": app_name,
-                "code": flask_app_code,
-                "filename": f"{app_name.lower().replace(' ', '_')}_app.py"
-            })
+            return json.dumps(
+                {
+                    "success": "Flask app created successfully",
+                    "app_name": app_name,
+                    "code": flask_app_code,
+                    "filename": f"{app_name.lower().replace(' ', '_')}_app.py",
+                }
+            )
         except Exception as e:
             return json.dumps({"error": f"Failed to create Flask app: {str(e)}"})
 
-    def add_route(self, route_path: str, methods: List[str], function_name: str, template_name: Optional[str] = None, form_data: bool = False) -> str:
+    def add_route(
+        self,
+        route_path: str,
+        methods: List[str],
+        function_name: str,
+        template_name: Optional[str] = None,
+        form_data: bool = False,
+    ) -> str:
         """Generate Flask route code.
 
         Args:
@@ -87,7 +96,7 @@ if __name__ == '__main__':
         """
         try:
             methods_str = "[" + ", ".join(f'"{m}"' for m in methods) + "]"
-            
+
             route_code = f'''
 @app.route('{route_path}', methods={methods_str})
 def {function_name}():
@@ -95,25 +104,27 @@ def {function_name}():
 '''
 
             if form_data:
-                route_code += '''    if request.method == 'POST':
+                route_code += """    if request.method == 'POST':
          # Handle form submission
          form_data = request.form.to_dict()
          # Process form data here
          return redirect(url_for('index'))
     
-'''
+"""
 
             if template_name:
-                route_code += f'''    return render_template('{template_name}')'''
+                route_code += f"""    return render_template('{template_name}')"""
             else:
-                route_code += '''    return jsonify({"message": "Route working", "path": request.path})'''
+                route_code += """    return jsonify({"message": "Route working", "path": request.path})"""
 
-            return json.dumps({
-                "success": "Route code generated successfully",
-                "route_path": route_path,
-                "function_name": function_name,
-                "code": route_code
-            })
+            return json.dumps(
+                {
+                    "success": "Route code generated successfully",
+                    "route_path": route_path,
+                    "function_name": function_name,
+                    "code": route_code,
+                }
+            )
         except Exception as e:
             return json.dumps({"error": f"Failed to generate route: {str(e)}"})
 
@@ -130,11 +141,15 @@ def {function_name}():
             str: HTML template code or error message
         """
         try:
-            bootstrap_cdn = '''
+            bootstrap_cdn = (
+                """
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>''' if include_bootstrap else ''
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>"""
+                if include_bootstrap
+                else ""
+            )
 
-            html_template = f'''<!DOCTYPE html>
+            html_template = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -157,14 +172,16 @@ def {function_name}():
 
      <script src="{{{{ url_for('static', filename='script.js') }}}}"></script>
 </body>
-</html>'''
+</html>"""
 
-            return json.dumps({
-                "success": "HTML template created successfully",
-                "template_name": template_name,
-                "code": html_template,
-                "filename": template_name if template_name.endswith('.html') else f"{template_name}.html"
-            })
+            return json.dumps(
+                {
+                    "success": "HTML template created successfully",
+                    "template_name": template_name,
+                    "code": html_template,
+                    "filename": template_name if template_name.endswith(".html") else f"{template_name}.html",
+                }
+            )
         except Exception as e:
             return json.dumps({"error": f"Failed to create template: {str(e)}"})
 
@@ -182,42 +199,42 @@ def {function_name}():
         """
         try:
             form_html = f'<form id="{form_name}" method="{method}" class="needs-validation" novalidate>\n'
-            
+
             for field in fields:
-                field_type = field.get('type', 'text')
-                field_name = field.get('name', '')
-                field_label = field.get('label', field_name.title())
-                field_required = field.get('required', False)
-                field_placeholder = field.get('placeholder', '')
-                field_options = field.get('options', [])
+                field_type = field.get("type", "text")
+                field_name = field.get("name", "")
+                field_label = field.get("label", field_name.title())
+                field_required = field.get("required", False)
+                field_placeholder = field.get("placeholder", "")
+                field_options = field.get("options", [])
 
                 form_html += '    <div class="mb-3">\n'
                 form_html += f'        <label for="{field_name}" class="form-label">{field_label}</label>\n'
 
-                if field_type == 'select':
+                if field_type == "select":
                     form_html += f'        <select class="form-select" id="{field_name}" name="{field_name}"{"" if not field_required else " required"}>\n'
                     form_html += f'            <option value="">Choose...</option>\n'
                     for option in field_options:
-                        option_value = option if isinstance(option, str) else option.get('value', '')
-                        option_text = option if isinstance(option, str) else option.get('text', option_value)
+                        option_value = option if isinstance(option, str) else option.get("value", "")
+                        option_text = option if isinstance(option, str) else option.get("text", option_value)
                         form_html += f'            <option value="{option_value}">{option_text}</option>\n'
-                    form_html += '        </select>\n'
-                elif field_type == 'textarea':
+                    form_html += "        </select>\n"
+                elif field_type == "textarea":
                     form_html += f'        <textarea class="form-control" id="{field_name}" name="{field_name}" rows="3" placeholder="{field_placeholder}"{"" if not field_required else " required"}>\n'
-                    form_html += '        </textarea>\n'
+                    form_html += "        </textarea>\n"
                 else:
                     form_html += f'        <input type="{field_type}" class="form-control" id="{field_name}" name="{field_name}" placeholder="{field_placeholder}"{"" if not field_required else " required"}>\n'
 
                 if field_required:
                     form_html += '        <div class="invalid-feedback">Please provide a valid value.</div>\n'
-                
-                form_html += '    </div>\n'
+
+                form_html += "    </div>\n"
 
             form_html += f'    <button type="submit" class="btn btn-primary">{submit_text}</button>\n'
-            form_html += '</form>\n'
+            form_html += "</form>\n"
 
             # Add JavaScript for form validation
-            validation_script = '''
+            validation_script = """
 <script>
 // Bootstrap form validation
 (function() {
@@ -235,19 +252,23 @@ def {function_name}():
         });
     }, false);
 })();
-</script>'''
+</script>"""
 
-            return json.dumps({
-                "success": "Form created successfully",
-                "form_name": form_name,
-                "html": form_html,
-                "validation_script": validation_script,
-                "full_code": form_html + validation_script
-            })
+            return json.dumps(
+                {
+                    "success": "Form created successfully",
+                    "form_name": form_name,
+                    "html": form_html,
+                    "validation_script": validation_script,
+                    "full_code": form_html + validation_script,
+                }
+            )
         except Exception as e:
             return json.dumps({"error": f"Failed to create form: {str(e)}"})
 
-    def create_api_endpoint(self, endpoint_path: str, method: str, response_data: Dict, requires_auth: bool = False) -> str:
+    def create_api_endpoint(
+        self, endpoint_path: str, method: str, response_data: Dict, requires_auth: bool = False
+    ) -> str:
         """Create a REST API endpoint.
 
         Args:
@@ -260,11 +281,12 @@ def {function_name}():
             str: API endpoint code or error message
         """
         try:
-            function_name = endpoint_path.replace('/', '_').replace('-', '_').strip('_')
+            function_name = endpoint_path.replace("/", "_").replace("-", "_").strip("_")
             if not function_name:
                 function_name = "api_endpoint"
 
-            auth_decorator = '''
+            auth_decorator = (
+                """
 @app.before_request
 def require_auth():
     if request.endpoint and 'api' in request.endpoint:
@@ -272,7 +294,10 @@ def require_auth():
         auth_header = request.headers.get('Authorization')
         if not auth_header or not auth_header.startswith('Bearer '):
             return jsonify({"error": "Authentication required"}), 401
-''' if requires_auth else ''
+"""
+                if requires_auth
+                else ""
+            )
 
             endpoint_code = f'''{auth_decorator}
 @app.route('/api{endpoint_path}', methods=['{method}'])
@@ -280,13 +305,13 @@ def api_{function_name}():
     """API endpoint for {endpoint_path}."""
     try:'''
 
-            if method == 'GET':
-                endpoint_code += f'''
+            if method == "GET":
+                endpoint_code += f"""
          # Handle GET request
          response_data = {json.dumps(response_data, indent=8)}
-         return jsonify(response_data), 200'''
-            elif method == 'POST':
-                endpoint_code += f'''
+         return jsonify(response_data), 200"""
+            elif method == "POST":
+                endpoint_code += f"""
          # Handle POST request
          data = request.get_json()
          if not data:
@@ -294,9 +319,9 @@ def api_{function_name}():
          
          # Process the data here
          response_data = {json.dumps(response_data, indent=8)}
-         return jsonify(response_data), 201'''
-            elif method == 'PUT':
-                endpoint_code += f'''
+         return jsonify(response_data), 201"""
+            elif method == "PUT":
+                endpoint_code += f"""
          # Handle PUT request
          data = request.get_json()
          if not data:
@@ -304,24 +329,26 @@ def api_{function_name}():
          
          # Update logic here
          response_data = {json.dumps(response_data, indent=8)}
-         return jsonify(response_data), 200'''
-            elif method == 'DELETE':
-                endpoint_code += f'''
+         return jsonify(response_data), 200"""
+            elif method == "DELETE":
+                endpoint_code += f"""
          # Handle DELETE request
          # Delete logic here
-         return jsonify({{"message": "Resource deleted successfully"}}), 200'''
+         return jsonify({{"message": "Resource deleted successfully"}}), 200"""
 
-            endpoint_code += '''
+            endpoint_code += """
     except Exception as e:
-         return jsonify({"error": str(e)}), 500'''
+         return jsonify({"error": str(e)}), 500"""
 
-            return json.dumps({
-                "success": "API endpoint created successfully",
-                "endpoint_path": f"/api{endpoint_path}",
-                "method": method,
-                "function_name": f"api_{function_name}",
-                "code": endpoint_code
-            })
+            return json.dumps(
+                {
+                    "success": "API endpoint created successfully",
+                    "endpoint_path": f"/api{endpoint_path}",
+                    "method": method,
+                    "function_name": f"api_{function_name}",
+                    "code": endpoint_code,
+                }
+            )
         except Exception as e:
             return json.dumps({"error": f"Failed to create API endpoint: {str(e)}"})
 
@@ -338,7 +365,7 @@ def api_{function_name}():
             str: Run command and instructions or error message
         """
         try:
-            run_code = f'''
+            run_code = f"""
 # To run your Flask application:
 # 1. Save your Flask code to {app_file}
 # 2. Install Flask: pip install flask
@@ -356,19 +383,21 @@ if __name__ == '__main__':
     app.run(host='{host}', port={port}, debug={debug})
 
 # Or run directly from command line:
-# flask run --host={host} --port={port}'''
+# flask run --host={host} --port={port}"""
 
-            requirements = '''flask>=2.0.0
-werkzeug>=2.0.0'''
+            requirements = """flask>=2.0.0
+werkzeug>=2.0.0"""
 
-            return json.dumps({
-                "success": "Flask run configuration created",
-                "run_code": run_code,
-                "requirements": requirements,
-                "host": host,
-                "port": port,
-                "debug": debug,
-                "url": f"http://{host if host != '0.0.0.0' else 'localhost'}:{port}"
-            })
+            return json.dumps(
+                {
+                    "success": "Flask run configuration created",
+                    "run_code": run_code,
+                    "requirements": requirements,
+                    "host": host,
+                    "port": port,
+                    "debug": debug,
+                    "url": f"http://{host if host != '0.0.0.0' else 'localhost'}:{port}",
+                }
+            )
         except Exception as e:
             return json.dumps({"error": f"Failed to create run configuration: {str(e)}"})

@@ -98,4 +98,3 @@ def get_default_reasoning_agent(
     agent.model.show_tool_calls = False  # type: ignore
 
     return agent
-

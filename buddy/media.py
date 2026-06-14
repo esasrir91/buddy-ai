@@ -21,11 +21,11 @@ class VideoArtifact(Media):
         response_dict = {
             "id": self.id,
             "url": self.url,
-            "content": self.content
-            if isinstance(self.content, str)
-            else self.content.decode("utf-8")
-            if self.content
-            else None,
+            "content": (
+                self.content
+                if isinstance(self.content, str)
+                else self.content.decode("utf-8") if self.content else None
+            ),
             "mime_type": self.mime_type,
             "eta": self.eta,
         }
@@ -42,9 +42,9 @@ class ImageArtifact(Media):
         response_dict = {
             "id": self.id,
             "url": self.url,
-            "content": self.content.decode("utf-8")
-            if self.content and isinstance(self.content, bytes)
-            else self.content,
+            "content": (
+                self.content.decode("utf-8") if self.content and isinstance(self.content, bytes) else self.content
+            ),
             "mime_type": self.mime_type,
             "alt_text": self.alt_text,
         }
@@ -124,11 +124,13 @@ class Video(BaseModel):
         import zlib
 
         response_dict = {
-            "content": base64.b64encode(
-                zlib.compress(self.content) if isinstance(self.content, bytes) else self.content.encode("utf-8")
-            ).decode("utf-8")
-            if self.content
-            else None,
+            "content": (
+                base64.b64encode(
+                    zlib.compress(self.content) if isinstance(self.content, bytes) else self.content.encode("utf-8")
+                ).decode("utf-8")
+                if self.content
+                else None
+            ),
             "filepath": self.filepath,
             "format": self.format,
         }
@@ -193,11 +195,13 @@ class Audio(BaseModel):
         import zlib
 
         response_dict = {
-            "content": base64.b64encode(
-                zlib.compress(self.content) if isinstance(self.content, bytes) else self.content.encode("utf-8")
-            ).decode("utf-8")
-            if self.content
-            else None,
+            "content": (
+                base64.b64encode(
+                    zlib.compress(self.content) if isinstance(self.content, bytes) else self.content.encode("utf-8")
+                ).decode("utf-8")
+                if self.content
+                else None
+            ),
             "filepath": self.filepath,
             "format": self.format,
         }
@@ -224,9 +228,9 @@ class AudioResponse(BaseModel):
 
         response_dict = {
             "id": self.id,
-            "content": base64.b64encode(self.content).decode("utf-8")
-            if isinstance(self.content, bytes)
-            else self.content,
+            "content": (
+                base64.b64encode(self.content).decode("utf-8") if isinstance(self.content, bytes) else self.content
+            ),
             "expires_at": self.expires_at,
             "transcript": self.transcript,
             "mime_type": self.mime_type,
@@ -294,11 +298,13 @@ class Image(BaseModel):
         import zlib
 
         response_dict = {
-            "content": base64.b64encode(
-                zlib.compress(self.content) if isinstance(self.content, bytes) else self.content.encode("utf-8")
-            ).decode("utf-8")
-            if self.content
-            else None,
+            "content": (
+                base64.b64encode(
+                    zlib.compress(self.content) if isinstance(self.content, bytes) else self.content.encode("utf-8")
+                ).decode("utf-8")
+                if self.content
+                else None
+            ),
             "filepath": self.filepath,
             "url": self.url,
             "detail": self.detail,

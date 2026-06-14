@@ -177,4 +177,3 @@ class WebsiteKnowledgeBase(AgentKnowledge):
         if self.optimize_on is not None and num_documents > self.optimize_on:
             log_debug("Optimizing Vector DB")
             vector_db.optimize()
-

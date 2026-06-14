@@ -463,4 +463,3 @@ class TeamRunResponse:
             if self.audio is None:
                 self.audio = []
             self.audio.extend(run_response.audio)
-

@@ -1,6 +1,6 @@
 import json
-from typing import Any, Dict, List, Optional
 from os import getenv
+from typing import Any, Dict, List, Optional
 
 from buddy.tools import Toolkit
 from buddy.utils.log import log_debug, logger
@@ -51,10 +51,7 @@ class TwitterTools(Toolkit):
     def _get_headers(self) -> Dict[str, str]:
         """Get headers for Twitter API requests."""
         if self.bearer_token:
-            return {
-                "Authorization": f"Bearer {self.bearer_token}",
-                "Content-Type": "application/json"
-            }
+            return {"Authorization": f"Bearer {self.bearer_token}", "Content-Type": "application/json"}
         else:
             return {"Content-Type": "application/json"}
 
@@ -73,17 +70,13 @@ class TwitterTools(Toolkit):
 
         try:
             payload = {"text": text}
-            
+
             if reply_to_id:
                 payload["reply"] = {"in_reply_to_tweet_id": reply_to_id}
 
-            response = requests.post(
-                f"{self.base_url}/tweets",
-                headers=self._get_headers(),
-                json=payload
-            )
+            response = requests.post(f"{self.base_url}/tweets", headers=self._get_headers(), json=payload)
             response.raise_for_status()
-            
+
             return json.dumps(response.json())
         except Exception as e:
             return json.dumps({"error": f"Failed to post tweet: {str(e)}"})
@@ -102,18 +95,13 @@ class TwitterTools(Toolkit):
             return json.dumps({"error": "Bearer token not provided"})
 
         try:
-            params = {
-                "max_results": max_results,
-                "tweet.fields": "created_at,author_id,public_metrics"
-            }
+            params = {"max_results": max_results, "tweet.fields": "created_at,author_id,public_metrics"}
 
             response = requests.get(
-                f"{self.base_url}/users/{user_id}/tweets",
-                headers=self._get_headers(),
-                params=params
+                f"{self.base_url}/users/{user_id}/tweets", headers=self._get_headers(), params=params
             )
             response.raise_for_status()
-            
+
             return json.dumps(response.json())
         except Exception as e:
             return json.dumps({"error": f"Failed to get tweets: {str(e)}"})
@@ -132,19 +120,11 @@ class TwitterTools(Toolkit):
             return json.dumps({"error": "Bearer token not provided"})
 
         try:
-            params = {
-                "query": query,
-                "max_results": max_results,
-                "tweet.fields": "created_at,author_id,public_metrics"
-            }
+            params = {"query": query, "max_results": max_results, "tweet.fields": "created_at,author_id,public_metrics"}
 
-            response = requests.get(
-                f"{self.base_url}/tweets/search/recent",
-                headers=self._get_headers(),
-                params=params
-            )
+            response = requests.get(f"{self.base_url}/tweets/search/recent", headers=self._get_headers(), params=params)
             response.raise_for_status()
-            
+
             return json.dumps(response.json())
         except Exception as e:
             return json.dumps({"error": f"Failed to search tweets: {str(e)}"})
@@ -162,17 +142,13 @@ class TwitterTools(Toolkit):
             return json.dumps({"error": "Bearer token not provided"})
 
         try:
-            params = {
-                "user.fields": "created_at,description,location,public_metrics,verified"
-            }
+            params = {"user.fields": "created_at,description,location,public_metrics,verified"}
 
             response = requests.get(
-                f"{self.base_url}/users/by/username/{username}",
-                headers=self._get_headers(),
-                params=params
+                f"{self.base_url}/users/by/username/{username}", headers=self._get_headers(), params=params
             )
             response.raise_for_status()
-            
+
             return json.dumps(response.json())
         except Exception as e:
             return json.dumps({"error": f"Failed to get user info: {str(e)}"})
@@ -192,13 +168,9 @@ class TwitterTools(Toolkit):
         try:
             payload = {"target_user_id": user_id}
 
-            response = requests.post(
-                f"{self.base_url}/users/me/following",
-                headers=self._get_headers(),
-                json=payload
-            )
+            response = requests.post(f"{self.base_url}/users/me/following", headers=self._get_headers(), json=payload)
             response.raise_for_status()
-            
+
             return json.dumps(response.json())
         except Exception as e:
             return json.dumps({"error": f"Failed to follow user: {str(e)}"})
@@ -218,13 +190,9 @@ class TwitterTools(Toolkit):
         try:
             payload = {"tweet_id": tweet_id}
 
-            response = requests.post(
-                f"{self.base_url}/users/me/retweets",
-                headers=self._get_headers(),
-                json=payload
-            )
+            response = requests.post(f"{self.base_url}/users/me/retweets", headers=self._get_headers(), json=payload)
             response.raise_for_status()
-            
+
             return json.dumps(response.json())
         except Exception as e:
             return json.dumps({"error": f"Failed to retweet: {str(e)}"})

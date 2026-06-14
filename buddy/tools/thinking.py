@@ -62,13 +62,10 @@ class ThinkingTools(Toolkit):
 
             # Return the full log of thoughts and the new thought
             thoughts = "\n".join([f"- {t}" for t in agent.session_state["thoughts"]])
-            formatted_thoughts = dedent(
-                f"""Thoughts:
+            formatted_thoughts = dedent(f"""Thoughts:
                 {thoughts}
-                """
-            ).strip()
+                """).strip()
             return formatted_thoughts
         except Exception as e:
             logger.error(f"Error recording thought: {e}")
             return f"Error recording thought: {e}"
-

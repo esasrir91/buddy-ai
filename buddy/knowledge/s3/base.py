@@ -62,4 +62,3 @@ class S3KnowledgeBase(AgentKnowledge):
                 s3_objects_to_read.extend(self.bucket.get_objects())
 
         return s3_objects_to_read
-

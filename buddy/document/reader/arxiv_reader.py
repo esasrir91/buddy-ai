@@ -51,4 +51,3 @@ class ArxivReader(Reader):
         @return: List of documents
         """
         return await asyncio.to_thread(self.read, query)
-

@@ -671,4 +671,3 @@ class DynamoDbStorage(Storage):
                 return value
 
         return {k: deserialize_value(v) for k, v in item.items()}
-

@@ -15,4 +15,3 @@ class AGUIApp(BaseAPIApp):
 
     def get_async_router(self) -> APIRouter:
         return get_async_agui_router(agent=self.agent, team=self.team)
-

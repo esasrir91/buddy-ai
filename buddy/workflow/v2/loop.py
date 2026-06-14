@@ -600,4 +600,3 @@ class Loop:
         for iteration_results in all_results:
             for step_output in iteration_results:
                 yield step_output
-

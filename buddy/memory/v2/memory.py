@@ -1095,5 +1095,3 @@ class Memory:
             setattr(copied_obj, k, v if k in shared_objects else deepcopy(v, memo))
 
         return copied_obj
-
-

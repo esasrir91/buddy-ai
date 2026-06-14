@@ -196,4 +196,3 @@ class DiscordClient:
             return self.client.run(token)
         except Exception as e:
             raise ValueError(f"Failed to run Discord client: {str(e)}")
-

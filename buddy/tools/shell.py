@@ -44,4 +44,3 @@ class ShellTools(Toolkit):
         except Exception as e:
             logger.warning(f"Failed to run shell command: {e}")
             return f"Error: {e}"
-

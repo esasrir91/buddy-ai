@@ -184,5 +184,3 @@ class BaseAPIApp(ABC):
         }
         payload = {k: v for k, v in payload.items() if v is not None}
         return payload
-
-

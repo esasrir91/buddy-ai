@@ -1,6 +1,6 @@
 import json
-from typing import Any, Dict, List, Optional
 from os import getenv
+from typing import Any, Dict, List, Optional
 
 from buddy.tools import Toolkit
 from buddy.utils.log import log_debug, logger
@@ -18,7 +18,7 @@ class TranslationTools(Toolkit):
         deepl_api_key: Optional[str] = None,
         azure_api_key: Optional[str] = None,
         azure_region: Optional[str] = None,
-        **kwargs
+        **kwargs,
     ):
         """Initialize Translation Tools.
 
@@ -32,7 +32,7 @@ class TranslationTools(Toolkit):
         self.deepl_api_key = deepl_api_key or getenv("DEEPL_API_KEY")
         self.azure_api_key = azure_api_key or getenv("AZURE_TRANSLATOR_KEY")
         self.azure_region = azure_region or getenv("AZURE_TRANSLATOR_REGION")
-        
+
         tools: List[Any] = [
             self.translate_text,
             self.detect_language,
@@ -43,11 +43,7 @@ class TranslationTools(Toolkit):
         super().__init__(name="translation", tools=tools, **kwargs)
 
     def translate_text(
-        self,
-        text: str,
-        target_language: str,
-        source_language: Optional[str] = None,
-        provider: str = "google"
+        self, text: str, target_language: str, source_language: Optional[str] = None, provider: str = "google"
     ) -> str:
         """Translate text using specified provider.
 
@@ -79,29 +75,27 @@ class TranslationTools(Toolkit):
 
         try:
             url = "https://translation.googleapis.com/language/translate/v2"
-            
-            data = {
-                "q": text,
-                "target": target_language,
-                "key": self.google_api_key
-            }
-            
+
+            data = {"q": text, "target": target_language, "key": self.google_api_key}
+
             if source_language:
                 data["source"] = source_language
 
             response = requests.post(url, data=data)
             response.raise_for_status()
-            
+
             result = response.json()
             translation = result["data"]["translations"][0]
-            
-            return json.dumps({
-                "translated_text": translation["translatedText"],
-                "detected_source_language": translation.get("detectedSourceLanguage"),
-                "target_language": target_language,
-                "provider": "google",
-                "confidence": 1.0  # Google doesn't provide confidence scores
-            })
+
+            return json.dumps(
+                {
+                    "translated_text": translation["translatedText"],
+                    "detected_source_language": translation.get("detectedSourceLanguage"),
+                    "target_language": target_language,
+                    "provider": "google",
+                    "confidence": 1.0,  # Google doesn't provide confidence scores
+                }
+            )
         except Exception as e:
             return json.dumps({"error": f"Google Translate failed: {str(e)}"})
 
@@ -112,29 +106,27 @@ class TranslationTools(Toolkit):
 
         try:
             url = "https://api-free.deepl.com/v2/translate"
-            
-            data = {
-                "text": text,
-                "target_lang": target_language.upper(),
-                "auth_key": self.deepl_api_key
-            }
-            
+
+            data = {"text": text, "target_lang": target_language.upper(), "auth_key": self.deepl_api_key}
+
             if source_language:
                 data["source_lang"] = source_language.upper()
 
             response = requests.post(url, data=data)
             response.raise_for_status()
-            
+
             result = response.json()
             translation = result["translations"][0]
-            
-            return json.dumps({
-                "translated_text": translation["text"],
-                "detected_source_language": translation["detected_source_language"],
-                "target_language": target_language,
-                "provider": "deepl",
-                "confidence": 1.0
-            })
+
+            return json.dumps(
+                {
+                    "translated_text": translation["text"],
+                    "detected_source_language": translation["detected_source_language"],
+                    "target_language": target_language,
+                    "provider": "deepl",
+                    "confidence": 1.0,
+                }
+            )
         except Exception as e:
             return json.dumps({"error": f"DeepL translation failed: {str(e)}"})
 
@@ -145,20 +137,14 @@ class TranslationTools(Toolkit):
 
         try:
             url = "https://api.cognitive.microsofttranslator.com/translate"
-            
-            params = {
-                "api-version": "3.0",
-                "to": target_language
-            }
-            
+
+            params = {"api-version": "3.0", "to": target_language}
+
             if source_language:
                 params["from"] = source_language
 
-            headers = {
-                "Ocp-Apim-Subscription-Key": self.azure_api_key,
-                "Content-Type": "application/json"
-            }
-            
+            headers = {"Ocp-Apim-Subscription-Key": self.azure_api_key, "Content-Type": "application/json"}
+
             if self.azure_region:
                 headers["Ocp-Apim-Subscription-Region"] = self.azure_region
 
@@ -166,17 +152,19 @@ class TranslationTools(Toolkit):
 
             response = requests.post(url, params=params, headers=headers, json=body)
             response.raise_for_status()
-            
+
             result = response.json()
             translation = result[0]["translations"][0]
-            
-            return json.dumps({
-                "translated_text": translation["text"],
-                "detected_source_language": result[0].get("detectedLanguage", {}).get("language"),
-                "target_language": target_language,
-                "provider": "azure",
-                "confidence": result[0].get("detectedLanguage", {}).get("score", 1.0)
-            })
+
+            return json.dumps(
+                {
+                    "translated_text": translation["text"],
+                    "detected_source_language": result[0].get("detectedLanguage", {}).get("language"),
+                    "target_language": target_language,
+                    "provider": "azure",
+                    "confidence": result[0].get("detectedLanguage", {}).get("score", 1.0),
+                }
+            )
         except Exception as e:
             return json.dumps({"error": f"Azure Translator failed: {str(e)}"})
 
@@ -207,23 +195,22 @@ class TranslationTools(Toolkit):
 
         try:
             url = "https://translation.googleapis.com/language/translate/v2/detect"
-            
-            data = {
-                "q": text,
-                "key": self.google_api_key
-            }
+
+            data = {"q": text, "key": self.google_api_key}
 
             response = requests.post(url, data=data)
             response.raise_for_status()
-            
+
             result = response.json()
             detection = result["data"]["detections"][0][0]
-            
-            return json.dumps({
-                "detected_language": detection["language"],
-                "confidence": detection["confidence"],
-                "provider": "google"
-            })
+
+            return json.dumps(
+                {
+                    "detected_language": detection["language"],
+                    "confidence": detection["confidence"],
+                    "provider": "google",
+                }
+            )
         except Exception as e:
             return json.dumps({"error": f"Google language detection failed: {str(e)}"})
 
@@ -234,14 +221,11 @@ class TranslationTools(Toolkit):
 
         try:
             url = "https://api.cognitive.microsofttranslator.com/detect"
-            
+
             params = {"api-version": "3.0"}
-            
-            headers = {
-                "Ocp-Apim-Subscription-Key": self.azure_api_key,
-                "Content-Type": "application/json"
-            }
-            
+
+            headers = {"Ocp-Apim-Subscription-Key": self.azure_api_key, "Content-Type": "application/json"}
+
             if self.azure_region:
                 headers["Ocp-Apim-Subscription-Region"] = self.azure_region
 
@@ -249,15 +233,13 @@ class TranslationTools(Toolkit):
 
             response = requests.post(url, params=params, headers=headers, json=body)
             response.raise_for_status()
-            
+
             result = response.json()
             detection = result[0]
-            
-            return json.dumps({
-                "detected_language": detection["language"],
-                "confidence": detection["score"],
-                "provider": "azure"
-            })
+
+            return json.dumps(
+                {"detected_language": detection["language"], "confidence": detection["score"], "provider": "azure"}
+            )
         except Exception as e:
             return json.dumps({"error": f"Azure language detection failed: {str(e)}"})
 
@@ -293,13 +275,10 @@ class TranslationTools(Toolkit):
 
             response = requests.get(url, params=params)
             response.raise_for_status()
-            
+
             result = response.json()
-            
-            return json.dumps({
-                "languages": result["data"]["languages"],
-                "provider": "google"
-            })
+
+            return json.dumps({"languages": result["data"]["languages"], "provider": "google"})
         except Exception as e:
             return json.dumps({"error": f"Failed to get Google languages: {str(e)}"})
 
@@ -311,13 +290,10 @@ class TranslationTools(Toolkit):
 
             response = requests.get(url, params=params)
             response.raise_for_status()
-            
+
             result = response.json()
-            
-            return json.dumps({
-                "languages": result,
-                "provider": "azure"
-            })
+
+            return json.dumps({"languages": result, "provider": "azure"})
         except Exception as e:
             return json.dumps({"error": f"Failed to get Azure languages: {str(e)}"})
 
@@ -325,14 +301,75 @@ class TranslationTools(Toolkit):
         """Get DeepL supported languages."""
         # DeepL has a limited set of languages, return them statically
         languages = {
-            "source": ["bg", "cs", "da", "de", "el", "en", "es", "et", "fi", "fr", "hu", "id", "it", "ja", "ko", "lt", "lv", "nb", "nl", "pl", "pt", "ro", "ru", "sk", "sl", "sv", "tr", "uk", "zh"],
-            "target": ["bg", "cs", "da", "de", "el", "en", "en-gb", "en-us", "es", "et", "fi", "fr", "hu", "id", "it", "ja", "ko", "lt", "lv", "nb", "nl", "pl", "pt", "pt-br", "pt-pt", "ro", "ru", "sk", "sl", "sv", "tr", "uk", "zh"]
+            "source": [
+                "bg",
+                "cs",
+                "da",
+                "de",
+                "el",
+                "en",
+                "es",
+                "et",
+                "fi",
+                "fr",
+                "hu",
+                "id",
+                "it",
+                "ja",
+                "ko",
+                "lt",
+                "lv",
+                "nb",
+                "nl",
+                "pl",
+                "pt",
+                "ro",
+                "ru",
+                "sk",
+                "sl",
+                "sv",
+                "tr",
+                "uk",
+                "zh",
+            ],
+            "target": [
+                "bg",
+                "cs",
+                "da",
+                "de",
+                "el",
+                "en",
+                "en-gb",
+                "en-us",
+                "es",
+                "et",
+                "fi",
+                "fr",
+                "hu",
+                "id",
+                "it",
+                "ja",
+                "ko",
+                "lt",
+                "lv",
+                "nb",
+                "nl",
+                "pl",
+                "pt",
+                "pt-br",
+                "pt-pt",
+                "ro",
+                "ru",
+                "sk",
+                "sl",
+                "sv",
+                "tr",
+                "uk",
+                "zh",
+            ],
         }
-        
-        return json.dumps({
-            "languages": languages,
-            "provider": "deepl"
-        })
+
+        return json.dumps({"languages": languages, "provider": "deepl"})
 
     def translate_bulk(self, texts: List[str], target_language: str, provider: str = "google") -> str:
         """Translate multiple texts.
@@ -347,23 +384,15 @@ class TranslationTools(Toolkit):
         """
         try:
             results = []
-            
+
             for text in texts:
                 try:
                     translation_result = self.translate_text(text, target_language, provider=provider)
                     translation_data = json.loads(translation_result)
-                    results.append({
-                        "original_text": text,
-                        "status": "success",
-                        "translation": translation_data
-                    })
+                    results.append({"original_text": text, "status": "success", "translation": translation_data})
                 except Exception as e:
-                    results.append({
-                        "original_text": text,
-                        "status": "error",
-                        "error": str(e)
-                    })
-            
+                    results.append({"original_text": text, "status": "error", "error": str(e)})
+
             return json.dumps({"results": results})
         except Exception as e:
             return json.dumps({"error": f"Bulk translation failed: {str(e)}"})

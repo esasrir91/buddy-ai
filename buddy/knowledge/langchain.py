@@ -69,4 +69,3 @@ class LangChainKnowledgeBase(AgentKnowledge):
     def exists(self) -> bool:
         logger.warning("LangChainKnowledgeBase.exists() not supported - please check the vectorstore manually.")
         return True
-

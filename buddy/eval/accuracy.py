@@ -528,9 +528,9 @@ Remember: You must only compare the agent_output to the expected_output. The exp
                 eval_type=EvalType.ACCURACY,
                 agent_id=self.agent.agent_id if self.agent is not None else None,
                 model_id=self.agent.model.id if self.agent is not None and self.agent.model is not None else None,
-                model_provider=self.agent.model.provider
-                if self.agent is not None and self.agent.model is not None
-                else None,
+                model_provider=(
+                    self.agent.model.provider if self.agent is not None and self.agent.model is not None else None
+                ),
                 name=self.name if self.name is not None else None,
                 evaluated_entity_name=self.agent.name if self.agent is not None else None,
             )
@@ -719,5 +719,3 @@ Remember: You must only compare the agent_output to the expected_output. The exp
 
         logger.debug(f"*********** Evaluation End: {self.eval_id} ***********")
         return self.result
-
-

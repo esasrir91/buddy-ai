@@ -44,8 +44,7 @@ class UserControlFlowTools(Toolkit):
     # Default instructions
     # --------------------------------------------------------------------------------
 
-    DEFAULT_INSTRUCTIONS = dedent(
-        """\
+    DEFAULT_INSTRUCTIONS = dedent("""\
         You have access to the `get_user_input` tool to get user input for the given fields.
 
         1. **Get User Input**:
@@ -69,6 +68,4 @@ class UserControlFlowTools(Toolkit):
         - **DO NOT validate or re-request input.** Accept whatever the user provides and convert it appropriately.
         - **Proceed with only the fields that were explicitly answered as True.** Skip or ignore fields that are False/unanswered.
         - **Complete the task immediately after receiving all user inputs, do not ask for confirmation or re-validation.**
-        """
-    )
-
+        """)

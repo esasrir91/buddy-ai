@@ -44,4 +44,3 @@ class UrlKnowledge(AgentKnowledge):
         for docs in results:
             if docs:
                 yield docs
-

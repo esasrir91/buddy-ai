@@ -229,4 +229,3 @@ class OpenWeatherTools(Toolkit):
         except Exception as e:
             logger.error(f"Error getting air pollution data: {e}")
             return json.dumps({"error": str(e)})
-

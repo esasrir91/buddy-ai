@@ -42,4 +42,3 @@ class GCSPDFReader(Reader):
 
     async def async_read(self, blob: storage.Blob) -> List[Document]:
         return await asyncio.to_thread(self.read, blob)
-

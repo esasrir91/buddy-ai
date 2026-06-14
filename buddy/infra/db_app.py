@@ -50,4 +50,3 @@ class DbApp(InfraApp):
         host = self.get_db_host_local()
         port = self.get_db_port_local()
         return f"{driver}://{user}:{password}@{host}:{port}/{database}"
-
