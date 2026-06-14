@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { CheckCircle, X } from 'lucide-react'
 import { usePulseStore } from '../hooks/usePulseStore'
 import { useKTSession } from '../hooks/useKTSession'
@@ -9,16 +9,19 @@ import { MentalModelPanel } from '../components/kt/MentalModelPanel'
 
 export default function LiveKTSession() {
   const navigate = useNavigate()
+  const { sessionId: urlSessionId } = useParams<{ sessionId: string }>()
   const { employeeId, employee } = usePulseStore()
   const employeeName = employee?.profile.full_name ?? 'PULSE'
 
-  const kt = useKTSession(employeeId ?? '')
+  // Pass the session ID from the URL so the hook is ready immediately
+  const kt = useKTSession(employeeId ?? '', urlSessionId)
   const [chatEntries, setChatEntries] = useState<ChatEntry[]>([])
   const [committed, setCommitted] = useState(false)
+  const [sessionError, setSessionError] = useState('')
 
-  // Pre-load the session if we have a sessionId from the URL
   const handleSend = useCallback(
     async (text: string) => {
+      setSessionError('')
       const humanEntry: ChatEntry = { id: crypto.randomUUID(), role: 'human', text }
       setChatEntries((prev) => [...prev, humanEntry])
 
@@ -28,7 +31,10 @@ export default function LiveKTSession() {
         ? await kt.explain(text)
         : await kt.answer({ response: text })
 
-      if (!turn) return
+      if (!turn) {
+        setSessionError(kt.error ?? 'No response from PULSE. Check the server.')
+        return
+      }
       const pulseEntry: ChatEntry = {
         id: crypto.randomUUID(),
         role: 'pulse',
@@ -47,6 +53,18 @@ export default function LiveKTSession() {
 
   const confidence = kt.state?.confidence_score ?? 0
   const isReady = kt.turns.length > 0 && (kt.turns[kt.turns.length - 1]?.ready_to_commit ?? false)
+
+  if (!urlSessionId) {
+    return (
+      <div className="flex items-center justify-center h-full text-zinc-500">
+        <div className="text-center">
+          <p className="text-3xl mb-2">⚠️</p>
+          <p className="text-sm mb-3">No session ID found. Start a session from the KT Center.</p>
+          <button onClick={() => navigate('/kt')} className="px-4 py-2 bg-blue-600 rounded-lg text-white text-sm">Back to KT Center</button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="h-screen flex flex-col">
@@ -75,6 +93,14 @@ export default function LiveKTSession() {
           </button>
         </div>
       </div>
+
+      {/* Session error banner */}
+      {sessionError && (
+        <div className="px-4 py-2 bg-red-900/40 border-b border-red-700 text-red-300 text-xs flex items-center justify-between">
+          <span>⚠️ {sessionError}</span>
+          <button onClick={() => setSessionError('')} className="text-red-400 hover:text-red-200 ml-4">✕</button>
+        </div>
+      )}
 
       {/* 3-panel layout */}
       <div className="flex-1 overflow-hidden flex">

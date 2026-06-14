@@ -2,8 +2,8 @@ import { useState, useCallback } from 'react'
 import type { KTTurn, KTSessionState } from '../types/pulse'
 import * as api from '../api/pulse'
 
-export function useKTSession(employeeId: string) {
-  const [sessionId, setSessionId] = useState<string | null>(null)
+export function useKTSession(employeeId: string, initialSessionId?: string) {
+  const [sessionId, setSessionId] = useState<string | null>(initialSessionId ?? null)
   const [state, setState] = useState<KTSessionState | null>(null)
   const [turns, setTurns] = useState<KTTurn[]>([])
   const [isLoading, setIsLoading] = useState(false)

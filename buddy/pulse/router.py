@@ -718,7 +718,11 @@ async def kt_human_explains(employee_id: str, session_id: str, req: HumanExplain
     session = _kt_sessions.get(session_id)
     if not session:
         raise HTTPException(status_code=404, detail=f"KT session '{session_id}' not found")
-    turn = session.human_explains(req.text)
+    loop = asyncio.get_event_loop()
+    turn = await asyncio.wait_for(
+        loop.run_in_executor(None, lambda: session.human_explains(req.text)),
+        timeout=90.0,
+    )
     return turn.model_dump()
 
 
@@ -728,7 +732,11 @@ async def kt_human_answers(employee_id: str, session_id: str, req: HumanAnswersR
     session = _kt_sessions.get(session_id)
     if not session:
         raise HTTPException(status_code=404, detail=f"KT session '{session_id}' not found")
-    turn = session.human_answers(req.answers)
+    loop = asyncio.get_event_loop()
+    turn = await asyncio.wait_for(
+        loop.run_in_executor(None, lambda: session.human_answers(req.answers)),
+        timeout=90.0,
+    )
     return turn.model_dump()
 
 
@@ -738,7 +746,11 @@ async def kt_human_corrects(employee_id: str, session_id: str, req: HumanCorrect
     session = _kt_sessions.get(session_id)
     if not session:
         raise HTTPException(status_code=404, detail=f"KT session '{session_id}' not found")
-    turn = session.human_corrects(req.correction)
+    loop = asyncio.get_event_loop()
+    turn = await asyncio.wait_for(
+        loop.run_in_executor(None, lambda: session.human_corrects(req.correction)),
+        timeout=90.0,
+    )
     return turn.model_dump()
 
 
