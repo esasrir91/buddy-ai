@@ -7,7 +7,6 @@ from typing import Optional
 
 import typer
 
-from buddy.cli.simple_train_cli import app as train_cli
 from buddy.cli.ws.ws_cli import ws_cli
 from buddy.utils.log import set_log_level_to_debug
 
@@ -601,7 +600,13 @@ def restart(
 
 
 BUDDY_cli.add_typer(ws_cli)
-BUDDY_cli.add_typer(train_cli, name="train")
+
+try:
+    from buddy.cli.simple_train_cli import app as train_cli
+
+    BUDDY_cli.add_typer(train_cli, name="train")
+except ImportError:
+    pass
 
 try:
     from buddy.cli.pulse_cli import pulse_app

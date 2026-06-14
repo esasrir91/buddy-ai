@@ -34,9 +34,6 @@ except ImportError:
         raise ImportError("buddy.train module not available")
 
 
-# Import our super simple training functions
-from buddy.train import delete_model, list_models, test_model, train_model
-
 app = typer.Typer(help="🚀 Train your own local LLMs with custom data - SUPER SIMPLE!")
 
 
