@@ -63,11 +63,12 @@ jobs:
       - name: Diagnose test environment
         run: |
           python --version
-          pip show buddy-ai
-          python -m pytest tests/unit/ --collect-only -q || true
+          pip show buddy-ai pytest
+          python scripts/ci_diagnose_tests.py
+          python -m pytest tests/unit/ --collect-only -q
 
       - name: Run unit tests
-        run: python -m pytest tests/unit/ -v --tb=long
+        run: python -m pytest tests/unit/ -v --tb=long --override-ini="addopts="
 
       - name: Run unit tests with coverage
         if: matrix.python-version == '3.11'
