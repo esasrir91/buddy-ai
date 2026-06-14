@@ -1,23 +1,111 @@
-# PULSE — Virtual Employee's ERA
+# PULSE — Autonomous Virtual Employee
 
-**PULSE** is the flagship feature of Buddy AI v2.1. It turns any Buddy AI `Agent` into a fully-functional **virtual human team member** that can take KTs, attend meetings, manage tasks, communicate proactively, and grow over time — just like a real employee.
-
----
-
-## What PULSE Is
-
-A `PulseEmployee` is an AI agent that:
-
-- **Has an identity** — name, role, department, skills, timezone, communication style
-- **Learns from knowledge transfer (KT)** — reads documents *and* takes live KT sessions from human colleagues
-- **Attends meetings** — processes transcripts, extracts action items and decisions
-- **Manages work** — receives tasks, tracks progress, reports blockers
-- **Communicates proactively** — sends EOD summaries, asks for clarification, updates teammates
-- **Grows over time** — receives feedback, improves behaviour, tracks performance
+**PULSE** is the flagship feature of buddy-ai v2.1. It is a fully autonomous virtual team member — not a chatbot you prompt, but an AI employee that works through your task queue, learns from your documents, attends your meetings, and reports back, all without being managed.
 
 ---
 
 ## Quick Start
+
+```bash
+pip install buddy-ai
+buddy pulse start
+# Opens http://localhost:8888
+```
+
+That's it. The web UI walks you through creating your virtual employee.
+
+---
+
+## What PULSE Does Autonomously
+
+Once created, a PULSE employee operates independently:
+
+| Behaviour | How |
+|-----------|-----|
+| **Works tasks** | Picks the highest-priority todo task, executes it using its KT knowledge, marks it done with full work output — every 30 seconds |
+| **Sends notifications** | Notifies you every time it completes work with a summary of what it did |
+| **Daily standup** | Generates a first-person standup report once per day — what it worked on, what's next, any observations |
+| **Suggests tasks** | Proactively proposes 3 high-value tasks based on its role and knowledge — once per day |
+| **Activity feed** | Logs every autonomous action with timestamp — visible live on the Dashboard |
+| **Learns from documents** | Reads PDFs, crawls entire websites (BFS, up to 20 pages), and retains knowledge permanently |
+| **Attends meetings** | Processes transcripts, extracts decisions and action items, creates tasks from its own action items |
+| **Answers from knowledge** | Every chat response uses everything it has learned — KT sessions are injected as context |
+
+---
+
+## Web UI
+
+```bash
+buddy pulse start
+buddy pulse start --port 3000 --no-browser
+```
+
+### Dashboard
+
+The command centre for your virtual employee:
+
+- **Activity Feed** — live log of every action PULSE takes (tasks started/done, KT learned, standups, suggestions)
+- **Currently Working On** — shows in-progress tasks with a live pulsing indicator
+- **Daily Standup** — generate on demand or let it auto-generate once per day
+- **PULSE Suggests** — PULSE proposes proactive tasks based on its role and knowledge; add them with one click
+- **Knowledge Domains** — all topics PULSE has been trained on
+
+### Task Board
+
+Kanban board with full autonomous execution:
+
+- Add a task → PULSE picks it up within 30 seconds
+- Blue pulsing dot on a card means PULSE is actively working on it
+- When done, the full AI-generated work output appears in the card
+- **Auto / Manual toggle** — disable auto-work if you want to control task execution yourself
+- Board auto-refreshes every 15 seconds
+
+### KT Center
+
+Teach PULSE from any source:
+
+- **Document / PDF** — upload or provide a file path; text is extracted with `pypdf`
+- **URL** — PULSE crawls the entire website (BFS up to 20 pages, 3 hops deep, same domain)
+- **Live KT** — real-time interactive session where PULSE asks Socratic questions until it reaches ≥82% confidence
+
+### Meeting Room
+
+Paste any meeting transcript. PULSE extracts:
+
+- Summary
+- Decisions made
+- Action items with owners
+- Its own action items are automatically added to the Task Board
+
+### Chat
+
+Streaming WebSocket conversation. Every response uses the full KT knowledge base as context — ask about any document it has read and it answers as a team member who was there.
+
+### Notifications
+
+Bell icon in the sidebar with unread count. PULSE sends you a notification for:
+
+- Every task it completes (with work summary)
+- Daily standup reports
+- Proactive task suggestions
+
+### Settings
+
+Configure LLM model and API key directly in the UI — no environment variables needed. Supports:
+
+- **OpenAI** — 22 models including GPT-4.1, GPT-4o, o3, o4-mini, o1
+- **Anthropic** — Claude Opus, Sonnet, Haiku
+- **Google** — Gemini 1.5 Pro, 2.0 Flash
+- **Groq** — Llama 3.3, Mixtral
+- **Ollama** — any local model
+
+Changes apply immediately to all active employees.
+
+---
+
+## Python API
+
+### Create an employee
 
 ```python
 from buddy.pulse import PulseEmployee, EmployeeProfile, KTSourceType
@@ -38,78 +126,30 @@ pulse = PulseEmployee(
 print(pulse.introduce_yourself())
 ```
 
----
-
-## Core Concepts
-
-### 1. Identity Layer
-
-`EmployeeProfile` is the identity card of a PULSE employee. It shapes:
-- The system prompt injected into the agent
-- Introduction messages
-- Communication style
-- Working hours and availability
+### Knowledge Transfer
 
 ```python
-from buddy.pulse import EmployeeProfile, WorkingHours, WorkStyle, CommunicationStyle
-
-profile = EmployeeProfile(
-    full_name="Alex Chen",
-    role="Data Scientist",
-    department="Data",
-    team="ML Platform",
-    reporting_to="Sarah Kim",
-    skills=["Python", "PyTorch", "SQL"],
-    domain_expertise=["recommendation systems", "fraud detection"],
-    timezone="US/Pacific",
-    work_mode="remote",
-    working_hours=WorkingHours.standard_five_day(),
-    work_style=WorkStyle(
-        communication_style=CommunicationStyle.CONCISE,
-        asks_clarifying_questions=True,
-        proactively_shares_updates=True,
-    ),
-    company_name="TechCorp",
-    bio="ML engineer focused on production model serving.",
-)
-```
-
----
-
-### 2. Knowledge Transfer (KT)
-
-PULSE can learn from both **documents** (async mode) and **humans** (live interactive mode).
-
-#### Document / URL KT (async)
-
-```python
+# From a PDF
 summary = pulse.take_kt(
-    source="docs/payments_system_overview.pdf",
+    source="docs/payments_architecture.pdf",
     source_type=KTSourceType.DOCUMENT,
-    session_name="Payments Architecture KT",
+    session_name="Payments KT",
     knowledge_giver="Arjun Nair",
+)
+
+# From a URL (crawls the entire site)
+summary = pulse.take_kt(
+    source="https://docs.yourproduct.com",
+    source_type=KTSourceType.URL,
+    session_name="Product Docs KT",
+    knowledge_giver="Docs Site",
 )
 
 print(f"Confidence: {summary.confidence_score:.0%}")
 print(f"Mental model: {summary.mental_model}")
-print(f"Open questions: {summary.open_questions}")
 ```
 
-Supported async source types:
-
-| `KTSourceType` | Description |
-|---|---|
-| `DOCUMENT` | PDF, text file, or raw bytes |
-| `URL` | Web page or online document |
-| `AUDIO_TRANSCRIPT` | Transcript from audio recording |
-| `VIDEO_TRANSCRIPT` | Transcript from screen recording |
-| `WIKI_PAGE` | Confluence / Notion page |
-| `MEETING_RECORDING` | Past meeting transcript |
-| `CODEBASE` | Source code or repo summary |
-
-#### Live / Human KT (interactive)
-
-PULSE drives a Socratic dialogue until it reaches ≥82% confidence:
+### Live KT (interactive)
 
 ```python
 session = pulse.start_live_kt(
@@ -118,66 +158,32 @@ session = pulse.start_live_kt(
     source_type=KTSourceType.HUMAN_CHAT,
 )
 
-# Human explains
-turn = session.human_explains("Our auth uses JWT tokens with 1-hr expiry...")
-print(turn.pulse_message)
-# → "Thanks! I have 2 questions:
-#    1. What happens when a refresh token expires?
-#    2. Are tokens blocklisted on logout?"
+turn = session.human_explains("Our auth uses JWT with 1-hr expiry...")
+print(turn.pulse_message)  # PULSE asks targeted questions
 
-# Human answers
-turn = session.human_answers({
-    "Q1": "User must re-login",
-    "Q2": "Yes, Redis blocklist",
-})
-print(f"Confidence now: {turn.confidence_score:.0%}")
+turn = session.human_answers({"Q1": "User must re-login", "Q2": "Yes, Redis blocklist"})
+print(f"Confidence: {turn.confidence_score:.0%}")
 
-# Optional: correct something
-session.human_corrects("Tokens are also rotated on every refresh.")
-
-# Finalize
 summary = pulse.finalize_kt_session(session)
-print(summary.format_summary())
 ```
 
-The `KTSession` object exposes:
-
-| Method | Description |
-|---|---|
-| `human_explains(text)` | Human explains a chunk → returns `KTTurn` |
-| `human_answers(answers)` | Human answers PULSE's questions → returns `KTTurn` |
-| `human_corrects(correction)` | Human corrects PULSE's understanding |
-| `generate_summary()` | Produce the final `KTSummary` |
-| `commit()` | Mark the session as complete |
-
----
-
-### 3. Meeting Intelligence
+### Meetings
 
 ```python
 from buddy.pulse import MeetingPlatform
 
 notes = pulse.attend_meeting(
-    transcript="""
-    Arjun: We need to complete the Razorpay migration by end of June.
-    Priya: I'll take the refund flow as an action item.
-    Dev: I'll handle the integration tests.
-    """,
-    participants=["Arjun Nair", "Priya Sharma", "Dev"],
+    transcript="Arjun: Complete the Razorpay migration by EOD. Priya: I'll take the refund flow.",
+    participants=["Arjun Nair", "Priya Sharma"],
     platform=MeetingPlatform.ZOOM,
-    title="Razorpay Migration Sync",
+    title="Sprint Sync",
 )
 
 print(notes.format_summary())
-for action in notes.action_items:
-    print(f"[{action.owner}] {action.description}")
+# Action items assigned to PULSE are auto-added to its task list
 ```
 
-Meeting action items assigned to the PULSE employee are **automatically added to their task list**.
-
----
-
-### 4. Task Management
+### Tasks
 
 ```python
 task = pulse.receive_task(
@@ -186,135 +192,135 @@ task = pulse.receive_task(
     assigned_by="Arjun Nair",
     priority="high",
     deadline="2026-06-27",
-    tags=["payments", "razorpay"],
 )
 
 task.start()
 task.add_note("Reviewed Razorpay refund webhook docs")
 
-# Get a status update
 update = pulse.report_status(task_id=task.task_id)
 print(update.format_standup())
 ```
 
 ---
 
-### 5. Knowledge Introspection
+## Data Persistence
 
-```python
-# Ask PULSE what it knows about a topic
-knowledge = pulse.what_do_i_know_about("authentication tokens")
-print(knowledge)
-```
+All employee data is saved to `~/.pulse_data/employees.json` on every change:
 
----
+- Employee profile
+- All KT session summaries and mental models
+- Task list with statuses, notes, and work output
+- LLM configuration
 
-### 6. Feedback & Growth
-
-```python
-pulse.receive_feedback(
-    content="Your status updates are really clear and timely.",
-    given_by="Arjun Nair",
-    category="communication",
-    sentiment="positive",
-)
-
-pulse.receive_feedback(
-    content="Please be more concise when summarising meeting notes.",
-    given_by="Sarah Kim",
-    category="communication",
-    sentiment="constructive",
-)
-```
-
-Constructive feedback is automatically incorporated into PULSE's system prompt so it improves over time.
+On `buddy pulse start`, everything is automatically restored — no re-onboarding needed.
 
 ---
 
-### 7. Onboarding
+## REST API Reference
 
-```python
-result = pulse.run_onboarding(
-    company_docs=["docs/architecture.pdf", "docs/runbook.md"],
-    team_members=[
-        {"name": "Arjun Nair", "role": "Tech Lead"},
-        {"name": "Sarah Kim", "role": "Product Manager"},
-    ],
-)
-print(result["introduction"])
-```
+When running `buddy pulse start`, the full API is available at `http://localhost:8888/api/docs`.
 
-Or with the full `OnboardingWorkflow`:
+### Employee
 
-```python
-from buddy.pulse import OnboardingWorkflow, OnboardingConfig
-from buddy.pulse.identity import ColleagueRecord
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/pulse/employees` | Create a PULSE employee |
+| `GET` | `/api/pulse/employees/{id}` | Get employee profile + status |
+| `PUT` | `/api/pulse/employees/{id}` | Update employee profile |
 
-workflow = OnboardingWorkflow(employee=pulse)
-config = OnboardingConfig(
-    company_name="Acme Corp",
-    company_docs=["docs/architecture.pdf"],
-    team_members=[ColleagueRecord(full_name="Arjun Nair", role="Tech Lead")],
-    introduction_channel="general",
-    send_introduction_to="general",
-)
-for chunk in workflow.run(config):
-    print(chunk.content, end="", flush=True)
-```
+### Knowledge Transfer
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/pulse/{id}/kt/async` | KT from document, PDF, or URL |
+| `POST` | `/api/pulse/{id}/kt/live` | Start a live KT session |
+| `POST` | `/api/pulse/{id}/kt/{sid}/explain` | Human explains a chunk |
+| `POST` | `/api/pulse/{id}/kt/{sid}/answer` | Human answers questions |
+| `POST` | `/api/pulse/{id}/kt/{sid}/commit` | Finalise the session |
+| `GET` | `/api/pulse/{id}/kt` | List all KT sessions |
+
+### Tasks
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/pulse/{id}/tasks` | Assign a task |
+| `GET` | `/api/pulse/{id}/tasks` | List all tasks |
+| `PUT` | `/api/pulse/{id}/tasks/{tid}` | Update status or add a note |
+| `GET` | `/api/pulse/{id}/tasks/{tid}/status-update` | Get AI status report |
+
+### Meetings
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/pulse/{id}/meetings` | Process a meeting transcript |
+
+### Chat
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/pulse/{id}/chat` | Single-turn chat (KT-aware) |
+| `WS` | `/api/pulse/{id}/chat/stream` | Streaming WebSocket chat |
+
+### Activity & Notifications
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/pulse/{id}/activity` | Get activity log |
+| `GET` | `/api/pulse/{id}/notifications` | Get notifications with unread count |
+| `POST` | `/api/pulse/{id}/notifications/read-all` | Mark all as read |
+
+### Standup & Suggestions
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/pulse/{id}/standup` | Generate daily standup |
+| `POST` | `/api/pulse/{id}/suggest-tasks` | Get proactive task suggestions |
+
+### Settings
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/pulse/settings/llm` | Get LLM configuration |
+| `POST` | `/api/pulse/settings/llm` | Save LLM configuration |
+| `POST` | `/api/pulse/settings/llm/test` | Test LLM connection |
+| `GET` | `/api/pulse/settings/auto-work` | Get auto-work status |
+| `POST` | `/api/pulse/settings/auto-work` | Enable / disable auto-work |
 
 ---
 
-## Web UI
+## Architecture
 
-PULSE comes with a built-in web interface. One command starts everything:
-
-```bash
-buddy pulse start
-# Opens http://localhost:8888
+```
+buddy/pulse/
+├── employee.py      # PulseEmployee (extends Agent)
+├── identity.py      # EmployeeProfile, WorkingHours, WorkStyle
+├── kt.py            # KTSession, KTManager, KTSourceType, KTSummary — includes PDF + URL crawler
+├── meeting.py       # MeetingParticipant, MeetingNotes, ActionItem, TranscriptProcessor
+├── work.py          # WorkItem, TaskManager, WorkCalendar, StatusUpdate
+├── comms.py         # CommunicationHub (Slack, Gmail, Teams, Zoom)
+├── memory.py        # ProfessionalMemory
+├── onboarding.py    # OnboardingWorkflow
+├── feedback.py      # FeedbackSystem, PerformanceTracker
+├── router.py        # FastAPI endpoints + autonomous background worker
+├── app.py           # PulseApp (serves React UI + API, starts auto worker on startup)
+└── __init__.py      # Public exports
 ```
 
-Or from Python:
+The **autonomous background worker** runs inside the FastAPI event loop:
 
-```python
-from buddy.pulse.app import PulseApp
-PulseApp().serve()
-```
-
-The UI provides:
-
-- **Onboarding Wizard** — set up a PULSE employee without writing code
-- **Dashboard** — today's tasks, meetings, and activity feed
-- **KT Center** — submit URLs, documents, or start a live KT session
-- **Live KT Chat** — real-time interactive KT dialogue with confidence meter
-- **Meeting Room** — process meeting transcripts and review action items
-- **Task Board** — Kanban-style task management with AI-generated completion notes
-- **Chat** — streaming WebSocket conversation with the PULSE employee; answers from its learned KT knowledge
-- **Knowledge Explorer** — search and browse what PULSE has learned
-- **Settings** — configure LLM provider, model ID, and API key directly in the UI (no environment variables needed)
-
-### Employee persistence
-
-Employees created through the UI are saved to `~/.pulse_data/employees.json` and **automatically restored on every server restart** — no need to go through onboarding again.
-
-### In-app LLM configuration
-
-Open **Settings → LLM Settings** to configure which model PULSE uses:
-
-| Field | Description |
-|---|---|
-| Provider | `openai`, `anthropic`, `google`, `ollama`, or custom OpenAI-compatible |
-| Model ID | e.g. `gpt-4o`, `claude-3-5-sonnet-20241022`, `gemma3:27b` |
-| API Key | Stored securely in the server process environment |
-| Base URL | For Ollama or custom OpenAI-compatible endpoints |
-
-Changes take effect immediately — all active employees are re-wired to the new model.
+1. Every 30 seconds, checks each employee's todo queue
+2. Picks the highest-priority task, runs it through the LLM (in a thread pool, non-blocking)
+3. Stores the full work output in the task's `progress_notes`
+4. Sends a notification and logs the event to the activity feed
+5. Once the queue is empty, generates the daily standup (once per day)
+6. Suggests proactive tasks (once per day)
 
 ---
 
 ## CLI
 
 ```bash
-# Start the web server
+# Start the server
 buddy pulse start
 buddy pulse start --port 3000 --no-browser
 
@@ -324,50 +330,6 @@ buddy pulse create --name "Priya Sharma" --role "Backend Engineer"
 # Run a KT session from the CLI
 buddy pulse kt docs/architecture.pdf --session "Architecture KT" --from "Arjun"
 
-# Check PULSE module status
+# Check module status
 buddy pulse status
 ```
-
----
-
-## Architecture
-
-```
-buddy/pulse/
-├── employee.py      # PulseEmployee (extends Agent)
-├── identity.py      # EmployeeProfile, ColleagueBook, WorkingHours, WorkStyle
-├── kt.py            # KTSession, KTManager, KTSourceType, KTSummary, KTTurn
-├── meeting.py       # MeetingParticipant, MeetingNotes, ActionItem, TranscriptProcessor
-├── work.py          # WorkItem, TaskManager, WorkCalendar, StatusUpdate
-├── comms.py         # CommunicationHub (Slack, Gmail, Teams, Zoom)
-├── memory.py        # ProfessionalMemory (extends Memory v2)
-├── onboarding.py    # OnboardingWorkflow (extends Workflow v1)
-├── feedback.py      # FeedbackSystem, PerformanceTracker, GrowthMetrics
-├── router.py        # FastAPI REST + WebSocket endpoints
-├── app.py           # PulseApp (serves React UI + API)
-└── __init__.py      # Public exports
-```
-
----
-
-## REST API
-
-When running `buddy pulse start`, the following endpoints are available:
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/api/pulse/employees` | Create a PULSE employee |
-| `GET` | `/api/pulse/employees/{id}` | Get employee profile + status |
-| `POST` | `/api/pulse/{id}/kt/async` | Run a document KT |
-| `POST` | `/api/pulse/{id}/kt/live` | Start a live KT session |
-| `POST` | `/api/pulse/{id}/kt/{sid}/explain` | Human explains a chunk |
-| `POST` | `/api/pulse/{id}/kt/{sid}/answer` | Human answers questions |
-| `POST` | `/api/pulse/{id}/kt/{sid}/commit` | Finalise a live KT |
-| `POST` | `/api/pulse/{id}/meetings` | Process a meeting transcript |
-| `POST` | `/api/pulse/{id}/tasks` | Assign a task |
-| `POST` | `/api/pulse/{id}/chat` | Single-turn chat |
-| `WS` | `/api/pulse/{id}/chat/stream` | Streaming WebSocket chat |
-| `GET` | `/api/pulse/{id}/knowledge/search` | Search PULSE's knowledge |
-| `GET` | `/api/pulse/{id}/eod-summary` | End-of-day status report |
-
-Full interactive API docs available at `http://localhost:8888/api/docs` when the server is running.

@@ -15,8 +15,8 @@
 
 **Buddy AI** is a comprehensive Python framework designed for building, deploying, and managing intelligent AI agents with enterprise-grade capabilities. It provides a unified interface to work with multiple LLM providers, advanced memory systems, and extensible tool frameworks.
 
-!!! tip "New in v2.1.0 — PULSE"
-    **PULSE (Virtual Employee's ERA)** is the flagship new feature: an AI agent that operates exactly like a human employee — with an identity, interactive knowledge transfer, meeting intelligence, task management, and a full web UI. [Learn more →](advanced/pulse.md)
+!!! tip "New in v2.1 — PULSE: Autonomous Virtual Employee"
+    **PULSE** is the flagship feature of buddy-ai v2.1. It is a fully autonomous virtual team member that works through your task queue, learns from documents and URLs, attends meetings, generates daily standups, suggests proactive tasks, and notifies you of everything it does — all without being prompted. One command starts it: `buddy pulse start`. [Full docs →](advanced/pulse.md)
 
 ## 🚀 Key Features
 
@@ -81,7 +81,7 @@ graph TD
 | Module | Description | Features |
 |--------|-------------|----------|
 | **[Agent](agents/agent-class.md)** | Core agent implementation | Memory, tools, personality, evolution |
-| **[PULSE](advanced/pulse.md)** | Virtual employee | Identity, KT, meetings, tasks, web UI |
+| **[PULSE](advanced/pulse.md)** | Autonomous virtual employee | Tasks, KT, meetings, standups, notifications, web UI |
 | **[Models](models/overview.md)** | LLM provider integrations | 25+ providers, unified interface |
 | **[Tools](tools/overview.md)** | Function calling system | 200+ tools, custom creation |
 | **[Memory](memory/overview.md)** | Memory management | Conversation, long-term, user memories |

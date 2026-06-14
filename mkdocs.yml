@@ -14,6 +14,9 @@ nav:
     - Quick Start: getting-started/quickstart.md
     - Configuration: getting-started/configuration.md
     - Examples: getting-started/examples.md
+  - "PULSE \u2014 Virtual Employee":
+    - Overview: advanced/pulse.md
+    - PULSE Commands: cli/pulse.md
   - Core Concepts:
     - Agent System: core/agents.md
     - Models: core/models.md
@@ -71,7 +74,6 @@ nav:
     - Planning System: advanced/planning.md
     - Security Framework: advanced/security.md
     - Evaluation System: advanced/evaluation.md
-    - "PULSE \u2014 Virtual Employee": advanced/pulse.md
   - Training & Fine-tuning:
     - Training Overview: training/overview.md
     - Data Preparation: training/data-prep.md
