@@ -18,7 +18,7 @@ try:
     import spacy
 
     SPACY_AVAILABLE = True
-except ImportError:
+except Exception:
     SPACY_AVAILABLE = False
 
 from buddy.document import Document

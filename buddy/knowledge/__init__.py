@@ -1,5 +1,9 @@
 from buddy.knowledge.agent import AgentKnowledge
-from buddy.knowledge.irag import irag
+
+try:
+    from buddy.knowledge.irag import irag
+except Exception:
+    irag = None  # type: ignore[misc, assignment]
 
 # Temporarily comment out to avoid circular imports during testing
 # from buddy.knowledge.irag import IRAGKnowledgeBase
