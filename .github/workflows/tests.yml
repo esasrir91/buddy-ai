@@ -60,6 +60,12 @@ jobs:
           pip install --upgrade pip
           pip install -e ".[dev]" --no-cache-dir
 
+      - name: Diagnose test environment
+        run: |
+          python --version
+          pip show buddy-ai
+          python -m pytest tests/unit/ --collect-only -q || true
+
       - name: Run unit tests
         run: pytest tests/unit/ -v --tb=long
 
