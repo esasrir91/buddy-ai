@@ -14,8 +14,8 @@ from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field
 
-from buddy import Agent
-from buddy.models import Model
+from buddy.agent.agent import Agent
+from buddy.models.base import Model
 
 try:
     import cv2

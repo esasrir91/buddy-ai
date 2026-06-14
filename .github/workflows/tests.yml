@@ -67,11 +67,11 @@ jobs:
           python -m pytest tests/unit/ --collect-only -q || true
 
       - name: Run unit tests
-        run: pytest tests/unit/ -v --tb=long
+        run: python -m pytest tests/unit/ -v --tb=long
 
       - name: Run unit tests with coverage
         if: matrix.python-version == '3.11'
-        run: pytest tests/unit/ -v --cov=buddy --cov-report=term-missing --cov-report=xml --tb=short
+        run: python -m pytest tests/unit/ -v --cov=buddy --cov-report=term-missing --cov-report=xml --tb=short
 
       - name: Upload coverage to Codecov
         if: matrix.python-version == '3.11'
