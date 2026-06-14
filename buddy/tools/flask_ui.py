@@ -46,17 +46,17 @@ app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-here')
 
 @app.route('/')
 def index():
-    \"\"\"Home page route.\"\"\"
+    """Home page route."""
     return render_template('index.html', title='{app_name}')
 
 @app.errorhandler(404)
 def page_not_found(e):
-    \"\"\"404 error handler.\"\"\"
+    """404 error handler."""
     return render_template('404.html'), 404
 
 @app.errorhandler(500)
 def internal_server_error(e):
-    \"\"\"500 error handler.\"\"\"
+    """500 error handler."""
     return render_template('500.html'), 500
 
 if __name__ == '__main__':
@@ -86,20 +86,20 @@ if __name__ == '__main__':
             str: Flask route code or error message
         """
         try:
-            methods_str = f"[{''.join([f'\"{m}\", ' for m in methods]).rstrip(', ')}]"
+            methods_str = "[" + ", ".join(f'"{m}"' for m in methods) + "]"
             
             route_code = f'''
 @app.route('{route_path}', methods={methods_str})
 def {function_name}():
-    \"\"\"Route handler for {route_path}.\"\"\"
+    """Route handler for {route_path}."""
 '''
 
             if form_data:
                 route_code += '''    if request.method == 'POST':
-        # Handle form submission
-        form_data = request.form.to_dict()
-        # Process form data here
-        return redirect(url_for('index'))
+         # Handle form submission
+         form_data = request.form.to_dict()
+         # Process form data here
+         return redirect(url_for('index'))
     
 '''
 
@@ -144,18 +144,18 @@ def {function_name}():
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container">
-            <a class="navbar-brand" href="{{{{ url_for('index') }}}}">{title}</a>
-        </div>
-    </nav>
+         <div class="container">
+             <a class="navbar-brand" href="{{{{ url_for('index') }}}}">{title}</a>
+         </div>
+     </nav>
 
-    <div class="container mt-4">
-        {{% block content %}}
-        {content}
-        {{% endblock %}}
-    </div>
+     <div class="container mt-4">
+         {{% block content %}}
+         {content}
+         {{% endblock %}}
+     </div>
 
-    <script src="{{{{ url_for('static', filename='script.js') }}}}"></script>
+     <script src="{{{{ url_for('static', filename='script.js') }}}}"></script>
 </body>
 </html>'''
 
@@ -203,7 +203,8 @@ def {function_name}():
                         form_html += f'            <option value="{option_value}">{option_text}</option>\n'
                     form_html += '        </select>\n'
                 elif field_type == 'textarea':
-                    form_html += f'        <textarea class="form-control" id="{field_name}" name="{field_name}" rows="3" placeholder="{field_placeholder}"{"" if not field_required else " required"}></textarea>\n'
+                    form_html += f'        <textarea class="form-control" id="{field_name}" name="{field_name}" rows="3" placeholder="{field_placeholder}"{"" if not field_required else " required"}>\n'
+                    form_html += '        </textarea>\n'
                 else:
                     form_html += f'        <input type="{field_type}" class="form-control" id="{field_name}" name="{field_name}" placeholder="{field_placeholder}"{"" if not field_required else " required"}>\n'
 
@@ -276,43 +277,43 @@ def require_auth():
             endpoint_code = f'''{auth_decorator}
 @app.route('/api{endpoint_path}', methods=['{method}'])
 def api_{function_name}():
-    \"\"\"API endpoint for {endpoint_path}.\"\"\"
+    """API endpoint for {endpoint_path}."""
     try:'''
 
             if method == 'GET':
                 endpoint_code += f'''
-        # Handle GET request
-        response_data = {json.dumps(response_data, indent=8)}
-        return jsonify(response_data), 200'''
+         # Handle GET request
+         response_data = {json.dumps(response_data, indent=8)}
+         return jsonify(response_data), 200'''
             elif method == 'POST':
                 endpoint_code += f'''
-        # Handle POST request
-        data = request.get_json()
-        if not data:
-            return jsonify({{"error": "No JSON data provided"}}), 400
-        
-        # Process the data here
-        response_data = {json.dumps(response_data, indent=8)}
-        return jsonify(response_data), 201'''
+         # Handle POST request
+         data = request.get_json()
+         if not data:
+             return jsonify({{"error": "No JSON data provided"}}), 400
+         
+         # Process the data here
+         response_data = {json.dumps(response_data, indent=8)}
+         return jsonify(response_data), 201'''
             elif method == 'PUT':
                 endpoint_code += f'''
-        # Handle PUT request
-        data = request.get_json()
-        if not data:
-            return jsonify({{"error": "No JSON data provided"}}), 400
-        
-        # Update logic here
-        response_data = {json.dumps(response_data, indent=8)}
-        return jsonify(response_data), 200'''
+         # Handle PUT request
+         data = request.get_json()
+         if not data:
+             return jsonify({{"error": "No JSON data provided"}}), 400
+         
+         # Update logic here
+         response_data = {json.dumps(response_data, indent=8)}
+         return jsonify(response_data), 200'''
             elif method == 'DELETE':
                 endpoint_code += f'''
-        # Handle DELETE request
-        # Delete logic here
-        return jsonify({{"message": "Resource deleted successfully"}}), 200'''
+         # Handle DELETE request
+         # Delete logic here
+         return jsonify({{"message": "Resource deleted successfully"}}), 200'''
 
             endpoint_code += '''
     except Exception as e:
-        return jsonify({"error": str(e)}), 500'''
+         return jsonify({"error": str(e)}), 500'''
 
             return json.dumps({
                 "success": "API endpoint created successfully",
