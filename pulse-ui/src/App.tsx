@@ -13,6 +13,8 @@ import TaskBoard from './pages/TaskBoard'
 import Chat from './pages/Chat'
 import KnowledgeExplorer from './pages/KnowledgeExplorer'
 import Settings from './pages/Settings'
+import Workspace from './pages/Workspace'
+import Memory from './pages/Memory'
 
 function RequireEmployee({ children }: { children: React.ReactNode }) {
   const isOnboarded = usePulseStore((s) => s.isOnboarded)
@@ -100,6 +102,8 @@ export default function App() {
           <Route path="/kt/live/:sessionId" element={<LiveKTSession />} />
           <Route path="/meetings" element={<MeetingRoom />} />
           <Route path="/tasks" element={<TaskBoard />} />
+          <Route path="/workspace" element={<Workspace />} />
+          <Route path="/memory" element={<Memory />} />
           <Route path="/chat" element={<Chat />} />
           <Route path="/knowledge" element={<KnowledgeExplorer />} />
           <Route path="/settings" element={<Settings />} />

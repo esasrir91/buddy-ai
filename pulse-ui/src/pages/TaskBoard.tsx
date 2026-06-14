@@ -307,10 +307,11 @@ function TaskCard({ task, onMove, onGetUpdate, autoWork }: {
     in_review: ['done', 'in_progress'],
   }
 
-  // Prefer [AUTO] output (full work), fall back to ✅ completion note
+  // Prefer [FILE] note for the workspace filename, then [AUTO] for preview, then ✅
+  const fileNote = task.progress_notes?.find((n) => n.startsWith('[FILE]'))?.replace(/^\[FILE\]\s*/, '')
   const autoNote = task.progress_notes?.find((n) => n.startsWith('[AUTO]'))?.replace(/^\[AUTO\]\s*/, '')
   const completionNote = task.progress_notes?.find((n) => n.startsWith('✅'))?.replace(/^✅\s*/, '')
-  const workOutput = autoNote || completionNote
+  const workPreview = autoNote || completionNote
 
   return (
     <div className={clsx(
@@ -336,11 +337,25 @@ function TaskCard({ task, onMove, onGetUpdate, autoWork }: {
       )}
 
       {/* Work output shown on done tasks */}
-      {workOutput && task.status === 'done' && (
-        <div className="pl-3.5 mt-1 max-h-36 overflow-y-auto">
-          <p className="text-[11px] text-green-400/80 leading-relaxed border-l-2 border-green-600/30 pl-2 whitespace-pre-wrap">
-            {workOutput.length > 400 ? workOutput.slice(0, 400) + '…' : workOutput}
-          </p>
+      {task.status === 'done' && (
+        <div className="pl-3.5 mt-1 space-y-1.5">
+          {fileNote && (
+            <a
+              href={`/workspace/${encodeURIComponent(fileNote)}`}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-1.5 text-[11px] text-blue-400 hover:text-blue-300 transition-colors"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <span>📄</span>
+              <span className="font-mono underline">{fileNote}</span>
+            </a>
+          )}
+          {workPreview && (
+            <p className="text-[11px] text-green-400/80 leading-relaxed border-l-2 border-green-600/30 pl-2 whitespace-pre-wrap">
+              {workPreview.length > 300 ? workPreview.slice(0, 300) + '…' : workPreview}
+            </p>
+          )}
         </div>
       )}
 

@@ -12,6 +12,9 @@ import type {
   FeedbackEntry,
   ActivityEvent,
   PulseNotification,
+  WorkspaceFile,
+  MemoryFact,
+  ChatHistoryMsg,
 } from '../types/pulse'
 
 const BASE = '/api/pulse'
@@ -320,5 +323,57 @@ export function suggestTasks(employeeId: string) {
   return request<{ suggestions: Array<{ title: string; description: string; priority: string }> }>(
     `/${employeeId}/suggest-tasks`,
     { method: 'POST' },
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Workspace
+// ---------------------------------------------------------------------------
+
+export function listWorkspaceFiles(employeeId: string) {
+  return request<{ workspace_path: string; files: WorkspaceFile[] }>(`/${employeeId}/workspace`)
+}
+
+export function getWorkspaceFile(employeeId: string, filename: string) {
+  return request<{ filename: string; extension: string; size_bytes: number; content: string }>(
+    `/${employeeId}/workspace/${encodeURIComponent(filename)}`,
+  )
+}
+
+export function deleteWorkspaceFile(employeeId: string, filename: string) {
+  return request<{ deleted: string }>(
+    `/${employeeId}/workspace/${encodeURIComponent(filename)}`,
+    { method: 'DELETE' },
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Memory
+// ---------------------------------------------------------------------------
+
+export function getMemory(employeeId: string) {
+  return request<{
+    long_term_memories: MemoryFact[]
+    chat_history: ChatHistoryMsg[]
+    history_count: number
+    memory_count: number
+  }>(`/${employeeId}/memory`)
+}
+
+export function forgetMemory(employeeId: string, memoryId: string) {
+  return request<{ deleted: string; remaining: number }>(
+    `/${employeeId}/memory/${memoryId}`,
+    { method: 'DELETE' },
+  )
+}
+
+export function clearAllMemory(employeeId: string) {
+  return request<{ cleared: boolean }>(`/${employeeId}/memory`, { method: 'DELETE' })
+}
+
+export function clearChatHistory(employeeId: string) {
+  return request<{ cleared: boolean }>(
+    `/${employeeId}/memory/history/clear`,
+    { method: 'DELETE' },
   )
 }

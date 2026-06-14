@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { usePulseStore } from '../../hooks/usePulseStore'
 import {
   LayoutDashboard, BookOpen, Video, CheckSquare,
-  MessageSquare, Search, Settings, LogOut, Cpu, Bell, X,
+  MessageSquare, Search, Settings, LogOut, Cpu, Bell, X, FolderOpen, Brain,
 } from 'lucide-react'
 import { getNotifications, markAllNotificationsRead } from '../../api/pulse'
 import type { PulseNotification } from '../../types/pulse'
@@ -14,6 +14,8 @@ const navItems = [
   { to: '/kt',          icon: BookOpen,         label: 'KT Center' },
   { to: '/meetings',    icon: Video,            label: 'Meetings' },
   { to: '/tasks',       icon: CheckSquare,      label: 'Tasks' },
+  { to: '/workspace',   icon: FolderOpen,       label: 'Workspace' },
+  { to: '/memory',      icon: Brain,            label: 'Memory' },
   { to: '/chat',        icon: MessageSquare,    label: 'Chat' },
   { to: '/knowledge',   icon: Search,           label: 'Knowledge' },
   { to: '/settings',    icon: Settings,         label: 'Settings' },

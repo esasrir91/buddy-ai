@@ -7,6 +7,10 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
+import pathlib
+from collections import deque
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
@@ -25,22 +29,116 @@ router = APIRouter(prefix="/api/pulse", tags=["PULSE"])
 # ---------------------------------------------------------------------------
 # Employee persistence — survives server restarts
 # ---------------------------------------------------------------------------
-import os
-import pathlib
 
 _PULSE_DATA_DIR = pathlib.Path(os.environ.get("PULSE_DATA_DIR", pathlib.Path.home() / ".pulse_data"))
 _EMPLOYEES_FILE = _PULSE_DATA_DIR / "employees.json"
 
 
+# ---------------------------------------------------------------------------
+# Employee conversation memory  —  per-employee, persisted to disk
+# ---------------------------------------------------------------------------
+# Short-term: rolling window of raw chat messages (max 30 per employee)
+_chat_history: Dict[str, deque] = {}      # employee_id -> deque[{role,content,ts}]
+# Long-term: key facts extracted from conversations (max 100 per employee)
+_long_term_memories: Dict[str, List[Dict[str, Any]]] = {}   # employee_id -> [{id,fact,ts,source}]
+
+_HISTORY_MAXLEN = 30    # messages kept in sliding window
+_MEMORY_MAXLEN  = 100   # long-term facts kept per employee
+
+
+def _get_history(employee_id: str) -> deque:
+    if employee_id not in _chat_history:
+        _chat_history[employee_id] = deque(maxlen=_HISTORY_MAXLEN)
+    return _chat_history[employee_id]
+
+
+def _add_history(employee_id: str, role: str, content: str) -> None:
+    """Append one message to the conversation history."""
+    _get_history(employee_id).append({
+        "role": role,
+        "content": content,
+        "ts": datetime.utcnow().isoformat(),
+    })
+
+
+def _build_history_block(employee_id: str, limit: int = 10) -> str:
+    """Return the last `limit` messages formatted for prompt injection."""
+    history = list(_get_history(employee_id))[-limit:]
+    if not history:
+        return ""
+    lines = []
+    for msg in history:
+        label = "User" if msg["role"] == "user" else "You (PULSE)"
+        lines.append(f"{label}: {msg['content'][:400]}")
+    return "RECENT CONVERSATION HISTORY (oldest first):\n" + "\n".join(lines) + "\n\n---\n"
+
+
+def _build_memory_block(employee_id: str) -> str:
+    """Return long-term memories formatted for prompt injection."""
+    facts = _long_term_memories.get(employee_id, [])
+    if not facts:
+        return ""
+    lines = [f"- {m['fact']}" for m in facts[-30:]]
+    return "WHAT YOU REMEMBER ABOUT THIS PERSON & CONTEXT:\n" + "\n".join(lines) + "\n\n---\n"
+
+
+async def _extract_and_store_memories(
+    employee_id: str, emp: "PulseEmployee",
+    user_message: str, assistant_reply: str,
+) -> None:
+    """
+    Background coroutine: ask LLM to extract 0-3 important facts worth
+    remembering from this exchange, and add them to long-term memory.
+    """
+    try:
+        prompt = (
+            "You are a memory-extraction assistant.\n"
+            "Given a conversation excerpt, extract 0–3 SHORT factual sentences "
+            "worth remembering long-term (user preferences, deadlines, project details, "
+            "names, key decisions, personal context, etc.).\n"
+            "Output ONLY the facts, one per line, with no numbering or preamble.\n"
+            "If there is nothing worth remembering, output the single word: NONE\n\n"
+            f"User: {user_message[:800]}\n"
+            f"Assistant: {assistant_reply[:800]}\n"
+        )
+        loop = asyncio.get_event_loop()
+        response = await asyncio.wait_for(
+            loop.run_in_executor(None, lambda: emp.run(prompt, stream=False)),
+            timeout=20.0,
+        )
+        raw = (response.content if hasattr(response, "content") else str(response)).strip()
+        if raw.upper() == "NONE" or not raw:
+            return
+        if employee_id not in _long_term_memories:
+            _long_term_memories[employee_id] = []
+        mem_list = _long_term_memories[employee_id]
+        for line in raw.splitlines():
+            line = line.strip().lstrip("-•0123456789. ")
+            if not line or len(line) < 8:
+                continue
+            # Deduplicate: skip if very similar fact already exists
+            if any(line.lower()[:40] in m["fact"].lower() for m in mem_list[-20:]):
+                continue
+            mem_list.append({
+                "id": str(uuid4())[:8],
+                "fact": line[:300],
+                "ts": datetime.utcnow().isoformat(),
+                "source": "chat",
+            })
+        # Keep only the most recent MEMORY_MAXLEN facts
+        _long_term_memories[employee_id] = mem_list[-_MEMORY_MAXLEN:]
+        _save_employees()
+    except Exception:
+        pass  # memory extraction is best-effort; never crash the main flow
+
+
 def _save_employees() -> None:
-    """Persist all employee profiles, KT summaries, and tasks to disk."""
+    """Persist all employee profiles, KT summaries, tasks, chat history, and memories to disk."""
     _PULSE_DATA_DIR.mkdir(parents=True, exist_ok=True)
     records = {}
     for eid, emp in _employees.items():
         p = emp.employee_profile
-        # KT summaries
         kt_data = [s.model_dump(mode="json") for s in emp.kt_manager.all_summaries()]
-        # Tasks
         task_data = [t.model_dump(mode="json") for t in emp.task_manager.list_tasks()]
         records[eid] = {
             "profile": {
@@ -56,12 +154,14 @@ def _save_employees() -> None:
             },
             "kt_summaries": kt_data,
             "tasks": task_data,
+            "chat_history": list(_chat_history.get(eid, [])),
+            "long_term_memories": _long_term_memories.get(eid, []),
         }
     _EMPLOYEES_FILE.write_text(json.dumps(records, indent=2, default=str), encoding="utf-8")
 
 
 def _load_employees() -> None:
-    """Restore persisted employees, KT summaries, and tasks on startup."""
+    """Restore persisted employees, KT summaries, tasks, history, and memories on startup."""
     if not _EMPLOYEES_FILE.exists():
         return
     try:
@@ -72,7 +172,6 @@ def _load_employees() -> None:
         if eid in _employees:
             continue
         try:
-            # Support both old format (flat profile) and new format (nested)
             profile_data = data.get("profile", data)
             model = _build_model(_llm_config["provider"], _llm_config["model_id"], None)
             profile = EmployeeProfile(**{k: v for k, v in profile_data.items() if v is not None})
@@ -97,6 +196,16 @@ def _load_employees() -> None:
                 except Exception:
                     pass
 
+            # Restore conversation history
+            hist = data.get("chat_history", [])
+            if hist:
+                _chat_history[eid] = deque(hist[-_HISTORY_MAXLEN:], maxlen=_HISTORY_MAXLEN)
+
+            # Restore long-term memories
+            mems = data.get("long_term_memories", [])
+            if mems:
+                _long_term_memories[eid] = mems[-_MEMORY_MAXLEN:]
+
             _employees[eid] = emp
         except Exception:
             pass
@@ -111,8 +220,6 @@ _kt_sessions: Dict[str, KTSession] = {}
 # ---------------------------------------------------------------------------
 # Activity log — every autonomous action PULSE takes is recorded here
 # ---------------------------------------------------------------------------
-from datetime import datetime
-from collections import deque
 
 class ActivityEvent:
     def __init__(self, employee_id: str, event_type: str, title: str, detail: str = "") -> None:
@@ -158,6 +265,47 @@ _auto_work_enabled: bool = True
 _TASK_POLL_INTERVAL: int = 30
 _auto_work_task: Optional[asyncio.Task] = None  # type: ignore[type-arg]
 
+# Workspace root — each employee gets their own folder
+_WORKSPACE_ROOT = pathlib.Path.home() / ".pulse_data" / "workspaces"
+
+
+def _employee_workspace(employee_id: str) -> pathlib.Path:
+    ws = _WORKSPACE_ROOT / employee_id
+    ws.mkdir(parents=True, exist_ok=True)
+    return ws
+
+
+def _detect_output_format(title: str, description: str) -> tuple[str, str]:
+    """
+    Return (file_extension, format_hint) based on task keywords.
+    e.g. ("py", "Python script"), ("md", "Markdown document")
+    """
+    text = (title + " " + description).lower()
+    if any(k in text for k in ("python", "script", "code", ".py", "function", "class", "module", "api endpoint", "fastapi", "flask")):
+        return "py", "Python script"
+    if any(k in text for k in ("sql", "query", "database", "schema", "migration")):
+        return "sql", "SQL script"
+    if any(k in text for k in ("bash", "shell", "sh ", ".sh", "command", "cli script")):
+        return "sh", "Shell script"
+    if any(k in text for k in ("json", "config", "configuration", "settings file")):
+        return "json", "JSON configuration"
+    if any(k in text for k in ("yaml", "yml", "docker", "kubernetes", "compose")):
+        return "yaml", "YAML configuration"
+    if any(k in text for k in ("html", "webpage", "web page", "frontend", "template")):
+        return "html", "HTML file"
+    if any(k in text for k in ("csv", "spreadsheet", "data export")):
+        return "csv", "CSV data file"
+    if any(k in text for k in ("test", "unit test", "pytest", "spec")):
+        return "py", "Python test file"
+    # Default: markdown document
+    return "md", "Markdown document"
+
+
+def _safe_filename(title: str, task_id: str, ext: str) -> str:
+    import re as _re
+    slug = _re.sub(r"[^a-zA-Z0-9_-]", "_", title.lower())[:40].strip("_")
+    return f"{task_id}_{slug}.{ext}"
+
 
 def _build_kt_block(emp: "PulseEmployee", max_summaries: int = 3, max_chars: int = 800) -> str:
     kt_summaries = emp.kt_manager.all_summaries()
@@ -173,11 +321,12 @@ async def _autonomous_worker() -> None:
     """
     Background loop — PULSE autonomously works tasks, generates daily standups,
     suggests new tasks when idle, and sends proactive notifications.
+    Each task produces a real file saved to the employee's workspace.
     """
     await asyncio.sleep(5)
     loop = asyncio.get_event_loop()
-    last_standup_date: Dict[str, str] = {}   # employee_id -> date str
-    last_suggest_date: Dict[str, str] = {}   # employee_id -> date str
+    last_standup_date: Dict[str, str] = {}
+    last_suggest_date: Dict[str, str] = {}
 
     while True:
         if _auto_work_enabled and _employees:
@@ -196,6 +345,12 @@ async def _autonomous_worker() -> None:
                         _save_employees()
                         _log(employee_id, "task_started", f"Started: {task.title}")
 
+                        # Determine output format from task keywords
+                        ext, fmt_hint = _detect_output_format(task.title, task.description or "")
+                        ws_dir = _employee_workspace(employee_id)
+                        filename = _safe_filename(task.title, task.task_id, ext)
+                        filepath = ws_dir / filename
+
                         kt_block = _build_kt_block(emp)
                         prompt = (
                             f"You are {emp.employee_profile.full_name}, a {emp.employee_profile.role} "
@@ -205,28 +360,48 @@ async def _autonomous_worker() -> None:
                             f"Title: {task.title}\n"
                             f"Description: {task.description or 'No additional description.'}\n"
                             f"Priority: {task.priority.value}\n\n"
-                            f"Complete this task as a professional employee. Produce actual, detailed work output. "
-                            f"End with a one-line summary on a new line starting with 'SUMMARY:'."
+                            f"Complete this task by producing a real {fmt_hint}.\n"
+                            f"Output ONLY the file content — no preamble, no explanation, no markdown code fences. "
+                            f"Just the raw {fmt_hint} content that would be saved directly to a file named '{filename}'.\n"
+                            f"The content must be complete, professional, and ready to use.\n"
+                            f"After the file content, on a NEW LINE write exactly: SUMMARY: <one sentence summary>"
                         )
 
                         response = await asyncio.wait_for(
                             loop.run_in_executor(None, lambda p=prompt: emp.run(p, stream=False)),
                             timeout=90.0,
                         )
-                        output = response.content if hasattr(response, "content") else str(response)
-                        lines = output.strip().split("\n")
-                        summary_line = next(
-                            (l.replace("SUMMARY:", "").strip() for l in lines if l.startswith("SUMMARY:")),
-                            task.title,
-                        )
-                        task.add_note(f"[AUTO] {output.strip()}")
+                        raw_output = response.content if hasattr(response, "content") else str(response)
+
+                        # Separate file content from summary line
+                        lines = raw_output.strip().split("\n")
+                        summary_line = task.title
+                        file_lines = []
+                        for line in lines:
+                            if line.startswith("SUMMARY:"):
+                                summary_line = line.replace("SUMMARY:", "").strip()
+                            else:
+                                file_lines.append(line)
+                        file_content = "\n".join(file_lines).strip()
+
+                        # Strip any accidental markdown code fences
+                        import re as _re
+                        file_content = _re.sub(r"^```[a-z]*\n?", "", file_content, flags=_re.M)
+                        file_content = _re.sub(r"\n?```$", "", file_content, flags=_re.M)
+                        file_content = file_content.strip()
+
+                        # Write the actual file to the workspace
+                        filepath.write_text(file_content, encoding="utf-8")
+
+                        task.add_note(f"[FILE] {filename}")
+                        task.add_note(f"[AUTO] {file_content[:600]}{'...' if len(file_content) > 600 else ''}")
                         task.status = TaskStatus.DONE
                         task.completed_at = datetime.utcnow()
                         task.updated_at = task.completed_at
                         _save_employees()
-                        _log(employee_id, "task_done", f"Completed: {task.title}", summary_line)
+                        _log(employee_id, "task_done", f"Completed: {task.title}", f"Created {filename}")
                         _notify(employee_id,
-                                f"I finished '{task.title}'. {summary_line}",
+                                f"Finished '{task.title}' — created {filename}. {summary_line}",
                                 "success")
 
                     except asyncio.TimeoutError:
@@ -732,7 +907,14 @@ async def task_status_update(employee_id: str, task_id: str) -> Dict[str, Any]:
 async def chat(employee_id: str, req: ChatRequest) -> Dict[str, Any]:
     emp = _get_employee(employee_id)
 
-    # Inject KT knowledge into context (same logic as WebSocket stream)
+    # ── Build context blocks ──────────────────────────────────────────────
+    # 1. Long-term memories (things PULSE remembers about this person)
+    memory_block = _build_memory_block(employee_id)
+
+    # 2. Recent conversation history
+    history_block = _build_history_block(employee_id, limit=10)
+
+    # 3. KT knowledge base
     kt_summaries = emp.kt_manager.all_summaries()
     if kt_summaries:
         knowledge_block = "\n\n".join(
@@ -741,16 +923,22 @@ async def chat(employee_id: str, req: ChatRequest) -> Dict[str, Any]:
             f"Key concepts: {', '.join(s.key_concepts)}"
             for s in kt_summaries[-5:]
         )
-        augmented = (
-            f"KNOWLEDGE BASE (from your KT sessions):\n"
-            f"{knowledge_block}\n\n"
-            f"---\n"
-            f"User message: {req.message}\n\n"
-            f"Answer using your knowledge above when relevant. "
-            f"Speak in first person as a knowledgeable employee."
-        )
+        kt_block = f"KNOWLEDGE BASE (from your KT sessions):\n{knowledge_block}\n\n---\n"
     else:
-        augmented = req.message
+        kt_block = ""
+
+    augmented = (
+        f"{memory_block}"
+        f"{history_block}"
+        f"{kt_block}"
+        f"User message: {req.message}\n\n"
+        f"Answer using your knowledge above when relevant. "
+        f"Speak in first person as a knowledgeable employee. "
+        f"Remember context from previous messages."
+    )
+
+    # Store user turn in history
+    _add_history(employee_id, "user", req.message)
 
     loop = asyncio.get_event_loop()
     try:
@@ -762,6 +950,13 @@ async def chat(employee_id: str, req: ChatRequest) -> Dict[str, Any]:
         return {"response": "Sorry, response timed out. Please try again.", "employee": emp.employee_profile.full_name}
 
     content = response.content if hasattr(response, "content") else str(response)
+
+    # Store assistant turn in history
+    _add_history(employee_id, "assistant", content)
+
+    # Background memory extraction (fire and forget)
+    asyncio.create_task(_extract_and_store_memories(employee_id, emp, req.message, content))
+
     return {"response": content, "employee": emp.employee_profile.full_name}
 
 
@@ -780,28 +975,35 @@ async def chat_stream(websocket: WebSocket, employee_id: str) -> None:
             payload = json.loads(data)
             message = payload.get("message", "")
 
-            # Inject KT knowledge (cap at 5 most recent to avoid token limits)
+            # ── Build context blocks ──────────────────────────────────────
+            memory_block = _build_memory_block(employee_id)
+            history_block = _build_history_block(employee_id, limit=10)
+
             kt_summaries = emp.kt_manager.all_summaries()
             if kt_summaries:
                 knowledge_block = "\n\n".join(
                     f"[KT: {s.session_name} | confidence {s.confidence_score:.0%}]\n"
                     f"{s.mental_model[:1500]}\n"
                     f"Key concepts: {', '.join(s.key_concepts)}"
-                    for s in kt_summaries[-5:]  # most recent 5 only
+                    for s in kt_summaries[-5:]
                 )
-                augmented = (
-                    f"KNOWLEDGE BASE (from your KT sessions):\n"
-                    f"{knowledge_block}\n\n"
-                    f"---\n"
-                    f"User message: {message}\n\n"
-                    f"Answer using your knowledge above when relevant. "
-                    f"Speak in first person as a knowledgeable employee."
-                )
+                kt_block = f"KNOWLEDGE BASE (from your KT sessions):\n{knowledge_block}\n\n---\n"
             else:
-                augmented = message
+                kt_block = ""
 
-            # Run the synchronous LLM call in a thread so it doesn't block
-            # the async event loop (which would freeze the WebSocket)
+            augmented = (
+                f"{memory_block}"
+                f"{history_block}"
+                f"{kt_block}"
+                f"User message: {message}\n\n"
+                f"Answer using your knowledge above when relevant. "
+                f"Speak in first person as a knowledgeable employee. "
+                f"Remember context from previous messages."
+            )
+
+            # Store user turn in history
+            _add_history(employee_id, "user", message)
+
             try:
                 response = await asyncio.wait_for(
                     loop.run_in_executor(None, lambda msg=augmented: emp.run(msg, stream=False)),
@@ -817,7 +1019,11 @@ async def chat_stream(websocket: WebSocket, employee_id: str) -> None:
                 await websocket.send_json({"chunk": "", "done": True})
                 continue
 
-            # Stream back word-by-word for a smooth typing effect
+            # Store assistant turn + trigger memory extraction
+            _add_history(employee_id, "assistant", content)
+            asyncio.create_task(_extract_and_store_memories(employee_id, emp, message, content))
+
+            # Stream back word-by-word
             words = content.split(" ")
             for i, word in enumerate(words):
                 chunk = word + ("" if i == len(words) - 1 else " ")
@@ -904,6 +1110,111 @@ class LLMSettingsRequest(BaseModel):
     model_id: str
     api_key: Optional[str] = None  # None means "keep existing"
     base_url: Optional[str] = None  # For Ollama / custom endpoints
+
+
+# ---------------------------------------------------------------------------
+# Workspace — files PULSE creates when working on tasks
+# ---------------------------------------------------------------------------
+
+@router.get("/{employee_id}/workspace")
+async def list_workspace_files(employee_id: str) -> Dict[str, Any]:
+    """List all files PULSE has created in its workspace."""
+    _get_employee(employee_id)
+    ws = _employee_workspace(employee_id)
+    files = []
+    for f in sorted(ws.iterdir(), key=lambda x: x.stat().st_mtime, reverse=True):
+        if f.is_file():
+            stat = f.stat()
+            files.append({
+                "filename": f.name,
+                "size_bytes": stat.st_size,
+                "modified_at": datetime.utcfromtimestamp(stat.st_mtime).isoformat(),
+                "extension": f.suffix.lstrip("."),
+            })
+    return {"workspace_path": str(ws), "files": files}
+
+
+@router.get("/{employee_id}/workspace/{filename}")
+async def get_workspace_file(employee_id: str, filename: str) -> Dict[str, Any]:
+    """Return the content of a workspace file."""
+    _get_employee(employee_id)
+    import re as _re
+    if not _re.match(r'^[\w\-. ]+$', filename):
+        raise HTTPException(status_code=400, detail="Invalid filename")
+    ws = _employee_workspace(employee_id)
+    filepath = ws / filename
+    if not filepath.exists() or not filepath.is_file():
+        raise HTTPException(status_code=404, detail=f"File '{filename}' not found")
+    content = filepath.read_text(encoding="utf-8", errors="replace")
+    return {
+        "filename": filename,
+        "extension": filepath.suffix.lstrip("."),
+        "size_bytes": filepath.stat().st_size,
+        "content": content,
+    }
+
+
+@router.delete("/{employee_id}/workspace/{filename}")
+async def delete_workspace_file(employee_id: str, filename: str) -> Dict[str, Any]:
+    """Delete a file from the workspace."""
+    _get_employee(employee_id)
+    import re as _re
+    if not _re.match(r'^[\w\-. ]+$', filename):
+        raise HTTPException(status_code=400, detail="Invalid filename")
+    ws = _employee_workspace(employee_id)
+    filepath = ws / filename
+    if not filepath.exists():
+        raise HTTPException(status_code=404, detail=f"File '{filename}' not found")
+    filepath.unlink()
+    return {"deleted": filename}
+
+
+# ---------------------------------------------------------------------------
+# Memory — conversation history + long-term facts
+# ---------------------------------------------------------------------------
+
+@router.get("/{employee_id}/memory")
+async def get_memory(employee_id: str) -> Dict[str, Any]:
+    """Return all long-term memories + recent history for this employee."""
+    _get_employee(employee_id)
+    history = list(_get_history(employee_id))
+    facts = _long_term_memories.get(employee_id, [])
+    return {
+        "long_term_memories": list(reversed(facts)),   # newest first
+        "chat_history": list(reversed(history)),        # newest first
+        "history_count": len(history),
+        "memory_count": len(facts),
+    }
+
+
+@router.delete("/{employee_id}/memory/{memory_id}")
+async def forget_memory(employee_id: str, memory_id: str) -> Dict[str, Any]:
+    """Remove a single long-term memory fact by ID."""
+    _get_employee(employee_id)
+    mems = _long_term_memories.get(employee_id, [])
+    before = len(mems)
+    _long_term_memories[employee_id] = [m for m in mems if m["id"] != memory_id]
+    _save_employees()
+    return {"deleted": memory_id, "remaining": before - 1}
+
+
+@router.delete("/{employee_id}/memory")
+async def clear_all_memory(employee_id: str) -> Dict[str, Any]:
+    """Clear ALL memories and conversation history for this employee."""
+    _get_employee(employee_id)
+    _long_term_memories[employee_id] = []
+    _chat_history[employee_id] = deque(maxlen=_HISTORY_MAXLEN)
+    _save_employees()
+    return {"cleared": True}
+
+
+@router.delete("/{employee_id}/memory/history/clear")
+async def clear_chat_history(employee_id: str) -> Dict[str, Any]:
+    """Clear only conversation history (keep long-term memories)."""
+    _get_employee(employee_id)
+    _chat_history[employee_id] = deque(maxlen=_HISTORY_MAXLEN)
+    _save_employees()
+    return {"cleared": True}
 
 
 # ---------------------------------------------------------------------------

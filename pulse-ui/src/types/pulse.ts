@@ -291,3 +291,23 @@ export interface PulseNotification {
   ts: string
   read: boolean
 }
+
+export interface WorkspaceFile {
+  filename: string
+  size_bytes: number
+  modified_at: string
+  extension: string
+}
+
+export interface MemoryFact {
+  id: string
+  fact: string
+  ts: string
+  source: string
+}
+
+export interface ChatHistoryMsg {
+  role: 'user' | 'assistant'
+  content: string
+  ts: string
+}
