@@ -54,13 +54,19 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          cache: pip
 
       - name: Install package and dev dependencies
-        run: pip install -e ".[dev]"
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[dev]" --no-cache-dir
+
+      - name: Verify package imports
+        run: |
+          python -c "import buddy; print('buddy', buddy.__version__)"
+          python -c "from buddy.cli.entrypoint import BUDDY_cli; print('cli ok')"
 
       - name: Run unit tests with coverage
-        run: pytest tests/unit/ -v --cov=buddy --cov-report=term-missing --cov-report=xml
+        run: pytest tests/unit/ -v --cov=buddy --cov-report=term-missing --cov-report=xml --tb=short
 
       - name: Upload coverage to Codecov
         if: matrix.python-version == '3.11'

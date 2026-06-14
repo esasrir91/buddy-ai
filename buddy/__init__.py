@@ -48,7 +48,7 @@ try:
     )
 
     MULTIMODAL_AVAILABLE = True
-except ImportError:
+except Exception:
     MULTIMODAL_AVAILABLE = False
 
 try:
