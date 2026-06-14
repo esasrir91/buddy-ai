@@ -28,7 +28,8 @@ def main() -> None:
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
             print(f"{name} OK")
-        except Exception:
+        except Exception as exc:
+            print(f"::error title={name}::{exc}", file=sys.stderr)
             print(f"{name} FAILED", file=sys.stderr)
             traceback.print_exc()
             raise
