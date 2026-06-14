@@ -4,6 +4,8 @@ Multi-Modal Agent Implementation
 Advanced AI agent with vision, audio, and video processing capabilities.
 """
 
+from __future__ import annotations
+
 import base64
 import io
 from datetime import datetime
