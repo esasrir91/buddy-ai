@@ -33,27 +33,35 @@ _EMPLOYEES_FILE = _PULSE_DATA_DIR / "employees.json"
 
 
 def _save_employees() -> None:
-    """Persist all employee profiles to disk."""
+    """Persist all employee profiles, KT summaries, and tasks to disk."""
     _PULSE_DATA_DIR.mkdir(parents=True, exist_ok=True)
     records = {}
     for eid, emp in _employees.items():
         p = emp.employee_profile
+        # KT summaries
+        kt_data = [s.model_dump(mode="json") for s in emp.kt_manager.all_summaries()]
+        # Tasks
+        task_data = [t.model_dump(mode="json") for t in emp.task_manager.list_tasks()]
         records[eid] = {
-            "full_name": p.full_name,
-            "role": p.role,
-            "department": p.department,
-            "team": p.team,
-            "skills": p.skills,
-            "timezone": p.timezone,
-            "reporting_to": p.reporting_to,
-            "company_name": p.company_name,
-            "bio": p.bio,
+            "profile": {
+                "full_name": p.full_name,
+                "role": p.role,
+                "department": p.department,
+                "team": p.team,
+                "skills": p.skills,
+                "timezone": p.timezone,
+                "reporting_to": p.reporting_to,
+                "company_name": p.company_name,
+                "bio": p.bio,
+            },
+            "kt_summaries": kt_data,
+            "tasks": task_data,
         }
-    _EMPLOYEES_FILE.write_text(json.dumps(records, indent=2), encoding="utf-8")
+    _EMPLOYEES_FILE.write_text(json.dumps(records, indent=2, default=str), encoding="utf-8")
 
 
 def _load_employees() -> None:
-    """Restore persisted employees on startup using the current LLM config."""
+    """Restore persisted employees, KT summaries, and tasks on startup."""
     if not _EMPLOYEES_FILE.exists():
         return
     try:
@@ -62,13 +70,36 @@ def _load_employees() -> None:
         return
     for eid, data in records.items():
         if eid in _employees:
-            continue  # already live (shouldn't happen at startup)
+            continue
         try:
+            # Support both old format (flat profile) and new format (nested)
+            profile_data = data.get("profile", data)
             model = _build_model(_llm_config["provider"], _llm_config["model_id"], None)
-            profile = EmployeeProfile(**{k: v for k, v in data.items() if v is not None})
-            _employees[eid] = PulseEmployee(employee_profile=profile, model=model)
+            profile = EmployeeProfile(**{k: v for k, v in profile_data.items() if v is not None})
+            emp = PulseEmployee(employee_profile=profile, model=model)
+
+            # Restore KT summaries
+            from buddy.pulse.kt import KTSummary
+            for s_data in data.get("kt_summaries", []):
+                try:
+                    summary = KTSummary(**s_data)
+                    emp.kt_manager.commit_summary(summary)
+                    emp._store_kt_in_memory(summary)
+                except Exception:
+                    pass
+
+            # Restore tasks
+            from buddy.pulse.work import WorkItem
+            for t_data in data.get("tasks", []):
+                try:
+                    task = WorkItem(**t_data)
+                    emp.task_manager._tasks[task.task_id] = task
+                except Exception:
+                    pass
+
+            _employees[eid] = emp
         except Exception:
-            pass  # skip bad records silently
+            pass
 
 
 # ---------------------------------------------------------------------------
@@ -76,6 +107,219 @@ def _load_employees() -> None:
 # ---------------------------------------------------------------------------
 _employees: Dict[str, PulseEmployee] = {}
 _kt_sessions: Dict[str, KTSession] = {}
+
+# ---------------------------------------------------------------------------
+# Activity log — every autonomous action PULSE takes is recorded here
+# ---------------------------------------------------------------------------
+from datetime import datetime
+from collections import deque
+
+class ActivityEvent:
+    def __init__(self, employee_id: str, event_type: str, title: str, detail: str = "") -> None:
+        self.employee_id = employee_id
+        self.event_type = event_type   # task_started | task_done | kt_learned | standup | suggestion | message
+        self.title = title
+        self.detail = detail
+        self.ts = datetime.utcnow().isoformat()
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {"employee_id": self.employee_id, "event_type": self.event_type,
+                "title": self.title, "detail": self.detail, "ts": self.ts}
+
+# Per-employee capped activity log (last 200 events)
+_activity_log: Dict[str, deque] = {}   # employee_id -> deque[ActivityEvent]
+
+# Notifications queue — proactive messages from PULSE to the user
+_notifications: Dict[str, deque] = {}  # employee_id -> deque[dict]
+
+
+def _log(employee_id: str, event_type: str, title: str, detail: str = "") -> None:
+    if employee_id not in _activity_log:
+        _activity_log[employee_id] = deque(maxlen=200)
+    _activity_log[employee_id].appendleft(ActivityEvent(employee_id, event_type, title, detail))
+
+
+def _notify(employee_id: str, message: str, notif_type: str = "info") -> None:
+    if employee_id not in _notifications:
+        _notifications[employee_id] = deque(maxlen=50)
+    _notifications[employee_id].appendleft({
+        "id": str(uuid4())[:8],
+        "message": message,
+        "type": notif_type,
+        "ts": datetime.utcnow().isoformat(),
+        "read": False,
+    })
+
+
+# ---------------------------------------------------------------------------
+# Autonomous task worker — PULSE picks up and executes tasks automatically
+# ---------------------------------------------------------------------------
+_auto_work_enabled: bool = True
+_TASK_POLL_INTERVAL: int = 30
+_auto_work_task: Optional[asyncio.Task] = None  # type: ignore[type-arg]
+
+
+def _build_kt_block(emp: "PulseEmployee", max_summaries: int = 3, max_chars: int = 800) -> str:
+    kt_summaries = emp.kt_manager.all_summaries()
+    if not kt_summaries:
+        return ""
+    return "KNOWLEDGE BASE:\n" + "\n\n".join(
+        f"[{s.session_name}] {s.mental_model[:max_chars]}"
+        for s in kt_summaries[-max_summaries:]
+    ) + "\n\n---\n"
+
+
+async def _autonomous_worker() -> None:
+    """
+    Background loop — PULSE autonomously works tasks, generates daily standups,
+    suggests new tasks when idle, and sends proactive notifications.
+    """
+    await asyncio.sleep(5)
+    loop = asyncio.get_event_loop()
+    last_standup_date: Dict[str, str] = {}   # employee_id -> date str
+    last_suggest_date: Dict[str, str] = {}   # employee_id -> date str
+
+    while True:
+        if _auto_work_enabled and _employees:
+            today = datetime.utcnow().strftime("%Y-%m-%d")
+
+            for employee_id, emp in list(_employees.items()):
+                from buddy.pulse.work import TaskStatus
+
+                # ── 1. Work on the next todo task ──────────────────────────
+                pending = emp.task_manager.list_tasks(TaskStatus.TODO)
+                if pending:
+                    task = pending[0]
+                    try:
+                        task.status = TaskStatus.IN_PROGRESS
+                        task.updated_at = datetime.utcnow()
+                        _save_employees()
+                        _log(employee_id, "task_started", f"Started: {task.title}")
+
+                        kt_block = _build_kt_block(emp)
+                        prompt = (
+                            f"You are {emp.employee_profile.full_name}, a {emp.employee_profile.role} "
+                            f"at {emp.employee_profile.company_name or 'the company'}.\n\n"
+                            f"{kt_block}"
+                            f"TASK ASSIGNED TO YOU:\n"
+                            f"Title: {task.title}\n"
+                            f"Description: {task.description or 'No additional description.'}\n"
+                            f"Priority: {task.priority.value}\n\n"
+                            f"Complete this task as a professional employee. Produce actual, detailed work output. "
+                            f"End with a one-line summary on a new line starting with 'SUMMARY:'."
+                        )
+
+                        response = await asyncio.wait_for(
+                            loop.run_in_executor(None, lambda p=prompt: emp.run(p, stream=False)),
+                            timeout=90.0,
+                        )
+                        output = response.content if hasattr(response, "content") else str(response)
+                        lines = output.strip().split("\n")
+                        summary_line = next(
+                            (l.replace("SUMMARY:", "").strip() for l in lines if l.startswith("SUMMARY:")),
+                            task.title,
+                        )
+                        task.add_note(f"[AUTO] {output.strip()}")
+                        task.status = TaskStatus.DONE
+                        task.completed_at = datetime.utcnow()
+                        task.updated_at = task.completed_at
+                        _save_employees()
+                        _log(employee_id, "task_done", f"Completed: {task.title}", summary_line)
+                        _notify(employee_id,
+                                f"I finished '{task.title}'. {summary_line}",
+                                "success")
+
+                    except asyncio.TimeoutError:
+                        task.add_note("[AUTO] Timed out. Will retry.")
+                        task.status = TaskStatus.TODO
+                        task.updated_at = datetime.utcnow()
+                        _save_employees()
+                        _log(employee_id, "task_error", f"Timeout on: {task.title}")
+
+                    except Exception as exc:
+                        task.add_note(f"[AUTO] Error: {exc}")
+                        task.status = TaskStatus.TODO
+                        task.updated_at = datetime.utcnow()
+                        _save_employees()
+                        _log(employee_id, "task_error", f"Error on: {task.title}", str(exc))
+
+                # ── 2. Daily standup (once per day, after any work is done) ─
+                elif last_standup_date.get(employee_id) != today:
+                    try:
+                        kt_block = _build_kt_block(emp, max_summaries=2, max_chars=400)
+                        done_tasks = emp.task_manager.list_tasks(TaskStatus.DONE)[-5:]
+                        todo_tasks = emp.task_manager.list_tasks(TaskStatus.TODO)[:3]
+                        task_ctx = ""
+                        if done_tasks:
+                            task_ctx += "Recently completed:\n" + "\n".join(f"- {t.title}" for t in done_tasks) + "\n"
+                        if todo_tasks:
+                            task_ctx += "Upcoming:\n" + "\n".join(f"- {t.title}" for t in todo_tasks) + "\n"
+
+                        prompt = (
+                            f"You are {emp.employee_profile.full_name}, a {emp.employee_profile.role}.\n\n"
+                            f"{kt_block}"
+                            f"{task_ctx}\n"
+                            f"Write a brief (3-5 bullet) daily standup update in first person. "
+                            f"Cover: what you did, what you'll work on next, and any observations. "
+                            f"Be concise and professional."
+                        )
+                        response = await asyncio.wait_for(
+                            loop.run_in_executor(None, lambda p=prompt: emp.run(p, stream=False)),
+                            timeout=60.0,
+                        )
+                        standup = response.content if hasattr(response, "content") else str(response)
+                        last_standup_date[employee_id] = today
+                        _log(employee_id, "standup", "Daily standup", standup.strip())
+                        _notify(employee_id, standup.strip(), "standup")
+                    except Exception:
+                        pass
+
+                # ── 3. Suggest tasks when idle (once per day) ───────────────
+                if last_suggest_date.get(employee_id) != today:
+                    try:
+                        kt_block = _build_kt_block(emp, max_summaries=2, max_chars=500)
+                        all_tasks = emp.task_manager.list_tasks()
+                        existing = "\n".join(f"- {t.title}" for t in all_tasks[:10]) if all_tasks else "None"
+                        prompt = (
+                            f"You are {emp.employee_profile.full_name}, a {emp.employee_profile.role} "
+                            f"at {emp.employee_profile.company_name or 'the company'}.\n\n"
+                            f"{kt_block}"
+                            f"Current tasks:\n{existing}\n\n"
+                            f"Based on your role, skills ({', '.join(emp.employee_profile.skills[:5])}), "
+                            f"and knowledge, suggest exactly 3 high-value tasks you could work on proactively. "
+                            f"Return ONLY a JSON array: "
+                            f'[{{"title":"...","description":"...","priority":"medium"}},...]\n'
+                            f"No other text."
+                        )
+                        response = await asyncio.wait_for(
+                            loop.run_in_executor(None, lambda p=prompt: emp.run(p, stream=False)),
+                            timeout=60.0,
+                        )
+                        raw = response.content if hasattr(response, "content") else str(response)
+                        import re as _re
+                        m = _re.search(r'\[.*\]', raw, _re.S)
+                        if m:
+                            suggestions = json.loads(m.group())
+                            for s in suggestions[:3]:
+                                if isinstance(s, dict) and s.get("title"):
+                                    _notify(
+                                        employee_id,
+                                        f"Task suggestion: {s['title']} — {s.get('description', '')}",
+                                        "suggestion",
+                                    )
+                            titles = ", ".join(s.get("title", "") for s in suggestions[:3] if isinstance(s, dict))
+                            _log(employee_id, "suggestion", "Suggested tasks", titles)
+                        last_suggest_date[employee_id] = today
+                    except Exception:
+                        pass
+
+        await asyncio.sleep(_TASK_POLL_INTERVAL)
+
+
+def start_auto_worker() -> None:
+    global _auto_work_task
+    loop = asyncio.get_event_loop()
+    _auto_work_task = loop.create_task(_autonomous_worker())
 
 
 def _get_employee(employee_id: str) -> PulseEmployee:
@@ -249,14 +493,25 @@ async def kt_async(employee_id: str, req: AsyncKTRequest) -> Dict[str, Any]:
     except ValueError:
         raise HTTPException(status_code=400, detail=f"Invalid source_type: {req.source_type!r}")
 
-    summary = emp.take_kt(
-        source=req.source,
-        source_type=source_type,
-        session_name=req.session_name,
-        knowledge_giver=req.knowledge_giver,
-        confidence_threshold=req.confidence_threshold,
-    )
-    return summary.model_dump()
+    loop = asyncio.get_event_loop()
+    try:
+        summary = await asyncio.wait_for(
+            loop.run_in_executor(
+                None,
+                lambda: emp.take_kt(
+                    source=req.source,
+                    source_type=source_type,
+                    session_name=req.session_name,
+                    knowledge_giver=req.knowledge_giver,
+                    confidence_threshold=req.confidence_threshold,
+                ),
+            ),
+            timeout=180.0,  # PDF crawl + LLM can take up to 3 min
+        )
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=504, detail="KT processing timed out. Try with a smaller document.")
+    _save_employees()
+    return summary.model_dump(mode="json")
 
 
 # ---------------------------------------------------------------------------
@@ -318,15 +573,20 @@ async def kt_commit(employee_id: str, session_id: str) -> Dict[str, Any]:
     session = _kt_sessions.get(session_id)
     if not session:
         raise HTTPException(status_code=404, detail=f"KT session '{session_id}' not found")
-    summary = emp.finalize_kt_session(session)
-    return summary.model_dump()
+    loop = asyncio.get_event_loop()
+    summary = await asyncio.wait_for(
+        loop.run_in_executor(None, lambda: emp.finalize_kt_session(session)),
+        timeout=120.0,
+    )
+    _save_employees()
+    return summary.model_dump(mode="json")
 
 
 @router.get("/{employee_id}/kt")
 async def list_kt_sessions(employee_id: str) -> Dict[str, Any]:
     emp = _get_employee(employee_id)
     summaries = emp.kt_manager.all_summaries()
-    return {"sessions": [s.model_dump() for s in summaries]}
+    return {"sessions": [s.model_dump(mode="json") for s in summaries]}
 
 
 @router.get("/{employee_id}/kt/{session_id}")
@@ -354,13 +614,24 @@ async def process_meeting(employee_id: str, req: MeetingRequest) -> Dict[str, An
         platform = MeetingPlatform(req.platform)
     except ValueError:
         platform = MeetingPlatform.OTHER
-    notes = emp.attend_meeting(
-        transcript=req.transcript,
-        participants=req.participants or None,
-        platform=platform,
-        title=req.title,
-    )
-    return notes.model_dump()
+    loop = asyncio.get_event_loop()
+    try:
+        notes = await asyncio.wait_for(
+            loop.run_in_executor(
+                None,
+                lambda: emp.attend_meeting(
+                    transcript=req.transcript,
+                    participants=req.participants or None,
+                    platform=platform,
+                    title=req.title,
+                ),
+            ),
+            timeout=90.0,
+        )
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=504, detail="Meeting processing timed out. Please try again.")
+    _save_employees()
+    return notes.model_dump(mode="json")
 
 
 @router.get("/{employee_id}/meetings")
@@ -383,13 +654,14 @@ async def assign_task(employee_id: str, req: TaskRequest) -> Dict[str, Any]:
         assigned_by=req.assigned_by,
         tags=req.tags,
     )
-    return task.model_dump()
+    _save_employees()
+    return task.model_dump(mode="json")
 
 
 @router.get("/{employee_id}/tasks")
 async def list_tasks(employee_id: str) -> Dict[str, Any]:
     emp = _get_employee(employee_id)
-    return {"tasks": [t.model_dump() for t in emp.task_manager.list_tasks()]}
+    return {"tasks": [t.model_dump(mode="json") for t in emp.task_manager.list_tasks()]}
 
 
 @router.put("/{employee_id}/tasks/{task_id}")
@@ -402,32 +674,54 @@ async def update_task(employee_id: str, task_id: str, updates: Dict[str, Any]) -
         from buddy.pulse.work import TaskStatus
         new_status = TaskStatus(updates["status"])
         task.status = new_status
-        # When a task is completed, have PULSE generate a brief completion note
+        # Generate completion note in background thread (non-blocking)
         if new_status == TaskStatus.DONE and not any("✅" in n for n in task.progress_notes):
-            try:
-                prompt = (
-                    f"You are {emp.employee_profile.full_name} ({emp.employee_profile.role}).\n"
-                    f"You just completed the following task:\n\n"
-                    f"Title: {task.title}\n"
-                    f"Description: {task.description or 'No description'}\n\n"
-                    f"Write a brief (2-4 sentences) first-person completion note summarising "
-                    f"what you did, the outcome, and any relevant observations."
-                )
-                resp = emp.run(prompt, stream=False)
-                note = resp.content if hasattr(resp, "content") else str(resp)
-                task.add_note(f"✅ {note.strip()}")
-            except Exception:
-                task.add_note("✅ Task marked as done.")
+            async def _add_completion_note() -> None:
+                try:
+                    prompt = (
+                        f"You are {emp.employee_profile.full_name} ({emp.employee_profile.role}).\n"
+                        f"You just completed the following task:\n\n"
+                        f"Title: {task.title}\n"
+                        f"Description: {task.description or 'No description'}\n\n"
+                        f"Write a brief (2-4 sentences) first-person completion note summarising "
+                        f"what you did, the outcome, and any relevant observations."
+                    )
+                    loop = asyncio.get_event_loop()
+                    resp = await asyncio.wait_for(
+                        loop.run_in_executor(None, lambda: emp.run(prompt, stream=False)),
+                        timeout=60.0,
+                    )
+                    note = resp.content if hasattr(resp, "content") else str(resp)
+                    task.add_note(f"✅ {note.strip()}")
+                except Exception:
+                    task.add_note("✅ Task marked as done.")
+                finally:
+                    _save_employees()
+            asyncio.create_task(_add_completion_note())
     if "note" in updates:
         task.add_note(updates["note"])
-    return task.model_dump()
+    _save_employees()
+    return task.model_dump(mode="json")
 
 
 @router.get("/{employee_id}/tasks/{task_id}/status-update")
 async def task_status_update(employee_id: str, task_id: str) -> Dict[str, Any]:
     emp = _get_employee(employee_id)
-    update = emp.report_status(task_id=task_id)
-    return update.model_dump()
+    loop = asyncio.get_event_loop()
+    try:
+        update = await asyncio.wait_for(
+            loop.run_in_executor(None, lambda: emp.report_status(task_id=task_id)),
+            timeout=60.0,
+        )
+    except asyncio.TimeoutError:
+        from buddy.pulse.work import StatusUpdate
+        update = StatusUpdate(
+            employee_name=emp.employee_profile.full_name,
+            update_type="task_update",
+            task_id=task_id,
+            message="Status report timed out. Please try again.",
+        )
+    return update.model_dump(mode="json")
 
 
 # ---------------------------------------------------------------------------
@@ -437,7 +731,36 @@ async def task_status_update(employee_id: str, task_id: str) -> Dict[str, Any]:
 @router.post("/{employee_id}/chat")
 async def chat(employee_id: str, req: ChatRequest) -> Dict[str, Any]:
     emp = _get_employee(employee_id)
-    response = emp.run(req.message, stream=False)
+
+    # Inject KT knowledge into context (same logic as WebSocket stream)
+    kt_summaries = emp.kt_manager.all_summaries()
+    if kt_summaries:
+        knowledge_block = "\n\n".join(
+            f"[KT: {s.session_name} | confidence {s.confidence_score:.0%}]\n"
+            f"{s.mental_model[:1500]}\n"
+            f"Key concepts: {', '.join(s.key_concepts)}"
+            for s in kt_summaries[-5:]
+        )
+        augmented = (
+            f"KNOWLEDGE BASE (from your KT sessions):\n"
+            f"{knowledge_block}\n\n"
+            f"---\n"
+            f"User message: {req.message}\n\n"
+            f"Answer using your knowledge above when relevant. "
+            f"Speak in first person as a knowledgeable employee."
+        )
+    else:
+        augmented = req.message
+
+    loop = asyncio.get_event_loop()
+    try:
+        response = await asyncio.wait_for(
+            loop.run_in_executor(None, lambda: emp.run(augmented, stream=False)),
+            timeout=60.0,
+        )
+    except asyncio.TimeoutError:
+        return {"response": "Sorry, response timed out. Please try again.", "employee": emp.employee_profile.full_name}
+
     content = response.content if hasattr(response, "content") else str(response)
     return {"response": content, "employee": emp.employee_profile.full_name}
 
@@ -450,35 +773,57 @@ async def chat_stream(websocket: WebSocket, employee_id: str) -> None:
         await websocket.send_json({"error": f"Employee '{employee_id}' not found"})
         await websocket.close()
         return
+    loop = asyncio.get_event_loop()
     try:
         while True:
             data = await websocket.receive_text()
             payload = json.loads(data)
             message = payload.get("message", "")
 
-            # Inject KT knowledge into the prompt so the employee can answer from it
+            # Inject KT knowledge (cap at 5 most recent to avoid token limits)
             kt_summaries = emp.kt_manager.all_summaries()
             if kt_summaries:
                 knowledge_block = "\n\n".join(
                     f"[KT: {s.session_name} | confidence {s.confidence_score:.0%}]\n"
-                    f"{s.mental_model}\n"
+                    f"{s.mental_model[:1500]}\n"
                     f"Key concepts: {', '.join(s.key_concepts)}"
-                    for s in kt_summaries[:15]
+                    for s in kt_summaries[-5:]  # most recent 5 only
                 )
                 augmented = (
-                    f"KNOWLEDGE BASE (things you have learned from KT sessions):\n"
+                    f"KNOWLEDGE BASE (from your KT sessions):\n"
                     f"{knowledge_block}\n\n"
                     f"---\n"
                     f"User message: {message}\n\n"
-                    f"Answer using your knowledge above when relevant. Speak in first person as a knowledgeable employee."
+                    f"Answer using your knowledge above when relevant. "
+                    f"Speak in first person as a knowledgeable employee."
                 )
             else:
                 augmented = message
 
-            for chunk in emp.run(augmented, stream=True):
-                content = chunk.content if hasattr(chunk, "content") else str(chunk)
-                if content:
-                    await websocket.send_json({"chunk": content, "done": False})
+            # Run the synchronous LLM call in a thread so it doesn't block
+            # the async event loop (which would freeze the WebSocket)
+            try:
+                response = await asyncio.wait_for(
+                    loop.run_in_executor(None, lambda msg=augmented: emp.run(msg, stream=False)),
+                    timeout=60.0,
+                )
+                content = response.content if hasattr(response, "content") else str(response)
+            except asyncio.TimeoutError:
+                await websocket.send_json({"chunk": "Sorry, the response timed out. Please try again.", "done": False})
+                await websocket.send_json({"chunk": "", "done": True})
+                continue
+            except Exception as e:
+                await websocket.send_json({"chunk": f"Error: {e}", "done": False})
+                await websocket.send_json({"chunk": "", "done": True})
+                continue
+
+            # Stream back word-by-word for a smooth typing effect
+            words = content.split(" ")
+            for i, word in enumerate(words):
+                chunk = word + ("" if i == len(words) - 1 else " ")
+                await websocket.send_json({"chunk": chunk, "done": False})
+                await asyncio.sleep(0.008)
+
             await websocket.send_json({"chunk": "", "done": True})
     except WebSocketDisconnect:
         pass
@@ -559,6 +904,135 @@ class LLMSettingsRequest(BaseModel):
     model_id: str
     api_key: Optional[str] = None  # None means "keep existing"
     base_url: Optional[str] = None  # For Ollama / custom endpoints
+
+
+# ---------------------------------------------------------------------------
+# Auto-work settings
+# ---------------------------------------------------------------------------
+
+@router.get("/settings/auto-work")
+async def get_auto_work_settings() -> Dict[str, Any]:
+    return {"enabled": _auto_work_enabled, "poll_interval_seconds": _TASK_POLL_INTERVAL}
+
+
+@router.post("/settings/auto-work")
+async def set_auto_work_settings(body: Dict[str, Any]) -> Dict[str, Any]:
+    global _auto_work_enabled, _TASK_POLL_INTERVAL
+    if "enabled" in body:
+        _auto_work_enabled = bool(body["enabled"])
+    if "poll_interval_seconds" in body:
+        _TASK_POLL_INTERVAL = max(10, min(int(body["poll_interval_seconds"]), 3600))
+    return {"enabled": _auto_work_enabled, "poll_interval_seconds": _TASK_POLL_INTERVAL}
+
+
+# ---------------------------------------------------------------------------
+# Activity log
+# ---------------------------------------------------------------------------
+
+@router.get("/{employee_id}/activity")
+async def get_activity(employee_id: str, limit: int = 50) -> Dict[str, Any]:
+    _get_employee(employee_id)
+    events = list(_activity_log.get(employee_id, deque()))[:limit]
+    return {"events": [e.to_dict() for e in events]}
+
+
+# ---------------------------------------------------------------------------
+# Notifications
+# ---------------------------------------------------------------------------
+
+@router.get("/{employee_id}/notifications")
+async def get_notifications(employee_id: str) -> Dict[str, Any]:
+    _get_employee(employee_id)
+    notifs = list(_notifications.get(employee_id, deque()))
+    return {"notifications": notifs, "unread": sum(1 for n in notifs if not n["read"])}
+
+
+@router.post("/{employee_id}/notifications/{notif_id}/read")
+async def mark_notification_read(employee_id: str, notif_id: str) -> Dict[str, Any]:
+    _get_employee(employee_id)
+    for n in _notifications.get(employee_id, deque()):
+        if n["id"] == notif_id:
+            n["read"] = True
+    return {"ok": True}
+
+
+@router.post("/{employee_id}/notifications/read-all")
+async def mark_all_read(employee_id: str) -> Dict[str, Any]:
+    _get_employee(employee_id)
+    for n in _notifications.get(employee_id, deque()):
+        n["read"] = True
+    return {"ok": True}
+
+
+# ---------------------------------------------------------------------------
+# Daily standup (on-demand trigger)
+# ---------------------------------------------------------------------------
+
+@router.post("/{employee_id}/standup")
+async def generate_standup(employee_id: str) -> Dict[str, Any]:
+    emp = _get_employee(employee_id)
+    from buddy.pulse.work import TaskStatus
+    done_tasks = emp.task_manager.list_tasks(TaskStatus.DONE)[-5:]
+    todo_tasks = emp.task_manager.list_tasks(TaskStatus.TODO)[:3]
+    task_ctx = ""
+    if done_tasks:
+        task_ctx += "Recently completed:\n" + "\n".join(f"- {t.title}" for t in done_tasks) + "\n"
+    if todo_tasks:
+        task_ctx += "Upcoming:\n" + "\n".join(f"- {t.title}" for t in todo_tasks) + "\n"
+    kt_block = _build_kt_block(emp, max_summaries=2, max_chars=400)
+    prompt = (
+        f"You are {emp.employee_profile.full_name}, a {emp.employee_profile.role}.\n\n"
+        f"{kt_block}"
+        f"{task_ctx}\n"
+        f"Write a concise daily standup (3-5 bullets) in first person covering: "
+        f"what you did, what you'll work on next, and any blockers or observations."
+    )
+    loop = asyncio.get_event_loop()
+    try:
+        response = await asyncio.wait_for(
+            loop.run_in_executor(None, lambda: emp.run(prompt, stream=False)),
+            timeout=60.0,
+        )
+        standup = response.content if hasattr(response, "content") else str(response)
+    except asyncio.TimeoutError:
+        standup = "Standup generation timed out."
+    _log(employee_id, "standup", "Daily standup", standup.strip())
+    _notify(employee_id, standup.strip(), "standup")
+    return {"standup": standup.strip(), "ts": datetime.utcnow().isoformat()}
+
+
+# ---------------------------------------------------------------------------
+# Task suggestions — PULSE proactively suggests what it should work on
+# ---------------------------------------------------------------------------
+
+@router.post("/{employee_id}/suggest-tasks")
+async def suggest_tasks(employee_id: str) -> Dict[str, Any]:
+    emp = _get_employee(employee_id)
+    all_tasks = emp.task_manager.list_tasks()
+    existing = "\n".join(f"- {t.title}" for t in all_tasks[:10]) if all_tasks else "None"
+    kt_block = _build_kt_block(emp, max_summaries=2, max_chars=500)
+    prompt = (
+        f"You are {emp.employee_profile.full_name}, a {emp.employee_profile.role} "
+        f"at {emp.employee_profile.company_name or 'the company'}.\n\n"
+        f"{kt_block}"
+        f"Current tasks:\n{existing}\n\n"
+        f"Based on your role, skills ({', '.join(emp.employee_profile.skills[:5])}), and knowledge, "
+        f"suggest exactly 3 high-value tasks you should work on proactively. "
+        f'Return ONLY a JSON array: [{{"title":"...","description":"...","priority":"medium"}},...]\nNo other text.'
+    )
+    loop = asyncio.get_event_loop()
+    try:
+        response = await asyncio.wait_for(
+            loop.run_in_executor(None, lambda: emp.run(prompt, stream=False)),
+            timeout=60.0,
+        )
+        raw = response.content if hasattr(response, "content") else str(response)
+        import re as _re
+        m = _re.search(r'\[.*\]', raw, _re.S)
+        suggestions = json.loads(m.group()) if m else []
+    except Exception:
+        suggestions = []
+    return {"suggestions": suggestions[:3]}
 
 
 @router.get("/settings/llm")

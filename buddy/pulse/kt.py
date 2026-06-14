@@ -232,8 +232,49 @@ class KTSession:
 
         path = Path(source_str)
         if path.exists():
-            return path.read_text(encoding="utf-8")
+            suffix = path.suffix.lower()
+            if suffix == ".pdf":
+                return self._read_pdf(path)
+            return path.read_text(encoding="utf-8", errors="replace")
         return source_str
+
+    @staticmethod
+    def _read_pdf(path: Path) -> str:
+        """Extract plain text from a PDF file using pypdf or pdfplumber."""
+        text_parts: List[str] = []
+
+        # Try pypdf first (pip install pypdf)
+        try:
+            import pypdf  # type: ignore
+            reader = pypdf.PdfReader(str(path))
+            for page in reader.pages:
+                t = page.extract_text()
+                if t:
+                    text_parts.append(t)
+            if text_parts:
+                return "\n\n".join(text_parts)
+        except ImportError:
+            pass
+        except Exception:
+            pass
+
+        # Try pdfplumber (pip install pdfplumber)
+        try:
+            import pdfplumber  # type: ignore
+            with pdfplumber.open(str(path)) as pdf:
+                for page in pdf.pages:
+                    t = page.extract_text()
+                    if t:
+                        text_parts.append(t)
+            if text_parts:
+                return "\n\n".join(text_parts)
+        except ImportError:
+            pass
+        except Exception:
+            pass
+
+        # Last resort: raw bytes, decode loosely
+        return path.read_bytes().decode("utf-8", errors="replace")
 
     @staticmethod
     def _crawl_url(

@@ -10,6 +10,8 @@ import type {
   WorkItem,
   StatusUpdate,
   FeedbackEntry,
+  ActivityEvent,
+  PulseNotification,
 } from '../types/pulse'
 
 const BASE = '/api/pulse'
@@ -284,4 +286,39 @@ export function sendFeedback(
     method: 'POST',
     body: JSON.stringify(data),
   })
+}
+
+// ---------------------------------------------------------------------------
+// Activity & Notifications
+// ---------------------------------------------------------------------------
+
+export function getActivity(employeeId: string, limit = 50) {
+  return request<{ events: ActivityEvent[] }>(`/${employeeId}/activity?limit=${limit}`)
+}
+
+export function getNotifications(employeeId: string) {
+  return request<{ notifications: PulseNotification[]; unread: number }>(`/${employeeId}/notifications`)
+}
+
+export function markNotificationRead(employeeId: string, notifId: string) {
+  return request<{ ok: boolean }>(`/${employeeId}/notifications/${notifId}/read`, { method: 'POST' })
+}
+
+export function markAllNotificationsRead(employeeId: string) {
+  return request<{ ok: boolean }>(`/${employeeId}/notifications/read-all`, { method: 'POST' })
+}
+
+// ---------------------------------------------------------------------------
+// Standup & Task suggestions
+// ---------------------------------------------------------------------------
+
+export function generateStandup(employeeId: string) {
+  return request<{ standup: string; ts: string }>(`/${employeeId}/standup`, { method: 'POST' })
+}
+
+export function suggestTasks(employeeId: string) {
+  return request<{ suggestions: Array<{ title: string; description: string; priority: string }> }>(
+    `/${employeeId}/suggest-tasks`,
+    { method: 'POST' },
+  )
 }

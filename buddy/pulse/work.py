@@ -55,7 +55,7 @@ class WorkItem(BaseModel):
 
     task_id: str = Field(default_factory=lambda: str(uuid4())[:8])
     title: str
-    description: str
+    description: str = ""
     task_type: TaskType = TaskType.OTHER
     priority: TaskPriority = TaskPriority.MEDIUM
     status: TaskStatus = TaskStatus.TODO

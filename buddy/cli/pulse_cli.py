@@ -9,6 +9,8 @@ buddy pulse status         — Show employee status
 from __future__ import annotations
 
 import json
+import os
+import sys
 from pathlib import Path
 from typing import Optional
 
@@ -17,12 +19,20 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+# Force UTF-8 output so emojis don't crash on Windows CP1252 terminals
+os.environ.setdefault("PYTHONUTF8", "1")
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
+    except Exception:
+        pass
+
 pulse_app = typer.Typer(
     name="pulse",
-    help="PULSE — Virtual Employee's ERA. Manage and interact with your virtual team member.",
+    help="PULSE -- Virtual Employee's ERA. Manage and interact with your virtual team member.",
     no_args_is_help=True,
 )
-console = Console()
+console = Console(highlight=False)
 
 
 # ---------------------------------------------------------------------------
@@ -43,7 +53,7 @@ def start(
         raise typer.Exit(1)
 
     console.print(Panel.fit(
-        f"[bold blue]🔵 Starting PULSE[/bold blue]\n"
+        f"[bold blue]>> Starting PULSE[/bold blue]\n"
         f"[dim]http://{host}:{port}[/dim]",
         border_style="blue",
     ))
@@ -64,7 +74,7 @@ def create(
     output: Optional[Path] = typer.Option(None, "--output", "-o", help="Save config to JSON file"),
 ) -> None:
     """Interactively create a PULSE employee configuration."""
-    console.print(Panel.fit("[bold blue]🔵 Create a PULSE Employee[/bold blue]", border_style="blue"))
+    console.print(Panel.fit("[bold blue]>> Create a PULSE Employee[/bold blue]", border_style="blue"))
 
     if not name:
         name = typer.prompt("Employee full name")

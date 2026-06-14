@@ -67,11 +67,12 @@ class PulseApp:
         # Mount PULSE API router
         self.app.include_router(router)
 
-        # Restore persisted employees on startup
-        from buddy.pulse.router import _load_employees
+        # Restore persisted employees on startup and launch autonomous worker
+        from buddy.pulse.router import _load_employees, start_auto_worker
         @self.app.on_event("startup")
         async def _startup() -> None:
             _load_employees()
+            start_auto_worker()
 
         # Mount React static build if it exists
         self._mount_ui()
@@ -110,8 +111,11 @@ class PulseApp:
     def serve(self) -> None:
         """Start the PULSE server (blocking)."""
         url = f"http://{self.host}:{self.port}"
-        print(f"\n🔵 PULSE is running at {url}")
-        print(f"   API docs → {url}/api/docs\n")
+        try:
+            print(f"\n[PULSE] Running at {url}")
+            print(f"   API docs -> {url}/api/docs\n")
+        except UnicodeEncodeError:
+            print(f"\nPULSE is running at {url}")
 
         if self.open_browser:
             import threading

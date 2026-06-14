@@ -196,10 +196,33 @@ export const LLM_PROVIDERS: {
     env_var: 'OPENAI_API_KEY',
     needs_key: true,
     models: [
-      { id: 'gpt-4o',          label: 'GPT-4o (recommended)' },
-      { id: 'gpt-4o-mini',     label: 'GPT-4o mini (fast)' },
-      { id: 'gpt-4-turbo',     label: 'GPT-4 Turbo' },
-      { id: 'gpt-3.5-turbo',   label: 'GPT-3.5 Turbo' },
+      // ── GPT-4.1 series ──────────────────────────────────────
+      { id: 'gpt-4.1',               label: 'GPT-4.1' },
+      { id: 'gpt-4.1-mini',          label: 'GPT-4.1 mini (fast)' },
+      { id: 'gpt-4.1-nano',          label: 'GPT-4.1 nano (cheapest)' },
+      // ── GPT-4o series ───────────────────────────────────────
+      { id: 'gpt-4o',                label: 'GPT-4o (recommended)' },
+      { id: 'gpt-4o-mini',           label: 'GPT-4o mini' },
+      { id: 'gpt-4o-2024-11-20',     label: 'GPT-4o (Nov 2024)' },
+      { id: 'gpt-4o-2024-08-06',     label: 'GPT-4o (Aug 2024)' },
+      { id: 'gpt-4o-2024-05-13',     label: 'GPT-4o (May 2024)' },
+      { id: 'gpt-4o-audio-preview',  label: 'GPT-4o Audio Preview' },
+      // ── o-series reasoning models ────────────────────────────
+      { id: 'o4-mini',               label: 'o4-mini (reasoning, fast)' },
+      { id: 'o4-mini-high',          label: 'o4-mini High (reasoning)' },
+      { id: 'o3',                    label: 'o3 (reasoning, flagship)' },
+      { id: 'o3-mini',               label: 'o3-mini (reasoning)' },
+      { id: 'o1',                    label: 'o1 (reasoning)' },
+      { id: 'o1-mini',               label: 'o1-mini (reasoning, fast)' },
+      { id: 'o1-preview',            label: 'o1-preview (reasoning)' },
+      // ── GPT-4 Turbo / GPT-4 ─────────────────────────────────
+      { id: 'gpt-4-turbo',           label: 'GPT-4 Turbo' },
+      { id: 'gpt-4-turbo-2024-04-09',label: 'GPT-4 Turbo (Apr 2024)' },
+      { id: 'gpt-4',                 label: 'GPT-4' },
+      { id: 'gpt-4-32k',             label: 'GPT-4 32k' },
+      // ── GPT-3.5 ─────────────────────────────────────────────
+      { id: 'gpt-3.5-turbo',         label: 'GPT-3.5 Turbo' },
+      { id: 'gpt-3.5-turbo-16k',     label: 'GPT-3.5 Turbo 16k' },
     ],
   },
   {
@@ -248,3 +271,23 @@ export const LLM_PROVIDERS: {
     ],
   },
 ]
+
+// ---------------------------------------------------------------------------
+// Activity & Notifications
+// ---------------------------------------------------------------------------
+
+export interface ActivityEvent {
+  employee_id: string
+  event_type: 'task_started' | 'task_done' | 'task_error' | 'kt_learned' | 'standup' | 'suggestion' | 'message'
+  title: string
+  detail: string
+  ts: string
+}
+
+export interface PulseNotification {
+  id: string
+  message: string
+  type: 'info' | 'success' | 'standup' | 'suggestion' | 'warning'
+  ts: string
+  read: boolean
+}
