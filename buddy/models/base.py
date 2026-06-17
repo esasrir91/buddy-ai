@@ -256,6 +256,14 @@ class Model(ABC):
     # Fine-grained cache configuration; auto-created from cache_prompt when not set.
     prompt_cache_config: Optional[Any] = None  # type: Optional[PromptCacheConfig]
 
+    # --- Token Budget ---
+    # Attach a TokenBudgetConfig to enable pre-invoke token counting, warnings,
+    # and automatic history compression when the context window is filling up.
+    # Example:
+    #   from buddy.models.token_budget import TokenBudgetConfig
+    #   model = OpenAIChat(token_budget=TokenBudgetConfig(max_input_tokens=100_000))
+    token_budget: Optional[Any] = None  # type: Optional[TokenBudgetConfig]
+
     # System prompt from the model added to the Agent.
     system_prompt: Optional[str] = None
     # Instructions from the model added to the Agent.
@@ -340,8 +348,20 @@ class Model(ABC):
         log_debug(f"{self.get_provider()} Response Start", center=True, symbol="-")
         log_debug(f"Model: {self.id}", center=True, symbol="-")
 
+        # --- Token budget check (before first invoke) ---
+        _budget_report: Optional[Dict[str, Any]] = None
+        if self.token_budget is not None:
+            from buddy.models.token_budget import TokenBudgetManager
+
+            _mgr = TokenBudgetManager.from_config(self.token_budget, model_id=self.id)
+            _budget_report = _mgr.check_and_compress(messages)
+
         _log_messages(messages)
         model_response = ModelResponse()
+        if _budget_report:
+            # Stash the budget report so callers can surface it in RunResponse
+            model_response.extra_data = model_response.extra_data or {}
+            model_response.extra_data["token_budget"] = _budget_report  # type: ignore[index]
 
         function_call_count = 0
 
@@ -451,8 +471,20 @@ class Model(ABC):
 
         log_debug(f"{self.get_provider()} Async Response Start", center=True, symbol="-")
         log_debug(f"Model: {self.id}", center=True, symbol="-")
+
+        # --- Token budget check (before first invoke) ---
+        _budget_report_async: Optional[Dict[str, Any]] = None
+        if self.token_budget is not None:
+            from buddy.models.token_budget import TokenBudgetManager
+
+            _mgr = TokenBudgetManager.from_config(self.token_budget, model_id=self.id)
+            _budget_report_async = _mgr.check_and_compress(messages)
+
         _log_messages(messages)
         model_response = ModelResponse()
+        if _budget_report_async:
+            model_response.extra_data = model_response.extra_data or {}
+            model_response.extra_data["token_budget"] = _budget_report_async  # type: ignore[index]
 
         function_call_count = 0
 
@@ -1677,10 +1709,45 @@ class Model(ABC):
         self, messages: List[Message], function_call_results: List[Message], **kwargs
     ) -> None:
         """
-        Format function call results.
+        Format function call results, applying tool-result trimming when a
+        token budget is configured.
         """
         if len(function_call_results) > 0:
+            if self.token_budget is not None:
+                function_call_results = self._trim_tool_results(function_call_results)
             messages.extend(function_call_results)
+
+    def _trim_tool_results(self, results: List[Message]) -> List[Message]:
+        """Trim oversized tool result content to keep context costs down.
+
+        Each tool-result message is capped at ``max_tool_result_tokens`` tokens
+        (default 2 000).  Truncated messages get a brief notice appended so the
+        model knows the output was cut.
+        """
+        from buddy.models.token_budget import count_message_tokens
+
+        cfg = self.token_budget
+        max_tokens: int = getattr(cfg, "max_tool_result_tokens", 2_000)
+        method: str = getattr(cfg, "count_method", "approx")
+        trimmed = []
+        for msg in results:
+            if count_message_tokens(msg, method, self.id) <= max_tokens:
+                trimmed.append(msg)
+                continue
+
+            content = msg.get_content_string() if hasattr(msg, "get_content_string") else str(msg.content or "")
+            # Approximate character limit: max_tokens * 4 chars, leaving room for notice
+            char_limit = max_tokens * 4 - 120
+            if len(content) > char_limit:
+                content = content[:char_limit] + (
+                    f"\n\n[Tool output trimmed to ~{max_tokens} tokens by Buddy token budget. "
+                    "Full result was longer.]"
+                )
+            from copy import copy as _copy
+            msg_copy = _copy(msg)
+            msg_copy.content = content
+            trimmed.append(msg_copy)
+        return trimmed
 
     def get_system_message_for_model(self, tools: Optional[List[Any]] = None) -> Optional[str]:
         return self.system_prompt

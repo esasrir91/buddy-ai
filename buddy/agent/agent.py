@@ -297,6 +297,14 @@ class Agent:
     #   this surfaces cache hit/miss token counts in RunResponse metrics.
     cache_prompt: bool = False
 
+    # --- Token Budget ---
+    # Attach a TokenBudgetConfig to warn when approaching the context limit and
+    # optionally auto-compress history to keep requests within budget.
+    # Example:
+    #   from buddy.models.token_budget import TokenBudgetConfig
+    #   Agent(token_budget=TokenBudgetConfig(max_input_tokens=100_000))
+    token_budget: Optional[Any] = None  # type: Optional[TokenBudgetConfig]
+
     # --- Agent Streaming ---
     # Stream the response from the Agent
     stream: Optional[bool] = None
@@ -433,6 +441,7 @@ class Agent:
         use_json_mode: bool = False,
         save_response_to_file: Optional[str] = None,
         cache_prompt: bool = False,
+        token_budget: Optional[Any] = None,
         stream: Optional[bool] = None,
         stream_intermediate_steps: bool = False,
         store_events: bool = False,
@@ -541,6 +550,7 @@ class Agent:
         self.use_json_mode = use_json_mode
         self.save_response_to_file = save_response_to_file
         self.cache_prompt = cache_prompt
+        self.token_budget = token_budget
 
         self.stream = stream
         self.stream_intermediate_steps = stream_intermediate_steps
@@ -659,6 +669,10 @@ class Agent:
                 from buddy.models.cache import PromptCacheConfig
 
                 self.model.prompt_cache_config = PromptCacheConfig(enabled=True)
+
+        # Propagate token_budget to the model
+        if self.token_budget is not None and self.model is not None and self.model.token_budget is None:
+            self.model.token_budget = self.token_budget
 
     def reset_session(self) -> None:
         self.session_state = None

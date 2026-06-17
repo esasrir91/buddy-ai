@@ -81,6 +81,7 @@ nav:
     - Evaluation System: advanced/evaluation.md
     - Competency Engine: advanced/competency.md
     - Prompt Caching: advanced/prompt-caching.md
+    - Token Efficiency: advanced/token-efficiency.md
   - Integrations:
     - Overview: integrations/overview.md
     - LangChain: integrations/langchain.md

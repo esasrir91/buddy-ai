@@ -43,8 +43,30 @@ class OpenAIChat(Model):
     provider: str = "OpenAI"
     supports_native_structured_outputs: bool = True
 
+    # --- Proxy-aware caching ---
+    # When routing Claude (or other models) through an LLM proxy, set
+    # proxy_type to activate the proxy's native cache mechanism automatically.
+    #
+    # Supported values:
+    #   "litellm"    → injects {"cache": {"no-cache": False}} into request_params
+    #                  (LiteLLM Redis/in-memory exact-match cache)
+    #   "openrouter" → sets x-openrouter-cache header (model-level caching)
+    #   "azure"      → sets x-ms-useragent cache hint (Azure API Management cache)
+    #   None (default) → no proxy cache headers; OpenAI server-side auto-caching
+    #                    is still active for native OpenAI endpoints.
+    #
+    # Example — Claude behind LiteLLM proxy:
+    #   OpenAIChat(
+    #       id="anthropic/claude-opus-4-5",
+    #       base_url="http://0.0.0.0:4000/v1",
+    #       api_key="sk-my-litellm-key",
+    #       proxy_type="litellm",
+    #       cache_prompt=True,
+    #   )
+    proxy_type: Optional[str] = None  # "litellm" | "openrouter" | "azure" | None
+
     # Request parameters
-    # cache_prompt is inherited from the base Model.  For OpenAI, server-side
+    # cache_prompt is inherited from the base Model.  For native OpenAI, server-side
     # prompt caching is automatic for repeated prefixes >= 1024 tokens — no
     # cache_control header is required.  Enabling cache_prompt surfaces
     # cache hit/miss token counts in RunResponse metrics.
@@ -219,9 +241,38 @@ class OpenAIChat(Model):
         if self.request_params:
             request_params.update(self.request_params)
 
+        # Inject proxy-native cache headers when cache_prompt is on
+        if self.cache_prompt and self.proxy_type:
+            self._inject_proxy_cache_params(request_params)
+
         if request_params:
             log_debug(f"Calling {self.provider} with request parameters: {request_params}", log_level=2)
         return request_params
+
+    def _inject_proxy_cache_params(self, request_params: Dict[str, Any]) -> None:
+        """Inject proxy-specific cache hints so LLM proxies activate their own
+        caching layer when Buddy's cache_prompt flag is enabled."""
+        proxy = (self.proxy_type or "").lower()
+
+        if proxy == "litellm":
+            # LiteLLM supports a top-level 'cache' dict that tells the proxy to
+            # look up/store the response in its configured Redis/in-memory cache.
+            # Docs: https://docs.litellm.ai/docs/proxy/caching
+            if "cache" not in request_params:
+                request_params["cache"] = {"no-cache": False, "no-store": False}
+
+        elif proxy == "openrouter":
+            # OpenRouter Context Caching — inject via extra_headers.
+            # Docs: https://openrouter.ai/docs/context-caching
+            existing = request_params.get("extra_headers") or {}
+            existing["X-OpenRouter-Cache"] = "1"
+            request_params["extra_headers"] = existing
+
+        elif proxy == "azure":
+            # Azure API Management has a cache-lookup policy; signal via header.
+            existing = request_params.get("extra_headers") or {}
+            existing["x-ms-cache-enabled"] = "true"
+            request_params["extra_headers"] = existing
 
     def to_dict(self) -> Dict[str, Any]:
         """

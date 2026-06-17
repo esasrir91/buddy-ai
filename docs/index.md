@@ -47,13 +47,13 @@ pip install buddy-ai[all]
 
 <div class="grid cards" markdown>
 
--   :material-cached:{ .lg .middle } __Built-in Prompt Caching__
+-   :material-cached:{ .lg .middle } __Token Efficiency Suite__
 
     ---
 
-    Provider-native caching with **one flag**.  Anthropic: `cache_control` breakpoints on system, tools, and history.  OpenAI: automatic — cache-hit metrics surface in `RunResponse`. Fine-grained control via `PromptCacheConfig`.
+    **Six layered techniques** to slash costs and latency: prompt caching (Anthropic & OpenAI), **proxy-aware caching** (LiteLLM, OpenRouter, Azure), **Token Budget Manager** (auto-compress history + cap tool outputs), session summaries. One flag per technique — compose freely.
 
-    [:octicons-arrow-right-24: Prompt Caching guide](advanced/prompt-caching.md)
+    [:octicons-arrow-right-24: Token Efficiency guide](advanced/token-efficiency.md) · [Prompt Caching](advanced/prompt-caching.md)
 
 -   :material-newspaper-variant-outline:{ .lg .middle } __Release article — Competency Engine__
 
@@ -279,7 +279,7 @@ graph TD
 | **[Knowledge](knowledge/overview.md)** | RAG and document processing | Multi-format, vector search |
 | **[Team](team/overview.md)** | Multi-agent collaboration | Orchestration, communication |
 | **[Workflows](workflows/overview.md)** | Process automation | Template-based, execution engine |
-| **[Prompt Caching](advanced/prompt-caching.md)** | Provider-native caching | `cache_prompt=True`; Anthropic breakpoints, OpenAI automatic |
+| **[Token Efficiency](advanced/token-efficiency.md)** | 6-layer cost reduction | Prompt cache, proxy cache, token budget, tool trimming, history compression |
 | **[Integrations](integrations/overview.md)** | LangChain & LangGraph interop | Buddy models/agents as LangChain & LangGraph components, competency routing edges |
 | **[Training](training/overview.md)** | Model fine-tuning | Data prep, training, evaluation |
 | **[CLI](cli/overview.md)** | Command-line interface | Workspace management, operations |
