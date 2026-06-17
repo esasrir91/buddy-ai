@@ -90,6 +90,9 @@ def create(
     company = typer.prompt("Company name", default="")
     reporting_to = typer.prompt("Reports to (manager name)", default="")
 
+    provider = "anthropic" if model.startswith("claude") else \
+               "google" if model.startswith("gemini") else "openai"
+
     config = {
         "employee_profile": {
             "full_name": name,
@@ -100,7 +103,7 @@ def create(
             "company_name": company or None,
             "reporting_to": reporting_to or None,
         },
-        "model_provider": "openai",
+        "model_provider": provider,
         "model_id": model,
     }
 
@@ -119,17 +122,32 @@ def create(
 # ---------------------------------------------------------------------------
 
 
+def _build_model(model_id: str):
+    """Return the right Model instance based on the model name prefix."""
+    if model_id.startswith("claude"):
+        from buddy.models.anthropic import Claude
+        return Claude(id=model_id)
+    if model_id.startswith("gemini"):
+        try:
+            from buddy.models.google import Gemini
+            return Gemini(id=model_id)
+        except ImportError:
+            pass
+    from buddy.models.openai import OpenAIChat
+    return OpenAIChat(id=model_id)
+
+
 @pulse_app.command("kt")
 def run_kt(
     source: str = typer.Argument(..., help="File path, URL, or text to learn from"),
     session_name: str = typer.Option(..., "--session", "-s", help="KT session name"),
     knowledge_giver: str = typer.Option("Unknown", "--from", "-f", help="Who provided this knowledge"),
-    model: str = typer.Option("gpt-4o", "--model", "-m"),
+    model: str = typer.Option("claude-3-5-haiku-20241022", "--model", "-m",
+                               help="Model to use (auto-detects claude/gemini/openai)"),
     output: Optional[Path] = typer.Option(None, "--output", "-o", help="Save KT summary to JSON"),
 ) -> None:
     """Run a document/URL KT session from the CLI."""
     try:
-        from buddy.models.openai import OpenAIChat
         from buddy.pulse import EmployeeProfile, KTSourceType, PulseEmployee
     except ImportError as e:
         console.print(f"[red]Import error: {e}[/red]")
@@ -140,7 +158,7 @@ def run_kt(
 
     emp = PulseEmployee(
         employee_profile=EmployeeProfile(full_name="CLI Employee", role="Analyst"),
-        model=OpenAIChat(id=model),
+        model=_build_model(model),
     )
 
     # Detect source type
