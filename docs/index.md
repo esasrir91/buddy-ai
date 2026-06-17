@@ -15,8 +15,8 @@
 
 **Buddy AI** is a comprehensive Python framework designed for building, deploying, and managing intelligent AI agents with enterprise-grade capabilities. It provides a unified interface to work with multiple LLM providers, advanced memory systems, and extensible tool frameworks.
 
-!!! tip "New in v2.1 — PULSE: Autonomous Virtual Employee"
-    **PULSE** is the flagship feature of buddy-ai v2.1. It is a fully autonomous virtual team member that works through your task queue, **creates real files** in its workspace, learns from documents and URLs, attends meetings, generates daily standups, suggests proactive tasks, and **remembers everything across sessions** — all without being prompted. One command starts it: `buddy pulse start`. [Full docs →](advanced/pulse.md)
+!!! tip "PULSE — Autonomous Virtual Employee"
+    **PULSE** is a flagship feature of buddy-ai v2.2.0. It is a fully autonomous virtual team member that works through your task queue, **creates real files** in its workspace, learns from documents and URLs, attends meetings, generates daily standups, suggests proactive tasks, and **remembers everything across sessions** — all without being prompted. One command starts it: `buddy pulse start`. [Full docs →](advanced/pulse.md)
 
 ## 🚀 Key Features
 
@@ -27,7 +27,7 @@
 - **Personality Engine** for emotional intelligence and behavioral modeling
 
 ### 🧠 **Multi-Model Support**
-- **25+ LLM Providers**: OpenAI, Anthropic, Google, AWS Bedrock, Azure, Cohere, and more
+- **30+ LLM Providers**: OpenAI, Anthropic, Google, AWS Bedrock, Azure, Cohere, and more
 - **Unified Interface** across all providers
 - **Model Switching** and failover capabilities
 - **Custom Model Integration** support
@@ -82,7 +82,7 @@ graph TD
 |--------|-------------|----------|
 | **[Agent](agents/agent-class.md)** | Core agent implementation | Memory, tools, personality, evolution |
 | **[PULSE](advanced/pulse.md)** | Autonomous virtual employee | Tasks + real file output, persistent memory, KT, meetings, standups, notifications, web UI |
-| **[Models](models/overview.md)** | LLM provider integrations | 25+ providers, unified interface |
+| **[Models](models/overview.md)** | LLM provider integrations | 30+ providers, unified interface |
 | **[Tools](tools/overview.md)** | Function calling system | 200+ tools, custom creation |
 | **[Memory](memory/overview.md)** | Memory management | Conversation, long-term, user memories |
 | **[Knowledge](knowledge/overview.md)** | RAG and document processing | Multi-format, vector search |
@@ -118,14 +118,14 @@ print(response.content)
 ```python
 from buddy import Agent
 from buddy.models.openai import OpenAIChat
-from buddy.tools.web import DuckDuckGoSearch
+from buddy.tools.tavily import TavilyTools
 from buddy.memory.agent import AgentMemory
 
 agent = Agent(
     name="ResearchBot",
     model=OpenAIChat(),
     memory=AgentMemory(),
-    tools=[DuckDuckGoSearch()],
+    tools=[TavilyTools()],
     instructions="You are a research assistant that can search the web."
 )
 

@@ -18,6 +18,7 @@ nav:
     - Overview: advanced/pulse.md
     - PULSE Commands: cli/pulse.md
   - Core Concepts:
+    - Overview: core/overview.md
     - Agent System: core/agents.md
     - Models: core/models.md
     - Memory: core/memory.md

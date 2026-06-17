@@ -19,7 +19,9 @@
 
 Buddy AI is a comprehensive Python framework for creating, deploying, and managing intelligent AI agents. It provides a unified interface across 25+ LLM providers, a powerful memory system, extensible tools, RAG-based knowledge management, multi-agent teams, and workflows — all production-ready out of the box.
 
-**New in v2.1.0 → [PULSE](#-pulse--virtual-employees-era)** — give your AI an employee identity, teach it through interactive knowledge transfer, have it attend meetings, manage tasks, and more.
+**New in v2.2.0 → [Competency Engine](#whats-new-in-v220)** — a balance-aware competency score that routes tasks to the most competent member and prioritizes what to train next.
+
+**v2.1.0 → [PULSE](#-pulse--virtual-employees-era)** — give your AI an employee identity, teach it through interactive knowledge transfer, have it attend meetings, manage tasks, and more.
 
 ---
 
@@ -173,13 +175,13 @@ Build installers: `npm run build:win` or `npm run build:mac`. See [pulse-desktop
 ```python
 from buddy import Agent
 from buddy.models.anthropic import Claude
-from buddy.tools.web import DuckDuckGoSearch
+from buddy.tools.tavily import TavilyTools
 from buddy.memory.agent import AgentMemory
 
 agent = Agent(
     name="ResearchBot",
     model=Claude(id="claude-opus-4-5"),
-    tools=[DuckDuckGoSearch()],
+    tools=[TavilyTools()],
     memory=AgentMemory(),
     instructions="You are a research assistant.",
     markdown=True,
@@ -207,24 +209,32 @@ agent.model = Claude(id="claude-sonnet-4-5")
 ### 🛠️ Tools
 
 ```python
-from buddy.tools.web import DuckDuckGoSearch, BrowserTools
-from buddy.tools.files import FileTools
-from buddy.tools.code import PythonTools
+from buddy import Agent
+from buddy.models.openai import OpenAIChat
+from buddy.tools import tool
+from buddy.tools.python import PythonTools
+from buddy.tools.file import FileTools
 
-# Custom tool with decorator
-@agent.tool
+# Built-in toolkits
+agent = Agent(model=OpenAIChat(), tools=[PythonTools(), FileTools()])
+
+# Custom tool with the @tool decorator
+@tool
 def get_stock_price(ticker: str) -> str:
     """Get real-time stock price for a ticker symbol."""
     return fetch_price(ticker)
+
+# Plain functions work too — just pass them in `tools=[...]`
+agent = Agent(model=OpenAIChat(), tools=[get_stock_price])
 ```
 
 ### 🧠 Memory & Knowledge (RAG)
 
 ```python
-from buddy.knowledge.pdf import PDFKnowledge
+from buddy.knowledge.pdf import PDFKnowledgeBase
 from buddy.vectordb.chroma import ChromaDb
 
-knowledge = PDFKnowledge(
+knowledge = PDFKnowledgeBase(
     path="company_handbook.pdf",
     vector_db=ChromaDb(collection="handbook"),
 )
@@ -246,8 +256,8 @@ writer = Agent(name="Writer", role="Write a clear summary")
 reviewer = Agent(name="Reviewer", role="Review and improve")
 
 team = Team(
-    agents=[researcher, writer, reviewer],
-    mode="coordinate",
+    members=[researcher, writer, reviewer],
+    mode="coordinate",  # "route" | "coordinate" | "collaborate"
     instructions="Produce a polished research report.",
 )
 
@@ -271,8 +281,8 @@ class ResearchWorkflow(Workflow):
 ## CLI
 
 ```bash
-# Initialize a project
-buddy init my-agent
+# Initialize Buddy configuration
+buddy init
 
 # PULSE virtual employee
 buddy pulse start             # Launch web UI (http://localhost:8888)
@@ -293,10 +303,10 @@ cd pulse-desktop && npm install && npm start
 
 ```python
 # FastAPI
-from buddy.app.fastapi import create_agent_app
+from buddy.app.fastapi import FastAPIApp
 
-app = create_agent_app(agent)
-# uvicorn app:app --host 0.0.0.0 --port 8000
+app = FastAPIApp(agents=[agent])
+app.serve(app="my_module:app", host="0.0.0.0", port=7777)
 ```
 
 ```dockerfile

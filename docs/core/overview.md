@@ -1,10 +1,9 @@
-# Buddy AI Core Components
+# Core Architecture
 
-The core of Buddy AI consists of fundamental building blocks that power the entire framework. These components provide the essential functionality for creating, managing, and orchestrating AI agents.
-
-## 🧩 Core Architecture
-
-Buddy AI's core is built around these fundamental concepts:
+Buddy AI is built from a small set of composable building blocks. An **Agent**
+is the central unit: it pairs a **Model** with optional **Tools**, **Memory**,
+and **Knowledge**. Agents can be grouped into **Teams**, orchestrated by
+**Workflows**, and enhanced with **Reasoning** and **Planning**.
 
 ```mermaid
 graph TD
@@ -12,359 +11,147 @@ graph TD
     A --> C[Tools]
     A --> D[Memory]
     A --> E[Knowledge]
-    
-    B --> F[LLM Providers]
-    C --> G[Tool Registry]
-    D --> H[Storage Backends]
-    E --> I[RAG System]
-    
-    A --> J[Team]
-    J --> K[Coordination]
-    J --> L[Communication]
-    
-    A --> M[Reasoning]
-    M --> N[Chain-of-Thought]
-    M --> O[Tree-of-Thoughts]
-    
+    E --> V[Vector DB / iRAG]
+
+    A --> R[Reasoning]
     A --> P[Planning]
-    P --> Q[Workflow]
-    P --> R[Execution]
+
+    T[Team] --> A
+    W[Workflow] --> A
+    W --> T
 ```
 
-## 🤖 Agent Class
+## Agent
 
-The `Agent` class is the primary interface for creating AI agents:
+The `Agent` combines a model with capabilities and runs prompts. All
+constructor arguments are keyword-only.
 
 ```python
 from buddy import Agent
 from buddy.models.openai import OpenAIChat
 
 agent = Agent(
-    name="MyAgent",
-    model=OpenAIChat(),
-    instructions="You are a helpful AI assistant.",
-    tools=[],  # List of tools
-    memory=None,  # Memory configuration
-    knowledge=None,  # Knowledge sources
-    reasoning=None,  # Reasoning engine
-    personality=None,  # Personality traits
-    team=None  # Team configuration
+    name="assistant",
+    model=OpenAIChat(id="gpt-4o-mini"),
+    instructions="You are a helpful assistant.",
+    markdown=True,
 )
 
-# Basic interaction
-response = agent.run("Hello, how can you help me?")
+response = agent.run("What can you do?")   # returns a RunResponse
 print(response.content)
+
+agent.print_response("Explain RAG.", stream=True)   # stream to the console
 ```
 
-### Agent Configuration
+`agent.run(msg, stream=True)` yields response chunks; `agent.arun(...)` and
+`agent.aprint_response(...)` are the async variants. See [Agents](agents.md).
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `name` | `str` | Unique identifier for the agent |
-| `model` | `Model` | Language model instance |
-| `instructions` | `str` | System instructions/personality |
-| `tools` | `List[Tool]` | Available tools for the agent |
-| `memory` | `Memory` | Memory management configuration |
-| `knowledge` | `Knowledge` | Knowledge sources and RAG setup |
-| `reasoning` | `Reasoning` | Advanced reasoning capabilities |
-| `personality` | `Personality` | Personality traits and behavior |
-| `team` | `Team` | Team collaboration settings |
+## Model
 
-### Agent Methods
+A unified `Model` interface backs 30+ providers under `buddy.models.<provider>`.
+Swap providers by changing one import.
 
 ```python
-# Core interaction methods
-agent.run(message: str) -> Response
-agent.stream(message: str) -> Iterator[Response]
-agent.chat(messages: List[Message]) -> Response
-
-# State management
-agent.get_memory() -> Memory
-agent.set_memory(memory: Memory)
-agent.save_state(path: str)
-agent.load_state(path: str)
-
-# Tool management
-agent.add_tool(tool: Tool)
-agent.remove_tool(tool_name: str)
-agent.get_tools() -> List[Tool]
-
-# Knowledge management
-agent.add_knowledge(knowledge: Knowledge)
-agent.update_knowledge()
-agent.search_knowledge(query: str) -> List[Result]
-```
-
-## 🧠 Model Abstraction
-
-Buddy AI supports 25+ language model providers through a unified interface:
-
-```python
-from buddy.models.base import Model
 from buddy.models.openai import OpenAIChat
-from buddy.models.anthropic import AnthropicChat
-from buddy.models.google import GeminiChat
+from buddy.models.anthropic import Claude
+from buddy.models.google import Gemini
 
-# Unified model interface
-class Model:
-    def generate(self, messages: List[Message]) -> Response:
-        """Generate response from messages."""
-        pass
-    
-    def stream(self, messages: List[Message]) -> Iterator[Response]:
-        """Stream response tokens."""
-        pass
-    
-    def embed(self, text: str) -> List[float]:
-        """Generate embeddings."""
-        pass
+model = Claude(id="claude-opus-4-5")
 ```
 
-### Model Providers
+See [Models](models.md) for the full provider list and import paths.
 
-| Provider | Models | Features |
-|----------|--------|----------|
-| **OpenAI** | GPT-4, GPT-3.5 | Function calling, vision |
-| **Anthropic** | Claude 3.5, Claude 3 | Large context, safety |
-| **Google** | Gemini Pro, Gemini Flash | Multimodal, fast inference |
-| **AWS Bedrock** | Multiple models | Enterprise security |
-| **Azure OpenAI** | OpenAI models on Azure | Enterprise integration |
-| **Cohere** | Command, Command-R | RAG optimization |
-| **Mistral** | Mistral Large, Medium | European AI |
-| **Ollama** | Local models | Privacy, offline |
+## Tools
 
-## 🛠️ Tool System
-
-Tools extend agent capabilities with external actions:
+Tools let the model take actions. Pass built-in toolkits, plain functions, or
+`@tool`-decorated functions in the `tools` list.
 
 ```python
-from buddy.tools.base import Tool
-from buddy.tools.function import Function
+from buddy.tools.calculator import CalculatorTools
 
-class CustomTool(Tool):
-    def __init__(self):
-        super().__init__(
-            name="custom_calculator",
-            description="Performs mathematical calculations"
-        )
-    
-    def calculate(self, expression: str) -> float:
-        """Calculate mathematical expression."""
-        return eval(expression)  # Simplified example
-
-# Function-based tool
-def get_weather(location: str) -> str:
-    """Get current weather for a location."""
-    # Weather API call implementation
-    return f"Weather in {location}: Sunny, 75°F"
-
-weather_tool = Function.from_callable(get_weather)
+agent = Agent(model=OpenAIChat(id="gpt-4o-mini"), tools=[CalculatorTools()])
 ```
 
-## 📚 Knowledge System
+See [Tools](tools.md) for built-in toolkits and custom-tool patterns.
 
-Integrate external knowledge sources with RAG:
+## Memory
+
+Agents have short-term **chat history** and durable **user memories**.
 
 ```python
-from buddy.knowledge import DocumentKnowledge, URLKnowledge
-
-# Document-based knowledge
-doc_knowledge = DocumentKnowledge(
-    sources=["./documents/", "./pdfs/"],
-    chunk_size=1000,
-    overlap=200,
-    embedder="openai",
-    vector_store="chroma"
-)
-
-# URL-based knowledge
-url_knowledge = URLKnowledge(
-    urls=["https://docs.python.org"],
-    depth=2,  # Crawl depth
-    filters=["*.html"]  # File type filters
-)
+from buddy.memory.v2.memory import Memory
+from buddy.memory.v2.db.sqlite import SqliteMemoryDb
 
 agent = Agent(
-    model=OpenAIChat(),
-    knowledge=[doc_knowledge, url_knowledge]
+    model=OpenAIChat(id="gpt-4o-mini"),
+    memory=Memory(db=SqliteMemoryDb(table_name="memories", db_file="memory.db")),
+    enable_user_memories=True,
+    add_history_to_messages=True,
+    num_history_runs=3,
 )
 ```
 
-## 🧠 Memory System
+See [Memory](memory.md).
 
-Persistent conversation and learning memory:
+## Knowledge
+
+Knowledge bases provide Retrieval-Augmented Generation. iRAG works without a
+vector database; format-specific bases use one.
 
 ```python
-from buddy.memory import ConversationalMemory, MemoryManager
+from buddy.knowledge.pdf import PDFKnowledgeBase
+from buddy.vectordb.chroma import ChromaDb
 
-# Conversational memory
-conv_memory = ConversationalMemory(
-    max_history=100,
-    storage="local",  # or "redis", "postgres"
-    encryption=True
+knowledge = PDFKnowledgeBase(
+    path="docs/manual.pdf",
+    vector_db=ChromaDb(collection="manual"),
 )
+knowledge.load()
 
-# Advanced memory manager
-memory_manager = MemoryManager(
-    types=["conversational", "episodic", "semantic"],
-    storage_backend="postgres",
-    retention_policy="7_days",
-    compression=True
-)
-
-agent = Agent(
-    model=OpenAIChat(),
-    memory=memory_manager
-)
+agent = Agent(model=OpenAIChat(id="gpt-4o-mini"), knowledge=knowledge)
 ```
 
-## 🤝 Team Collaboration
+See [Knowledge](knowledge.md).
 
-Multi-agent coordination and collaboration:
+## Team
 
-```python
-from buddy import Team
-from buddy.team import TeamController
+A `Team` coordinates multiple agents (or nested teams). The first argument,
+`members`, is required; `mode` selects the orchestration strategy.
 
-# Create specialized agents
-researcher = Agent(name="Researcher", model=OpenAIChat(), role="research")
-writer = Agent(name="Writer", model=OpenAIChat(), role="writing")
-analyst = Agent(name="Analyst", model=OpenAIChat(), role="analysis")
-
-# Form a team
-team = Team(
-    name="Content Team",
-    agents=[researcher, writer, analyst],
-    controller=TeamController(
-        strategy="sequential",  # or "parallel", "democratic"
-        communication="structured"
-    )
-)
-
-# Collaborative task execution
-result = team.collaborate(
-    task="Create a comprehensive market analysis report",
-    coordination="pipeline"  # researcher -> analyst -> writer
-)
-```
-
-## 🎯 Planning and Workflow
-
-Structured task planning and execution:
-
-```python
-from buddy.planning import PlanningAgent, ExecutionPlan
-
-# Planning-enabled agent
-planning_agent = PlanningAgent(
-    model=OpenAIChat(),
-    planning_strategy="hierarchical",
-    execution_monitoring=True
-)
-
-# Create execution plan
-plan = planning_agent.create_plan(
-    objective="Analyze competitor landscape",
-    constraints=["2 hour time limit", "use only public data"],
-    resources=["web_search", "data_analysis"]
-)
-
-# Execute plan with monitoring
-result = planning_agent.execute_plan(plan, monitor=True)
-```
-
-## 🏗️ Framework Architecture
-
-Buddy AI follows a modular architecture pattern:
-
-### Core Layers
-
-1. **Interface Layer**: Agent, Team, Model APIs
-2. **Service Layer**: Tools, Knowledge, Memory, Reasoning
-3. **Infrastructure Layer**: Storage, Networking, Security
-4. **Provider Layer**: LLM providers, Vector databases, Cloud services
-
-### Design Principles
-
-- **Modularity**: Each component is independent and replaceable
-- **Extensibility**: Easy to add new tools, models, and capabilities
-- **Scalability**: Supports single agents to large multi-agent systems
-- **Security**: Built-in security and privacy protection
-- **Observability**: Comprehensive logging, metrics, and monitoring
-
-### Configuration Management
-
-```python
-from buddy.config import BuddyConfig
-
-# Global configuration
-config = BuddyConfig(
-    default_model="openai/gpt-4",
-    default_embedder="openai/text-embedding-3-small",
-    storage_backend="postgres",
-    vector_store="chroma",
-    logging_level="INFO",
-    security={
-        "encryption_enabled": True,
-        "api_key_rotation": True,
-        "access_logging": True
-    },
-    performance={
-        "caching_enabled": True,
-        "connection_pooling": True,
-        "rate_limiting": True
-    }
-)
-
-# Apply configuration globally
-Buddy.configure(config)
-```
-
-## 🚀 Quick Start Examples
-
-### Simple Assistant
-```python
-from buddy import Agent
-from buddy.models.openai import OpenAIChat
-
-agent = Agent(model=OpenAIChat())
-response = agent.run("What's the weather like today?")
-```
-
-### Knowledge-Enabled Agent
-```python
-from buddy import Agent
-from buddy.models.openai import OpenAIChat
-from buddy.knowledge import DocumentKnowledge
-
-knowledge = DocumentKnowledge(sources=["./docs/"])
-agent = Agent(model=OpenAIChat(), knowledge=[knowledge])
-response = agent.run("What does our documentation say about API usage?")
-```
-
-### Tool-Enabled Agent
-```python
-from buddy import Agent
-from buddy.models.openai import OpenAIChat
-from buddy.tools import WebSearch, Calculator
-
-agent = Agent(
-    model=OpenAIChat(),
-    tools=[WebSearch(), Calculator()]
-)
-response = agent.run("Search for Python tutorials and calculate 15% of 200")
-```
-
-### Team of Agents
 ```python
 from buddy import Agent, Team
 from buddy.models.openai import OpenAIChat
 
-researcher = Agent(name="Researcher", model=OpenAIChat())
-writer = Agent(name="Writer", model=OpenAIChat())
+researcher = Agent(name="researcher", model=OpenAIChat(id="gpt-4o-mini"), role="research")
+writer = Agent(name="writer", model=OpenAIChat(id="gpt-4o-mini"), role="writing")
 
-team = Team(agents=[researcher, writer])
-result = team.collaborate("Research and write about AI trends")
+team = Team(members=[researcher, writer], mode="coordinate")
+team.print_response("Research and write a short brief on AI agents.")
 ```
 
-The core components provide a solid foundation for building sophisticated AI agent applications, from simple chatbots to complex multi-agent systems.
+Modes are `"route"`, `"coordinate"` (default), and `"collaborate"`.
+
+## Reasoning & Planning
+
+Enable step-by-step reasoning directly on an agent, or use a dedicated
+`PlanningAgent` for explicit plan creation and execution.
+
+```python
+# Reasoning: think through the problem before answering
+agent = Agent(model=OpenAIChat(id="gpt-4o"), reasoning=True)
+
+# Planning: decompose a goal into ordered steps
+from buddy.planning import PlanningAgent
+```
+
+## Workflows
+
+`Workflow` (`buddy.workflow`) lets you compose multi-step processes that drive
+agents and teams programmatically — useful for repeatable pipelines and
+deployments alongside [`FastAPIApp`](../getting-started/quickstart.md#5-deploy-as-an-api).
+
+## Where to Go Next
+
+- [Agents](agents.md) · [Models](models.md) · [Tools](tools.md)
+- [Memory](memory.md) · [Knowledge](knowledge.md)
+- [Competency Engine](../advanced/competency.md) · [PULSE](../advanced/pulse.md)

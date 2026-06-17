@@ -1,6 +1,6 @@
 # Models
 
-Buddy AI supports **35+ LLM providers** through a unified `Model` interface.
+Buddy AI supports **30+ LLM providers** through a unified `Model` interface.
 
 ## OpenAI
 
@@ -34,8 +34,8 @@ model = Gemini(id="gemini-1.5-pro")
 ```python
 pip install "buddy-ai[aws]"
 
-from buddy.models.aws import BedrockChat
-model = BedrockChat(id="anthropic.claude-3-sonnet-20240229-v1:0")
+from buddy.models.aws import AwsBedrock
+model = AwsBedrock(id="anthropic.claude-3-sonnet-20240229-v1:0")
 ```
 
 ## Ollama (Local)

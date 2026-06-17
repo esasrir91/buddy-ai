@@ -56,19 +56,31 @@ agent = Agent(
 
 ## 5. Deploy as an API
 
+`FastAPIApp` wraps one or more agents in a FastAPI application. Build the app
+with `get_app()`, then pass it to `serve()` (the `app` argument is required).
+
 ```python
 from buddy import Agent
 from buddy.models.openai import OpenAIChat
 from buddy.app.fastapi import FastAPIApp
 
 agent = Agent(name="api_agent", model=OpenAIChat(id="gpt-4o-mini"))
-app = FastAPIApp(agents=[agent])
-app.serve()  # http://localhost:7777
+
+fastapi_app = FastAPIApp(agents=[agent])
+app = fastapi_app.get_app()
+
+if __name__ == "__main__":
+    fastapi_app.serve(app, host="localhost", port=7777)  # http://localhost:7777
 ```
+
+!!! tip "Auto-reload during development"
+    `serve()` calls `uvicorn.run()` under the hood. To enable `reload=True` (or
+    `workers=N`), save the code to a module and pass an import string instead of
+    the app instance, e.g. `fastapi_app.serve("main:app", reload=True)`.
 
 ## Next Steps
 
 - [Configuration](configuration.md) — API keys, defaults, storage
 - [Examples](examples.md) — More runnable scripts
 - [Agent System](../core/agents.md) — Deep dive into agents
-- [Model Providers](../models/overview.md) — All 35+ supported models
+- [Model Providers](../models/overview.md) — All 30+ supported models

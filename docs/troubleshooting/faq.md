@@ -1,48 +1,80 @@
 # Frequently Asked Questions
 
-## What LLM providers does Buddy AI support?
+## How many LLM providers does Buddy AI support?
 
-35+ providers including OpenAI, Anthropic, Google Gemini, AWS Bedrock, Azure OpenAI, Cohere,
-Ollama, Groq, Mistral, HuggingFace, DeepSeek, xAI, Perplexity, Together AI, and more.
-See [Model Providers](../models/overview.md).
+30+ providers ship under `buddy.models.*`, including OpenAI, Anthropic, Google
+Gemini, AWS Bedrock, Azure OpenAI, Cohere, Ollama, Groq, Mistral, HuggingFace,
+DeepSeek, xAI, Perplexity, Together AI, and many more. See
+[Model Providers](../models/overview.md).
 
-## Do I need an internet connection?
+## Do I need API keys?
 
-Not if you use a local provider like Ollama or a self-hosted vLLM server.
+For hosted providers, yes — each reads its key from an environment variable
+(e.g. `OPENAI_API_KEY`). For local inference with Ollama or a self-hosted vLLM
+server, no key is required.
 
-## How is Buddy AI different from LangChain?
+## Can I run models locally / offline?
 
-Buddy AI focuses on **production-grade agents** with a simpler, Pydantic-first API.
-It ships iRAG (no external vector DB needed), built-in personality and evolution engines,
-and a hosted Playground UI out of the box — without the complexity of LangChain's chain abstractions.
+Yes. Use `Ollama` (`from buddy.models.ollama import Ollama`) or another local
+provider. No internet connection or API key is needed once the model is pulled.
+Buddy also includes optional training extras (`pip install "buddy-ai[training]"`)
+for fine-tuning workflows.
 
-## What is iRAG?
+## Can I use multiple providers in one application?
 
-iRAG is Buddy AI's custom RAG engine that uses spaCy NLP, TF-IDF, and cosine similarity.
-It requires no external vector database and is included in the base install. See [Knowledge](../core/knowledge.md).
-
-## Can I use multiple LLM providers in one application?
-
-Yes. Each `Agent` has its own `model`. Mix providers freely:
+Yes. Each `Agent` has its own `model`, so you can mix providers freely — for
+example within a `Team`:
 
 ```python
+from buddy import Agent, Team
+from buddy.models.openai import OpenAIChat
+from buddy.models.anthropic import Claude
+
 team = Team(
-    agents=[
+    members=[
         Agent(model=OpenAIChat(id="gpt-4o")),
-        Agent(model=Claude(id="claude-opus-4-5")),
-    ]
+        Agent(model=Claude(id="claude-3-5-sonnet-20241022")),
+    ],
 )
 ```
 
-## Is Buddy AI production-ready?
+!!! note "`Team` uses `members=`"
+    The team's participants are passed via the required `members` parameter.
 
-Yes. v2.0.0 ships with Docker support, PostgreSQL/Redis storage backends, streaming,
-session management, security hardening, and a full test suite.
+## What is iRAG?
 
-## How do I report a bug?
+iRAG (`buddy.knowledge.irag`) is Buddy's built-in retrieval engine that combines
+spaCy NLP, TF-IDF, and cosine similarity. It needs no external vector database.
+If you prefer a vector store, use a knowledge base with a `vector_db` such as
+`ChromaDb` — see the [Knowledge API](../api/knowledge-api.md).
 
-Open a [GitHub Issue](https://github.com/esasrir91/buddy-ai/issues) with a minimal reproducible example.
+## Does memory persist between runs?
 
-## Where can I get help?
+In-process memory persists for the life of the agent object. For durability
+across restarts, attach storage: `storage=SqliteStorage(...)` persists sessions,
+and `memory=Memory(db=SqliteMemoryDb(...))` with `enable_user_memories=True`
+persists user memories. Pass a stable `session_id`/`user_id` to resume. See the
+[memory example](../examples/basic.md#agent-with-memory).
 
-[GitHub Discussions](https://github.com/esasrir91/buddy-ai/discussions) or open an issue.
+## How is Buddy AI different from using a provider SDK directly?
+
+A raw SDK (e.g. the `openai` package) gives you one model call. Buddy adds the
+agent layer on top: tool calling, memory and sessions, knowledge/RAG, multi-agent
+teams, workflows, structured (Pydantic) outputs, streaming, and deployment via
+`FastAPIApp` — all behind a consistent API that works across 30+ providers.
+
+## Can I define my own tools?
+
+Yes — any Python function with type hints and a docstring can be passed in
+`tools=[...]`, or you can use the `@tool` decorator / build a `Toolkit`. See
+[Custom Tools](../tools/custom.md).
+
+## What license is Buddy AI under?
+
+MIT.
+
+## How do I report a bug or get help?
+
+Open a [GitHub Issue](https://github.com/esasrir91/buddy-ai/issues) with a
+minimal reproducible example (include `get_version_info()` output), or ask in
+[GitHub Discussions](https://github.com/esasrir91/buddy-ai/discussions).

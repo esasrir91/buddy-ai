@@ -43,9 +43,12 @@ print(response.content)
 # Async
 response = await agent.arun("What is AI?")
 
-# Stream tokens
-for chunk in agent.run_stream("Explain AI..."):
+# Stream tokens — pass stream=True to run()
+for chunk in agent.run("Explain AI...", stream=True):
     print(chunk.content, end="", flush=True)
+
+# print_response can also stream directly to the console
+agent.print_response("Explain AI...", stream=True)
 ```
 
 ## Structured Output
@@ -60,8 +63,9 @@ class Summary(BaseModel):
     word_count: int
 
 agent = Agent(model=..., response_model=Summary)
-result: Summary = agent.run("Summarize quantum computing.")
-print(result.title)
+response = agent.run("Summarize quantum computing.")
+summary: Summary = response.content  # parsed into the Pydantic model
+print(summary.title)
 ```
 
 ## See Also
