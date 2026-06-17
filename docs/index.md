@@ -26,8 +26,17 @@ pip install buddy-ai[all]
 
 ## ⭐ Featured in v2.2.0
 
-!!! success "New release article"
-    **v2.2.0 is here.** Read the full story behind the Competency Engine — plain English, runnable code, honest framing.
+!!! success "New in v2.2.0 — Built-in Prompt Caching"
+    Save up to **90 % of repeated prompt-token costs** with a single flag.  Anthropic gets explicit `cache_control` breakpoints on system prompt, tools, and conversation history.  OpenAI gets automatic server-side caching with cache-hit metrics surfaced automatically.
+
+    ```python
+    agent = Agent(model=Claude(id="claude-opus-4-5"), cache_prompt=True)
+    ```
+
+    [:octicons-arrow-right-24: Prompt Caching guide](advanced/prompt-caching.md){ .md-button .md-button--primary }
+
+!!! info "New in v2.2.0 — Competency Engine"
+    **Teaching AI Agents to Know What They Don't Know.** Read the full story — plain English, runnable code, honest framing.
 
     [:octicons-book-24: Read the release article](articles/competency-engine-v2.2.0.md){ .md-button .md-button--primary }
 
@@ -37,6 +46,14 @@ pip install buddy-ai[all]
     [:octicons-account-hard-hat-24: Read the PULSE article](articles/pulse-virtual-employee.md){ .md-button .md-button--primary }
 
 <div class="grid cards" markdown>
+
+-   :material-cached:{ .lg .middle } __Built-in Prompt Caching__
+
+    ---
+
+    Provider-native caching with **one flag**.  Anthropic: `cache_control` breakpoints on system, tools, and history.  OpenAI: automatic — cache-hit metrics surface in `RunResponse`. Fine-grained control via `PromptCacheConfig`.
+
+    [:octicons-arrow-right-24: Prompt Caching guide](advanced/prompt-caching.md)
 
 -   :material-newspaper-variant-outline:{ .lg .middle } __Release article — Competency Engine__
 
@@ -262,6 +279,7 @@ graph TD
 | **[Knowledge](knowledge/overview.md)** | RAG and document processing | Multi-format, vector search |
 | **[Team](team/overview.md)** | Multi-agent collaboration | Orchestration, communication |
 | **[Workflows](workflows/overview.md)** | Process automation | Template-based, execution engine |
+| **[Prompt Caching](advanced/prompt-caching.md)** | Provider-native caching | `cache_prompt=True`; Anthropic breakpoints, OpenAI automatic |
 | **[Integrations](integrations/overview.md)** | LangChain & LangGraph interop | Buddy models/agents as LangChain & LangGraph components, competency routing edges |
 | **[Training](training/overview.md)** | Model fine-tuning | Data prep, training, evaluation |
 | **[CLI](cli/overview.md)** | Command-line interface | Workspace management, operations |
@@ -278,7 +296,7 @@ This documentation is organized into the following sections:
 - **[Tools & Functions](tools/overview.md)** — Building and using tools
 - **[Memory System](memory/overview.md)** — Managing agent memory and state
 - **[Knowledge Management](knowledge/overview.md)** — RAG and document processing
-- **[Advanced Features](advanced/multimodal.md)** — Multi-modal, reasoning, planning, competency
+- **[Advanced Features](advanced/multimodal.md)** — Multi-modal, reasoning, planning, competency, [prompt caching](advanced/prompt-caching.md)
 - **[Integrations](integrations/overview.md)** — Use Buddy with LangChain and LangGraph
 - **[Examples & Tutorials](examples/basic.md)** — Practical examples and use cases
 

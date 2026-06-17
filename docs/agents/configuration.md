@@ -114,6 +114,41 @@ agent = Agent(
 
 See [Tools](../core/tools.md) for building toolkits and functions.
 
+## Prompt caching
+
+Set `cache_prompt=True` to activate provider-native prompt caching. Buddy handles all the
+plumbing — no prompt edits required.
+
+```python
+from buddy.models.anthropic import Claude
+from buddy.models.openai import OpenAIChat
+
+# Anthropic: cache_control injected on system + tools + history
+agent = Agent(
+    model=Claude(id="claude-opus-4-5"),
+    cache_prompt=True,
+    add_history_to_messages=True,
+)
+
+# OpenAI: server-side automatic caching; cache metrics surfaced in RunResponse
+agent = Agent(
+    model=OpenAIChat(id="gpt-4o"),
+    cache_prompt=True,
+)
+```
+
+After a run, inspect cache token counts:
+
+```python
+response = agent.run("...")
+print(response.metrics.get("cached_tokens"))       # tokens served from cache
+print(response.metrics.get("cache_write_tokens"))  # tokens written to cache
+```
+
+!!! tip
+    See the full [Prompt Caching guide](../advanced/prompt-caching.md) for fine-grained
+    control with `PromptCacheConfig`, 1-hour TTL, and per-provider details.
+
 ## Debugging & monitoring
 
 ```python

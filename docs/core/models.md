@@ -67,3 +67,25 @@ model = Ollama(id="llama3.2")  # Requires ollama server running
 | LiteLLM | `buddy.models.litellm` | core |
 
 See [Model Providers Overview](../models/overview.md) for the full list.
+
+## Prompt Caching
+
+All models support the `cache_prompt` flag. Each provider implements caching in
+the most efficient way for its API:
+
+```python
+from buddy.agent import Agent
+from buddy.models.anthropic import Claude
+from buddy.models.openai import OpenAIChat
+
+# Anthropic — explicit cache_control breakpoints on system, tools, history
+agent = Agent(model=Claude(id="claude-opus-4-5"), cache_prompt=True)
+
+# OpenAI — server-side automatic caching (>=1024 token prefix)
+agent = Agent(model=OpenAIChat(id="gpt-4o"), cache_prompt=True)
+```
+
+Cache hit/miss token counts appear automatically in `RunResponse.metrics`.
+
+See the full [Prompt Caching guide](../advanced/prompt-caching.md) for
+`PromptCacheConfig`, 1-hour TTL, and per-provider details.
