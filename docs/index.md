@@ -26,7 +26,20 @@ pip install buddy-ai[all]
 
 ## ⭐ Featured in v2.2.0
 
+!!! success "New release article"
+    **v2.2.0 is here.** Read the full story behind the Competency Engine — plain English, runnable code, honest framing.
+
+    [:octicons-book-24: Read the release article](articles/competency-engine-v2.2.0.md){ .md-button .md-button--primary }
+
 <div class="grid cards" markdown>
+
+-   :material-newspaper-variant-outline:{ .lg .middle } __Release article — Competency Engine__
+
+    ---
+
+    **Teaching AI Agents to Know What They Don't Know** — what's new in v2.2.0, the report-card metaphor, and three runnable code walkthroughs (scoring, autonomous loop, runtime routing).
+
+    [:octicons-arrow-right-24: Read the article](articles/competency-engine-v2.2.0.md)
 
 -   :material-account-hard-hat:{ .lg .middle } __PULSE — Autonomous Virtual Employee__
 
