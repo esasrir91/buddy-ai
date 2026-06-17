@@ -29,9 +29,18 @@ TEMPLATE_TO_NAME_MAP: Dict[WorkspaceStarterTemplate, str] = {
     WorkspaceStarterTemplate.agent_app: "agent-app",
     WorkspaceStarterTemplate.agent_api: "agent-api",
 }
+
+# Local templates bundled with the package (no network required)
+_TEMPLATES_DIR = Path(__file__).parent / "templates"
+TEMPLATE_TO_LOCAL_PATH: Dict[WorkspaceStarterTemplate, Path] = {
+    WorkspaceStarterTemplate.agent_app: _TEMPLATES_DIR / "agent-app",
+    WorkspaceStarterTemplate.agent_api: _TEMPLATES_DIR / "agent-api",
+}
+
+# Legacy remote repo map — kept for -u/--url override support
 TEMPLATE_TO_REPO_MAP: Dict[WorkspaceStarterTemplate, str] = {
-    WorkspaceStarterTemplate.agent_app: "https://github.com/buddy-ai/agent-app-aws",
-    WorkspaceStarterTemplate.agent_api: "https://github.com/buddy-ai/agent-api-aws",
+    WorkspaceStarterTemplate.agent_app: "https://github.com/esasrir91/buddy-ai-agent-app",
+    WorkspaceStarterTemplate.agent_api: "https://github.com/esasrir91/buddy-ai-agent-api",
 }
 
 
@@ -40,16 +49,12 @@ def create_workspace(
 ) -> Optional[WorkspaceConfig]:
     """Creates a new workspace and returns the WorkspaceConfig.
 
-    This function clones a template or url on the users machine at the path:
-        cwd/name
+    When no --url is given, the workspace is created from a local bundled template
+    (no network required). When --url is given, the repo is cloned from that URL.
     """
     from shutil import copytree
 
-    import git
-
     from buddy.cli.operator import initialize_buddy
-    from buddy.utils.filesystem import rmdir_recursive
-    from buddy.utils.git import GitCloneProgress
     from buddy.workspace.helpers import get_workspace_dir_path
 
     current_dir: Path = Path(".").resolve()
@@ -109,9 +114,6 @@ def create_workspace(
     if ws_dir_name is None:
         logger.error("Workspace name is required")
         return None
-    if repo_to_clone is None:
-        logger.error("URL or Template is required")
-        return None
 
     # Check if we can create the workspace in the current dir
     ws_root_path: Path = current_dir.joinpath(ws_dir_name)
@@ -120,28 +122,37 @@ def create_workspace(
         return None
 
     print_info(f"Creating {str(ws_root_path)}")
-    logger.debug("Cloning: {}".format(repo_to_clone))
-    try:
-        _cloned_git_repo: git.Repo = git.Repo.clone_from(
-            repo_to_clone,
-            str(ws_root_path),
-            progress=GitCloneProgress(),  # type: ignore
-        )
-    except Exception as e:
-        logger.error(e)
-        return None
 
-    # Remove existing .git folder
-    _dot_git_folder = ws_root_path.joinpath(".git")
-    _dot_git_exists = _dot_git_folder.exists()
-    if _dot_git_exists:
-        logger.debug(f"Deleting {_dot_git_folder}")
+    if url is not None:
+        # Clone from a user-provided URL
         try:
-            _dot_git_exists = not rmdir_recursive(_dot_git_folder)
+            import git
+            from buddy.utils.git import GitCloneProgress
+            from buddy.utils.filesystem import rmdir_recursive
+
+            logger.debug("Cloning: {}".format(url))
+            git.Repo.clone_from(url, str(ws_root_path), progress=GitCloneProgress())  # type: ignore
+            _dot_git_folder = ws_root_path.joinpath(".git")
+            if _dot_git_folder.exists():
+                try:
+                    rmdir_recursive(_dot_git_folder)
+                except Exception as e:
+                    logger.warning(f"Failed to delete .git folder: {e}")
         except Exception as e:
-            logger.warning(f"Failed to delete {_dot_git_folder}: {e}")
-            logger.info("Please delete the .git folder manually")
-            pass
+            logger.error(e)
+            return None
+    else:
+        # Use local bundled template (no network required)
+        local_template_path = TEMPLATE_TO_LOCAL_PATH.get(ws_template)
+        if local_template_path is None or not local_template_path.exists():
+            logger.error(f"Template directory not found: {local_template_path}")
+            return None
+        try:
+            copytree(str(local_template_path), str(ws_root_path))
+            logger.debug(f"Copied template from {local_template_path}")
+        except Exception as e:
+            logger.error(f"Failed to copy template: {e}")
+            return None
 
     BUDDY_config.add_new_ws_to_config(ws_root_path=ws_root_path)
 

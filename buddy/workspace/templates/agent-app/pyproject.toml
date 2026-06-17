@@ -1,0 +1,12 @@
+[project]
+name = "agent-app"
+version = "0.1.0"
+description = "A Buddy AI agent application"
+requires-python = ">=3.9"
+dependencies = [
+    "buddy-ai>=2.2.0",
+    "openai>=1.0.0",
+]
+
+[tool.buddy]
+workspace = "workspace"

@@ -148,7 +148,7 @@ where = ["."]
 include = ["buddy*"]
 
 [tool.setuptools.package-data]
-buddy = ["py.typed", "pulse/ui/**/*"]
+buddy = ["py.typed", "pulse/ui/**/*", "workspace/templates/**/*", "workspace/templates/**/.env*"]
 
 [tool.black]
 line-length = 120
