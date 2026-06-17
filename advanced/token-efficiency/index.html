@@ -12,13 +12,13 @@
         <meta name="author" content="Sriram Sangeeth Mantha">
       
       
-        <link rel="canonical" href="https://esasrir91.github.io/buddy-ai/memory/user-memories/">
+        <link rel="canonical" href="https://esasrir91.github.io/buddy-ai/advanced/token-efficiency/">
       
       
-        <link rel="prev" href="../sessions/">
+        <link rel="prev" href="../prompt-caching/">
       
       
-        <link rel="next" href="../storage/">
+        <link rel="next" href="../../integrations/overview/">
       
       
         
@@ -29,7 +29,7 @@
     
     
       
-        <title>User Memories - Buddy AI - Comprehensive AI Agent Framework</title>
+        <title>Token Efficiency - Buddy AI - Comprehensive AI Agent Framework</title>
       
     
     
@@ -82,7 +82,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#user-memories" class="md-skip">
+        <a href="#token-efficiency" class="md-skip">
           Skip to content
         </a>
       
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              User Memories
+              Token Efficiency
             
           </span>
         </div>
@@ -297,7 +297,7 @@
     
     
       <li class="md-tabs__item">
-        <a href="../../advanced/pulse/" class="md-tabs__link">
+        <a href="../pulse/" class="md-tabs__link">
           
   
   
@@ -393,13 +393,11 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="../overview/" class="md-tabs__link">
+      <li class="md-tabs__item">
+        <a href="../../memory/overview/" class="md-tabs__link">
           
   
   
@@ -475,11 +473,13 @@
   
   
   
+    
+  
   
     
     
-      <li class="md-tabs__item">
-        <a href="../../advanced/multimodal/" class="md-tabs__link">
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../multimodal/" class="md-tabs__link">
           
   
   
@@ -1082,7 +1082,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../advanced/pulse/" class="md-nav__link">
+      <a href="../pulse/" class="md-nav__link">
         
   
   
@@ -2114,31 +2114,28 @@
       
   
   
-    
   
   
-  
     
     
     
     
-      
-        
-        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" checked>
         
           
-          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="">
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
             
   
   
@@ -2156,7 +2153,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_9">
             <span class="md-nav__icon md-icon"></span>
             
@@ -2174,7 +2171,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../overview/" class="md-nav__link">
+      <a href="../../memory/overview/" class="md-nav__link">
         
   
   
@@ -2202,7 +2199,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../agent-memory/" class="md-nav__link">
+      <a href="../../memory/agent-memory/" class="md-nav__link">
         
   
   
@@ -2230,7 +2227,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../sessions/" class="md-nav__link">
+      <a href="../../memory/sessions/" class="md-nav__link">
         
   
   
@@ -2255,37 +2252,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    User Memories
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../memory/user-memories/" class="md-nav__link">
         
   
   
@@ -2301,98 +2271,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#enabling-user-memories" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Enabling user memories
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#how-memories-are-created" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        How memories are created
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="How memories are created">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#1-classification" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        1. Classification
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#2-management" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2. Management
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#how-memories-are-recalled" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        How memories are recalled
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#agentic-vs-passive-memory" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Agentic vs passive memory
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -2405,7 +2283,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../storage/" class="md-nav__link">
+      <a href="../../memory/storage/" class="md-nav__link">
         
   
   
@@ -2984,28 +2862,31 @@
       
   
   
+    
   
   
+  
     
     
     
     
+      
+        
+        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_13" checked>
         
           
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_13" >
-        
-          
-          <label class="md-nav__link" for="__nav_13" id="__nav_13_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_13" id="__nav_13_label" tabindex="">
             
   
   
@@ -3023,7 +2904,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_13_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_13_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_13">
             <span class="md-nav__icon md-icon"></span>
             
@@ -3041,7 +2922,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../advanced/multimodal/" class="md-nav__link">
+      <a href="../multimodal/" class="md-nav__link">
         
   
   
@@ -3069,7 +2950,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../advanced/reasoning/" class="md-nav__link">
+      <a href="../reasoning/" class="md-nav__link">
         
   
   
@@ -3097,7 +2978,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../advanced/planning/" class="md-nav__link">
+      <a href="../planning/" class="md-nav__link">
         
   
   
@@ -3125,7 +3006,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../advanced/security/" class="md-nav__link">
+      <a href="../security/" class="md-nav__link">
         
   
   
@@ -3153,7 +3034,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../advanced/evaluation/" class="md-nav__link">
+      <a href="../evaluation/" class="md-nav__link">
         
   
   
@@ -3181,7 +3062,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../advanced/competency/" class="md-nav__link">
+      <a href="../competency/" class="md-nav__link">
         
   
   
@@ -3209,7 +3090,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../advanced/prompt-caching/" class="md-nav__link">
+      <a href="../prompt-caching/" class="md-nav__link">
         
   
   
@@ -3234,10 +3115,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../advanced/token-efficiency/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Token Efficiency
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -3253,6 +3161,153 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#technique-1-prompt-caching" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technique 1 — Prompt Caching
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#technique-2-proxy-aware-caching" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technique 2 — Proxy-Aware Caching
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#technique-3-token-budget-manager" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technique 3 — Token Budget Manager
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Technique 3 — Token Budget Manager">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#reading-budget-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading budget metrics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tokenbudgetconfig-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TokenBudgetConfig reference
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#technique-4-automatic-tool-result-trimming" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technique 4 — Automatic Tool-Result Trimming
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#technique-5-history-truncation-num_history_runs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technique 5 — History Truncation (num_history_runs)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#technique-6-session-summaries-instead-of-raw-history" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technique 6 — Session Summaries (instead of raw history)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#combining-all-techniques" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Combining all techniques
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#proxy-caching-decision-tree" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Proxy + Caching decision tree
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cost-impact-at-a-glance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cost impact at a glance
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -4587,10 +4642,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#enabling-user-memories" class="md-nav__link">
+  <a href="#technique-1-prompt-caching" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Enabling user memories
+        Technique 1 — Prompt Caching
       
     </span>
   </a>
@@ -4598,22 +4653,33 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#how-memories-are-created" class="md-nav__link">
+  <a href="#technique-2-proxy-aware-caching" class="md-nav__link">
     <span class="md-ellipsis">
       
-        How memories are created
+        Technique 2 — Proxy-Aware Caching
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="How memories are created">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#technique-3-token-budget-manager" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technique 3 — Token Budget Manager
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Technique 3 — Token Budget Manager">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1-classification" class="md-nav__link">
+  <a href="#reading-budget-metrics" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Classification
+        Reading budget metrics
       
     </span>
   </a>
@@ -4621,10 +4687,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-management" class="md-nav__link">
+  <a href="#tokenbudgetconfig-reference" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Management
+        TokenBudgetConfig reference
       
     </span>
   </a>
@@ -4637,10 +4703,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#how-memories-are-recalled" class="md-nav__link">
+  <a href="#technique-4-automatic-tool-result-trimming" class="md-nav__link">
     <span class="md-ellipsis">
       
-        How memories are recalled
+        Technique 4 — Automatic Tool-Result Trimming
       
     </span>
   </a>
@@ -4648,10 +4714,54 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#agentic-vs-passive-memory" class="md-nav__link">
+  <a href="#technique-5-history-truncation-num_history_runs" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Agentic vs passive memory
+        Technique 5 — History Truncation (num_history_runs)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#technique-6-session-summaries-instead-of-raw-history" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technique 6 — Session Summaries (instead of raw history)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#combining-all-techniques" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Combining all techniques
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#proxy-caching-decision-tree" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Proxy + Caching decision tree
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cost-impact-at-a-glance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cost impact at a glance
       
     </span>
   </a>
@@ -4701,10 +4811,10 @@
     
     
       <li class="md-path__item">
-        <a href="../overview/" class="md-path__link">
+        <a href="../multimodal/" class="md-path__link">
           
   <span class="md-ellipsis">
-    Memory System
+    Advanced Features
   </span>
 
         </a>
@@ -4726,113 +4836,283 @@
   
 
 
-<h1 id="user-memories">User Memories</h1>
-<p>User memories are durable facts about a <em>user</em> — their name, preferences, goals,
-constraints — extracted from conversations and persisted so they carry across
-sessions. They are keyed by <code>user_id</code>, not by session.</p>
-<h2 id="enabling-user-memories">Enabling user memories</h2>
-<p>Set <code>enable_user_memories=True</code> and give the agent a <code>user_id</code> and a memory
-database:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buddy.agent</span><span class="w"> </span><span class="kn">import</span> <span class="n">Agent</span>
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buddy.memory</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentMemory</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buddy.memory.db.sqlite</span><span class="w"> </span><span class="kn">import</span> <span class="n">SqliteMemoryDb</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">agent</span> <span class="o">=</span> <span class="n">Agent</span><span class="p">(</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">memory</span><span class="o">=</span><span class="n">AgentMemory</span><span class="p">(</span><span class="n">db</span><span class="o">=</span><span class="n">SqliteMemoryDb</span><span class="p">(</span><span class="n">db_file</span><span class="o">=</span><span class="s2">&quot;memory.db&quot;</span><span class="p">)),</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">enable_user_memories</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">user_id</span><span class="o">=</span><span class="s2">&quot;dana@example.com&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="p">)</span>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="n">agent</span><span class="o">.</span><span class="n">print_response</span><span class="p">(</span><span class="s2">&quot;I&#39;m vegetarian and I live in Berlin.&quot;</span><span class="p">)</span>
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="c1"># later, even in a new session with the same user_id:</span>
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="n">agent</span><span class="o">.</span><span class="n">print_response</span><span class="p">(</span><span class="s2">&quot;Suggest a restaurant for dinner.&quot;</span><span class="p">)</span>
+<h1 id="token-efficiency">Token Efficiency</h1>
+<p>Buddy AI gives you several layered techniques to reduce token usage, API costs,
+and latency — from provider-native prompt caching to automatic context
+compression.  All techniques compose: you can enable any combination.</p>
+<hr />
+<h2 id="technique-1-prompt-caching">Technique 1 — Prompt Caching</h2>
+<p>The fastest, cheapest win.  See the dedicated <a href="../prompt-caching/">Prompt Caching</a>
+guide.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Works on both Claude and GPT-4o — one flag</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">agent</span> <span class="o">=</span> <span class="n">Agent</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">Claude</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s2">&quot;claude-opus-4-5&quot;</span><span class="p">),</span> <span class="n">cache_prompt</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </code></pre></div>
-<p>When enabled, <code>add_memory_references</code> defaults to <code>True</code>, so recalled memories
-are referenced in the agent's responses.</p>
-<div class="admonition warning">
-<p class="admonition-title">A database is required</p>
-<p>Memories are only stored when a <code>MemoryDb</code> is attached. Without one, the
-update step logs a warning and returns
-<code>"Please provide a db to store memories"</code>. See <a href="../storage/">Memory Storage</a>.</p>
-</div>
-<h2 id="how-memories-are-created">How memories are created</h2>
-<p>After a run, Buddy AI decides whether the user's message is worth remembering
-using a two-stage pipeline.</p>
-<h3 id="1-classification">1. Classification</h3>
-<p><code>MemoryClassifier</code> (<code>buddy.memory.classifier</code>) asks a model a yes/no question:
-does this message contain information worth remembering — personal facts, life
-events, preferences, goals? It is given the existing memories so it can avoid
-duplicates and respond <code>"no"</code> when nothing new is present.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">should_store</span> <span class="o">=</span> <span class="n">agent</span><span class="o">.</span><span class="n">memory</span><span class="o">.</span><span class="n">should_update_memory</span><span class="p">(</span><span class="s2">&quot;I&#39;m vegetarian&quot;</span><span class="p">)</span>  <span class="c1"># -&gt; True/False</span>
+<hr />
+<h2 id="technique-2-proxy-aware-caching">Technique 2 — Proxy-Aware Caching</h2>
+<p>When your company routes LLM traffic through a proxy (LiteLLM, OpenRouter,
+Azure AI Gateway), Buddy automatically injects the right cache headers so the
+proxy's own caching layer fires too — <strong>even for Claude models served through
+an OpenAI-compatible endpoint</strong>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buddy.models.openai</span><span class="w"> </span><span class="kn">import</span> <span class="n">OpenAIChat</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="c1"># Claude behind a LiteLLM proxy</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">model</span> <span class="o">=</span> <span class="n">OpenAIChat</span><span class="p">(</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="nb">id</span><span class="o">=</span><span class="s2">&quot;anthropic/claude-opus-4-5&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="n">base_url</span><span class="o">=</span><span class="s2">&quot;http://0.0.0.0:4000/v1&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    <span class="n">api_key</span><span class="o">=</span><span class="s2">&quot;sk-my-litellm-key&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    <span class="n">proxy_type</span><span class="o">=</span><span class="s2">&quot;litellm&quot;</span><span class="p">,</span>   <span class="c1"># injects {&quot;cache&quot;: {&quot;no-cache&quot;: False}}</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>    <span class="n">cache_prompt</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="p">)</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="c1"># Any model behind OpenRouter</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="n">model</span> <span class="o">=</span> <span class="n">OpenAIChat</span><span class="p">(</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>    <span class="nb">id</span><span class="o">=</span><span class="s2">&quot;anthropic/claude-opus-4-5&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>    <span class="n">base_url</span><span class="o">=</span><span class="s2">&quot;https://openrouter.ai/api/v1&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>    <span class="n">api_key</span><span class="o">=</span><span class="s2">&quot;sk-or-v1-...&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>    <span class="n">proxy_type</span><span class="o">=</span><span class="s2">&quot;openrouter&quot;</span><span class="p">,</span>  <span class="c1"># injects X-OpenRouter-Cache header</span>
+<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>    <span class="n">cache_prompt</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="p">)</span>
+<a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>
+<a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a><span class="c1"># Azure AI Management</span>
+<a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="n">model</span> <span class="o">=</span> <span class="n">OpenAIChat</span><span class="p">(</span>
+<a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a>    <span class="nb">id</span><span class="o">=</span><span class="s2">&quot;gpt-4o&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a>    <span class="n">base_url</span><span class="o">=</span><span class="s2">&quot;https://my-gateway.azure-api.net/openai&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a>    <span class="n">proxy_type</span><span class="o">=</span><span class="s2">&quot;azure&quot;</span><span class="p">,</span>     <span class="c1"># injects x-ms-cache-enabled header</span>
+<a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a>    <span class="n">cache_prompt</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a><span class="p">)</span>
 </code></pre></div>
-<h3 id="2-management">2. Management</h3>
-<p>If the classifier says yes, <code>MemoryManager</code> (<code>buddy.memory.manager</code>) is invoked.
-It exposes memory operations to the model as tools — <code>add_memory</code>,
-<code>update_memory</code>, <code>delete_memory</code>, and <code>clear_memory</code> — and writes the result to
-the <code>MemoryDb</code> for the given <code>user_id</code>.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Force-create a memory, bypassing the classifier:</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">agent</span><span class="o">.</span><span class="n">memory</span><span class="o">.</span><span class="n">update_memory</span><span class="p">(</span><span class="s2">&quot;Prefers vegetarian food&quot;</span><span class="p">,</span> <span class="n">force</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</code></pre></div>
-<p>Each stored item is a <code>Memory</code> (<code>buddy.memory.memory.Memory</code>):</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">Memory</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="n">memory</span><span class="p">:</span> <span class="nb">str</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="nb">id</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="n">topic</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="nb">input</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-</code></pre></div>
-<h2 id="how-memories-are-recalled">How memories are recalled</h2>
-<p><code>AgentMemory.load_user_memories()</code> reads memories back from the database for the
-configured <code>user_id</code>. The retrieval strategy is controlled by the <code>retrieval</code>
-field, a <code>MemoryRetrieval</code> enum:</p>
+<p><strong>Supported <code>proxy_type</code> values:</strong></p>
 <table>
 <thead>
 <tr>
-<th>Strategy</th>
-<th>Behaviour</th>
+<th>Value</th>
+<th>Cache mechanism</th>
+<th>Reference</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>last_n</code></td>
-<td>Most recent memories (default).</td>
+<td><code>"litellm"</code></td>
+<td>Redis / in-memory exact-match cache</td>
+<td><a href="https://docs.litellm.ai/docs/proxy/caching">LiteLLM caching docs</a></td>
 </tr>
 <tr>
-<td><code>first_n</code></td>
-<td>Oldest memories first.</td>
+<td><code>"openrouter"</code></td>
+<td>OpenRouter context caching</td>
+<td><a href="https://openrouter.ai/docs/context-caching">OpenRouter docs</a></td>
 </tr>
 <tr>
-<td><code>semantic</code></td>
-<td>Reserved — raises <code>NotImplementedError</code> (not yet supported).</td>
+<td><code>"azure"</code></td>
+<td>Azure API Management cache policy</td>
+<td>Azure APIM</td>
+</tr>
+<tr>
+<td><code>None</code> (default)</td>
+<td>Native OpenAI server-side cache</td>
+<td>Automatic</td>
 </tr>
 </tbody>
 </table>
-<p><code>num_memories</code> caps how many are loaded.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buddy.memory</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentMemory</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buddy.memory.memory</span><span class="w"> </span><span class="kn">import</span> <span class="n">MemoryRetrieval</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buddy.memory.db.sqlite</span><span class="w"> </span><span class="kn">import</span> <span class="n">SqliteMemoryDb</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="n">memory</span> <span class="o">=</span> <span class="n">AgentMemory</span><span class="p">(</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>    <span class="n">db</span><span class="o">=</span><span class="n">SqliteMemoryDb</span><span class="p">(</span><span class="n">db_file</span><span class="o">=</span><span class="s2">&quot;memory.db&quot;</span><span class="p">),</span>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="n">user_id</span><span class="o">=</span><span class="s2">&quot;dana@example.com&quot;</span><span class="p">,</span>
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>    <span class="n">retrieval</span><span class="o">=</span><span class="n">MemoryRetrieval</span><span class="o">.</span><span class="n">last_n</span><span class="p">,</span>
-<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>    <span class="n">num_memories</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
-<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="p">)</span>
+<blockquote>
+<p><strong>Direct Claude key?</strong> Use the <code>Claude</code> model directly — it sends explicit
+<code>cache_control</code> blocks to Anthropic and is more efficient than going through
+a proxy.</p>
+</blockquote>
+<hr />
+<h2 id="technique-3-token-budget-manager">Technique 3 — Token Budget Manager</h2>
+<p>Set a hard token ceiling on every request.  Buddy counts tokens <em>before</em>
+sending, warns you as you approach the limit, and automatically drops the
+oldest history turns to keep requests within budget.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buddy.agent</span><span class="w"> </span><span class="kn">import</span> <span class="n">Agent</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buddy.models.openai</span><span class="w"> </span><span class="kn">import</span> <span class="n">OpenAIChat</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buddy.models.token_budget</span><span class="w"> </span><span class="kn">import</span> <span class="n">TokenBudgetConfig</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">agent</span> <span class="o">=</span> <span class="n">Agent</span><span class="p">(</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="n">model</span><span class="o">=</span><span class="n">OpenAIChat</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s2">&quot;gpt-4o&quot;</span><span class="p">),</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="n">add_history_to_messages</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="n">num_history_runs</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>             <span class="c1"># keep lots of history...</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    <span class="n">token_budget</span><span class="o">=</span><span class="n">TokenBudgetConfig</span><span class="p">(</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>        <span class="n">max_input_tokens</span><span class="o">=</span><span class="mi">100_000</span><span class="p">,</span>    <span class="c1"># ...but never exceed this</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>        <span class="n">target_input_tokens</span><span class="o">=</span><span class="mi">80_000</span><span class="p">,</span>  <span class="c1"># trim until we&#39;re here (default: 90 %)</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>        <span class="n">auto_compress</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>          <span class="c1"># drop oldest turns automatically</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>        <span class="n">warn_at</span><span class="o">=</span><span class="mf">0.85</span><span class="p">,</span>                <span class="c1"># log a warning at 85 % usage</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>        <span class="n">count_method</span><span class="o">=</span><span class="s2">&quot;approx&quot;</span><span class="p">,</span>       <span class="c1"># &quot;approx&quot; (fast) or &quot;tiktoken&quot; (exact)</span>
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>        <span class="n">max_tool_result_tokens</span><span class="o">=</span><span class="mi">2_000</span><span class="p">,</span><span class="c1"># also trim oversized tool outputs</span>
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>    <span class="p">),</span>
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="p">)</span>
 </code></pre></div>
-<h2 id="agentic-vs-passive-memory">Agentic vs passive memory</h2>
-<ul>
-<li><code>enable_user_memories=True</code> — passive: memories are extracted after runs via
-  the classifier/manager.</li>
-<li><code>enable_agentic_memory=True</code> — agentic: the agent manages memories as part of
-  its own reasoning (see <a href="../agent-memory/">Agent Memory</a>).</li>
-</ul>
-<div class="admonition tip">
-<p class="admonition-title">Custom models for memory</p>
-<p>Both <code>MemoryClassifier</code> and <code>MemoryManager</code> accept a <code>model</code>. If none is
-given they default to <code>OpenAIChat(id="gpt-4o")</code>; pass your own to control
-cost and provider.</p>
-</div>
-<p>See <a href="../storage/">Memory Storage</a> to choose a backend, and
-<a href="../overview/">Memory Overview</a> for how this fits the broader picture.</p>
+<h3 id="reading-budget-metrics">Reading budget metrics</h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">response</span> <span class="o">=</span> <span class="n">agent</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="s2">&quot;...&quot;</span><span class="p">)</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">budget</span> <span class="o">=</span> <span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">extra_data</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;token_budget&quot;</span><span class="p">,</span> <span class="p">{})</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Estimated input tokens:&quot;</span><span class="p">,</span> <span class="n">budget</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;estimated_tokens&quot;</span><span class="p">))</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;After compression:     &quot;</span><span class="p">,</span> <span class="n">budget</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;tokens_after&quot;</span><span class="p">))</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Turns dropped:         &quot;</span><span class="p">,</span> <span class="n">budget</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;turns_dropped&quot;</span><span class="p">))</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Tokens trimmed:        &quot;</span><span class="p">,</span> <span class="n">budget</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;tokens_trimmed&quot;</span><span class="p">))</span>
+</code></pre></div>
+<h3 id="tokenbudgetconfig-reference"><code>TokenBudgetConfig</code> reference</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>max_input_tokens</code></td>
+<td><code>100_000</code></td>
+<td>Hard ceiling on input tokens per request</td>
+</tr>
+<tr>
+<td><code>target_input_tokens</code></td>
+<td>90 % of max</td>
+<td>Compress history down to this level</td>
+</tr>
+<tr>
+<td><code>auto_compress</code></td>
+<td><code>True</code></td>
+<td>Drop oldest history turns automatically</td>
+</tr>
+<tr>
+<td><code>warn_at</code></td>
+<td><code>0.85</code></td>
+<td>Warn fraction (0–1); <code>None</code> to silence</td>
+</tr>
+<tr>
+<td><code>count_method</code></td>
+<td><code>"approx"</code></td>
+<td><code>"approx"</code> (len//4) or <code>"tiktoken"</code></td>
+</tr>
+<tr>
+<td><code>max_tool_result_tokens</code></td>
+<td><code>2_000</code></td>
+<td>Cap per tool result; <code>None</code> to disable</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="technique-4-automatic-tool-result-trimming">Technique 4 — Automatic Tool-Result Trimming</h2>
+<p>Long tool outputs (web search results, file reads, API responses) can cost
+thousands of tokens per call.  When a <code>TokenBudgetConfig</code> is set, Buddy trims
+any tool result that exceeds <code>max_tool_result_tokens</code> <em>before</em> appending it to
+the message list, and adds a brief notice so the model knows the output was cut.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Aggressive trimming — useful for search/scrape tools</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">token_budget</span><span class="o">=</span><span class="n">TokenBudgetConfig</span><span class="p">(</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    <span class="n">max_input_tokens</span><span class="o">=</span><span class="mi">128_000</span><span class="p">,</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="n">max_tool_result_tokens</span><span class="o">=</span><span class="mi">1_000</span><span class="p">,</span>   <span class="c1"># ~4 KB per tool call</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="p">)</span>
+</code></pre></div>
+<p>Tool results that fit under the limit are passed through unchanged.</p>
+<hr />
+<h2 id="technique-5-history-truncation-num_history_runs">Technique 5 — History Truncation (<code>num_history_runs</code>)</h2>
+<p>The simplest dial: <code>num_history_runs</code> (default <code>3</code>) controls how many past
+conversation turns are appended to each prompt.  Combine with token budget for
+best results:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">agent</span> <span class="o">=</span> <span class="n">Agent</span><span class="p">(</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>    <span class="n">model</span><span class="o">=...</span><span class="p">,</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>    <span class="n">add_history_to_messages</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    <span class="n">num_history_runs</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>              <span class="c1"># include last 5 turns</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>    <span class="n">token_budget</span><span class="o">=</span><span class="n">TokenBudgetConfig</span><span class="p">(</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>        <span class="n">max_input_tokens</span><span class="o">=</span><span class="mi">60_000</span><span class="p">,</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>        <span class="n">auto_compress</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>          <span class="c1"># drop turns if 5 is still too many</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>    <span class="p">),</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="p">)</span>
+</code></pre></div>
+<hr />
+<h2 id="technique-6-session-summaries-instead-of-raw-history">Technique 6 — Session Summaries (instead of raw history)</h2>
+<p>For very long sessions, Buddy can summarize past context instead of including
+raw messages.  This keeps the history compact while preserving meaning:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">agent</span> <span class="o">=</span> <span class="n">Agent</span><span class="p">(</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>    <span class="n">model</span><span class="o">=...</span><span class="p">,</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>    <span class="n">enable_session_summaries</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>   <span class="c1"># generate a rolling summary</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>    <span class="n">add_history_to_messages</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>   <span class="c1"># don&#39;t include raw turns</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>    <span class="n">add_session_summary_references</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>  <span class="c1"># inject the summary instead</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="p">)</span>
+</code></pre></div>
+<hr />
+<h2 id="combining-all-techniques">Combining all techniques</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buddy.agent</span><span class="w"> </span><span class="kn">import</span> <span class="n">Agent</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buddy.models.anthropic</span><span class="w"> </span><span class="kn">import</span> <span class="n">Claude</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">buddy.models.token_budget</span><span class="w"> </span><span class="kn">import</span> <span class="n">TokenBudgetConfig</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="n">agent</span> <span class="o">=</span> <span class="n">Agent</span><span class="p">(</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>    <span class="n">model</span><span class="o">=</span><span class="n">Claude</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s2">&quot;claude-opus-4-5&quot;</span><span class="p">),</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>    <span class="c1"># --- Prompt caching (saves ~90 % on repeated system/tool prefix) ---</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>    <span class="n">cache_prompt</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>    <span class="c1"># --- History ---</span>
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>    <span class="n">add_history_to_messages</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>    <span class="n">num_history_runs</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>
+<a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a>    <span class="c1"># --- Token budget (auto-compress + tool trimming) ---</span>
+<a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>    <span class="n">token_budget</span><span class="o">=</span><span class="n">TokenBudgetConfig</span><span class="p">(</span>
+<a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a>        <span class="n">max_input_tokens</span><span class="o">=</span><span class="mi">180_000</span><span class="p">,</span>    <span class="c1"># Claude&#39;s 200k window - output reserve</span>
+<a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a>        <span class="n">target_input_tokens</span><span class="o">=</span><span class="mi">140_000</span><span class="p">,</span>
+<a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a>        <span class="n">auto_compress</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a>        <span class="n">warn_at</span><span class="o">=</span><span class="mf">0.80</span><span class="p">,</span>
+<a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a>        <span class="n">max_tool_result_tokens</span><span class="o">=</span><span class="mi">1_500</span><span class="p">,</span>
+<a id="__codelineno-7-22" name="__codelineno-7-22" href="#__codelineno-7-22"></a>    <span class="p">),</span>
+<a id="__codelineno-7-23" name="__codelineno-7-23" href="#__codelineno-7-23"></a><span class="p">)</span>
+</code></pre></div>
+<hr />
+<h2 id="proxy-caching-decision-tree">Proxy + Caching decision tree</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>Using Claude?
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>├── Direct Anthropic key
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>│   └── Use Claude model + cache_prompt=True  ← BEST: explicit cache_control
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>└── Through a proxy
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>    ├── LiteLLM  → OpenAIChat(proxy_type=&quot;litellm&quot;, cache_prompt=True)
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>    ├── OpenRouter → OpenAIChat(proxy_type=&quot;openrouter&quot;, cache_prompt=True)
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>    └── Azure    → OpenAIChat(proxy_type=&quot;azure&quot;, cache_prompt=True)
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>Using GPT-4o?
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>└── OpenAI server-side auto-caching (no flag needed)
+<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>    └── cache_prompt=True surfaces metrics in RunResponse
+</code></pre></div>
+<hr />
+<h2 id="cost-impact-at-a-glance">Cost impact at a glance</h2>
+<table>
+<thead>
+<tr>
+<th>Technique</th>
+<th>Typical saving</th>
+<th>Best for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Prompt caching (Anthropic)</td>
+<td>60–90 % of prompt cost</td>
+<td>Long system prompts, big tool lists</td>
+</tr>
+<tr>
+<td>Prompt caching (OpenAI auto)</td>
+<td>50 % of cached prefix</td>
+<td>Repeated prompts / same user</td>
+</tr>
+<tr>
+<td>Proxy caching</td>
+<td>Full response reuse</td>
+<td>Identical queries</td>
+</tr>
+<tr>
+<td>Token budget compression</td>
+<td>Prevents runaway costs</td>
+<td>Long multi-turn sessions</td>
+</tr>
+<tr>
+<td>Tool-result trimming</td>
+<td>30–80 % of tool tokens</td>
+<td>Search, scraping, large API responses</td>
+</tr>
+<tr>
+<td>Session summaries</td>
+<td>70–95 % of history tokens</td>
+<td>Very long (50+ turn) sessions</td>
+</tr>
+</tbody>
+</table>
 
 
 

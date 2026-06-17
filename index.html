@@ -3263,6 +3263,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="advanced/token-efficiency/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Token Efficiency
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -4765,10 +4793,10 @@
 <div class="grid cards">
 <ul>
 <li>
-<p><span class="twemoji lg middle"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m19 8-4 4h3a6 6 0 0 1-6 6c-1 0-1.97-.25-2.8-.7l-1.46 1.46A7.93 7.93 0 0 0 12 20a8 8 0 0 0 8-8h3M6 12a6 6 0 0 1 6-6c1 0 1.97.25 2.8.7l1.46-1.46A7.93 7.93 0 0 0 12 4a8 8 0 0 0-8 8H1l4 4 4-4"/></svg></span> <strong>Built-in Prompt Caching</strong></p>
+<p><span class="twemoji lg middle"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m19 8-4 4h3a6 6 0 0 1-6 6c-1 0-1.97-.25-2.8-.7l-1.46 1.46A7.93 7.93 0 0 0 12 20a8 8 0 0 0 8-8h3M6 12a6 6 0 0 1 6-6c1 0 1.97.25 2.8.7l1.46-1.46A7.93 7.93 0 0 0 12 4a8 8 0 0 0-8 8H1l4 4 4-4"/></svg></span> <strong>Token Efficiency Suite</strong></p>
 <hr />
-<p>Provider-native caching with <strong>one flag</strong>.  Anthropic: <code>cache_control</code> breakpoints on system, tools, and history.  OpenAI: automatic — cache-hit metrics surface in <code>RunResponse</code>. Fine-grained control via <code>PromptCacheConfig</code>.</p>
-<p><a href="advanced/prompt-caching/"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13.22 19.03a.75.75 0 0 1 0-1.06L18.19 13H3.75a.75.75 0 0 1 0-1.5h14.44l-4.97-4.97a.749.749 0 0 1 .326-1.275.75.75 0 0 1 .734.215l6.25 6.25a.75.75 0 0 1 0 1.06l-6.25 6.25a.75.75 0 0 1-1.06 0"/></svg></span> Prompt Caching guide</a></p>
+<p><strong>Six layered techniques</strong> to slash costs and latency: prompt caching (Anthropic &amp; OpenAI), <strong>proxy-aware caching</strong> (LiteLLM, OpenRouter, Azure), <strong>Token Budget Manager</strong> (auto-compress history + cap tool outputs), session summaries. One flag per technique — compose freely.</p>
+<p><a href="advanced/token-efficiency/"><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13.22 19.03a.75.75 0 0 1 0-1.06L18.19 13H3.75a.75.75 0 0 1 0-1.5h14.44l-4.97-4.97a.749.749 0 0 1 .326-1.275.75.75 0 0 1 .734.215l6.25 6.25a.75.75 0 0 1 0 1.06l-6.25 6.25a.75.75 0 0 1-1.06 0"/></svg></span> Token Efficiency guide</a> · <a href="advanced/prompt-caching/">Prompt Caching</a></p>
 </li>
 <li>
 <p><span class="twemoji lg middle"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 5v14H4V5zm0-2H4c-1.11 0-2 .89-2 2v14c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V5c0-1.11-.89-2-2-2m-2 12H6v2h12zm-8-8H6v6h4zm2 2h6V7h-6zm6 2h-6v2h6z"/></svg></span> <strong>Release article — Competency Engine</strong></p>
@@ -5006,9 +5034,9 @@
 <td>Template-based, execution engine</td>
 </tr>
 <tr>
-<td><strong><a href="advanced/prompt-caching/">Prompt Caching</a></strong></td>
-<td>Provider-native caching</td>
-<td><code>cache_prompt=True</code>; Anthropic breakpoints, OpenAI automatic</td>
+<td><strong><a href="advanced/token-efficiency/">Token Efficiency</a></strong></td>
+<td>6-layer cost reduction</td>
+<td>Prompt cache, proxy cache, token budget, tool trimming, history compression</td>
 </tr>
 <tr>
 <td><strong><a href="integrations/overview/">Integrations</a></strong></td>
