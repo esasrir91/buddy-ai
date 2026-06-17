@@ -214,9 +214,10 @@ export function sendChatMessage(employeeId: string, message: string) {
 
 export function createChatWebSocket(employeeId: string): WebSocket {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  const host = import.meta.env.VITE_API_HOST ?? window.location.hostname
-  const port = import.meta.env.VITE_API_PORT ?? '8888'
-  return new WebSocket(`${protocol}//${host}:${port}/api/pulse/${employeeId}/chat/stream`)
+  const host = import.meta.env.VITE_API_HOST
+    ? `${import.meta.env.VITE_API_HOST}:${import.meta.env.VITE_API_PORT ?? '8888'}`
+    : window.location.host
+  return new WebSocket(`${protocol}//${host}/api/pulse/${employeeId}/chat/stream`)
 }
 
 // ---------------------------------------------------------------------------

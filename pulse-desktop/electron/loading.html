@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Buddy AI</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0f172a;
+      color: #f1f5f9;
+      font-family: system-ui, -apple-system, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      user-select: none;
+    }
+    .card {
+      text-align: center;
+      max-width: 420px;
+      padding: 48px 36px;
+    }
+    .pulse-dot {
+      width: 18px;
+      height: 18px;
+      background: #3b82f6;
+      border-radius: 50%;
+      margin: 0 auto 28px;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(59,130,246,0.6); }
+      50% { box-shadow: 0 0 0 14px rgba(59,130,246,0); }
+    }
+    h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 8px; }
+    .subtitle { color: #94a3b8; margin-bottom: 24px; line-height: 1.5; }
+    .status { color: #64748b; font-size: 0.9rem; min-height: 1.4em; }
+    .error {
+      display: none;
+      margin-top: 24px;
+      padding: 14px 16px;
+      background: #450a0a;
+      border: 1px solid #991b1b;
+      border-radius: 10px;
+      color: #fecaca;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      text-align: left;
+    }
+    code {
+      background: #1e293b;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: ui-monospace, monospace;
+      color: #7dd3fc;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="pulse-dot"></div>
+    <h1>Buddy AI</h1>
+    <p class="subtitle">Starting your autonomous assistant…</p>
+    <p class="status" id="status">Launching PULSE backend</p>
+    <div class="error" id="error"></div>
+  </div>
+  <script>
+    window.addEventListener('message', (event) => {
+      if (event.data?.type === 'buddy-status') {
+        document.getElementById('status').textContent = event.data.message
+      }
+      if (event.data?.type === 'buddy-error') {
+        document.getElementById('error').style.display = 'block'
+        document.getElementById('error').innerHTML = event.data.message
+        document.querySelector('.pulse-dot').style.background = '#ef4444'
+        document.querySelector('.pulse-dot').style.animation = 'none'
+      }
+    })
+  </script>
+</body>
+</html>

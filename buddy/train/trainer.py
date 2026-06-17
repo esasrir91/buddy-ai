@@ -23,6 +23,7 @@ try:
         DataCollatorForLanguageModeling,
         EarlyStoppingCallback,
         Trainer,
+        TrainerCallback,
         TrainingArguments,
     )
 
@@ -33,6 +34,37 @@ except ImportError:
 from buddy.train.data_processor import DataProcessor, ProcessedData
 from buddy.train.model_manager import ModelManager
 from buddy.utils.log import logger
+
+
+if transformers_available:
+
+    class ProgressReportingCallback(TrainerCallback):
+        """Reports training progress to an optional callback (used by the Fire UI)."""
+
+        def __init__(self, callback):
+            self.callback = callback
+
+        def on_log(self, args, state, control, logs=None, **kwargs):
+            if not self.callback or not logs:
+                return
+            max_steps = max(getattr(state, "max_steps", 0) or 1, 1)
+            progress = 0.25 + (state.global_step / max_steps) * 0.65
+            self.callback(
+                {
+                    "step": f"step {state.global_step}/{max_steps}",
+                    "progress": progress,
+                    "logs": logs,
+                    "epoch": getattr(state, "epoch", None),
+                }
+            )
+
+        def on_epoch_end(self, args, state, control, **kwargs):
+            if not self.callback:
+                return
+            total_epochs = args.num_train_epochs
+            epoch = int(state.epoch) if state.epoch else 0
+            progress = 0.25 + (epoch / max(total_epochs, 1)) * 0.65
+            self.callback({"step": f"epoch {epoch}/{int(total_epochs)}", "progress": progress})
 
 
 class ModelTrainer:
@@ -131,6 +163,7 @@ class ModelTrainer:
             default_config.update(config)
 
         config = default_config
+        self._progress_callback = config.pop("progress_callback", None)
 
         try:
             # Step 1: Load base model and tokenizer
@@ -289,6 +322,10 @@ class ModelTrainer:
         callbacks = []
         if eval_dataset:
             callbacks.append(EarlyStoppingCallback(early_stopping_patience=3))
+
+        progress_callback = getattr(self, "_progress_callback", None)
+        if progress_callback and transformers_available:
+            callbacks.append(ProgressReportingCallback(progress_callback))
 
         # Initialize trainer
         self.trainer = Trainer(

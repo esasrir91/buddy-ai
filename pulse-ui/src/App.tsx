@@ -15,6 +15,10 @@ import KnowledgeExplorer from './pages/KnowledgeExplorer'
 import Settings from './pages/Settings'
 import Workspace from './pages/Workspace'
 import Memory from './pages/Memory'
+import TrainDashboard from './pages/TrainDashboard'
+import TrainWizard from './pages/TrainWizard'
+import TrainMonitor from './pages/TrainMonitor'
+import TrainPlayground from './pages/TrainPlayground'
 
 function RequireEmployee({ children }: { children: React.ReactNode }) {
   const isOnboarded = usePulseStore((s) => s.isOnboarded)
@@ -106,6 +110,10 @@ export default function App() {
           <Route path="/memory" element={<Memory />} />
           <Route path="/chat" element={<Chat />} />
           <Route path="/knowledge" element={<KnowledgeExplorer />} />
+          <Route path="/train" element={<TrainDashboard />} />
+          <Route path="/train/new" element={<TrainWizard />} />
+          <Route path="/train/jobs/:jobId" element={<TrainMonitor />} />
+          <Route path="/train/playground" element={<TrainPlayground />} />
           <Route path="/settings" element={<Settings />} />
         </Route>
 

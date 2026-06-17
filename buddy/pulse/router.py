@@ -1417,6 +1417,12 @@ async def suggest_tasks(employee_id: str) -> Dict[str, Any]:
     return {"suggestions": suggestions[:3]}
 
 
+@router.get("/health")
+async def health() -> Dict[str, str]:
+    """Lightweight health check for desktop app startup polling."""
+    return {"status": "ok", "service": "pulse"}
+
+
 @router.get("/settings/llm")
 async def get_llm_settings() -> Dict[str, Any]:
     """Return current LLM configuration (key is masked)."""

@@ -23,6 +23,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 from buddy.pulse.router import router
+from buddy.train.router import router as train_router
 
 
 class PulseApp:
@@ -67,6 +68,7 @@ class PulseApp:
 
         # Mount PULSE API router
         self.app.include_router(router)
+        self.app.include_router(train_router)
 
         # Restore persisted employees on startup and launch autonomous worker
         from buddy.pulse.router import _load_employees, start_auto_worker

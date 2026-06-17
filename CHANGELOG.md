@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [2.2.0] — 2026-06-17
+
+### Added
+- **Competency Engine (`buddy.eval.competency`)** — a balance-aware competency score for agents and teams. Decomposes integrated competency into a *vertical* (per-domain depth), *crosswise* (dependency-weighted cross-domain interaction), and *deficit* (gap from a target base) component, and exposes a normalized competency index plus per-domain deficit, centrality, and priority.
+  - `CompetencyEval` / `CompetencyResult` — score, breakdown, and rich summary/table output (consistent with the accuracy/reliability/performance evals).
+  - `DeficitDrivenController` — turns per-domain priorities into ranked learning recommendations.
+  - `AutonomousCompetencyLoop` — a background loop that reads live signals, scores competency, and automatically enqueues training jobs for the highest-priority gaps until a target index is reached.
+- **Closed-loop training hook** — `TrainingJobManager.enqueue_from_competency()` starts fine-tuning jobs for the weakest domains, connecting the score to the existing training pipeline.
+- **Runtime competency routing (`buddy.eval.competency_runtime`)** — applies the same signal at task-execution time:
+  - `CompetencyTracker` — live per-domain competency updated from task outcomes via EMA; its `signal()` callables feed straight back into the autonomous loop.
+  - `LLMDomainClassifier` (with keyword fallback) — infers a task's domain.
+  - `CompetencyRouter` — routes each task to the most competent member, selects an execution policy (proceed / review / escalate) and model tier (standard / strong), and records the outcome back into the tracker.
+- **`EvalType.COMPETENCY`** — competency runs are recorded through the existing eval logging path.
+- **Docs & example** — new `docs/advanced/competency.md` page and `examples/12_competency_engine.py`.
+
+### Notes
+- The competency index is an interpretable aggregation/orchestration layer; it does not by itself change model capability. With a non-trivial domain-dependency graph the crosswise term becomes a genuine, non-separable interaction signal.
+
+---
+
 ## [2.1.3] — 2026-06-14
 
 ### Fixed

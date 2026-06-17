@@ -74,6 +74,7 @@ nav:
     - Planning System: advanced/planning.md
     - Security Framework: advanced/security.md
     - Evaluation System: advanced/evaluation.md
+    - Competency Engine: advanced/competency.md
   - Training & Fine-tuning:
     - Training Overview: training/overview.md
     - Data Preparation: training/data-prep.md

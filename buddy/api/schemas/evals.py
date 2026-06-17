@@ -8,6 +8,7 @@ class EvalType(str, Enum):
     ACCURACY = "accuracy"
     PERFORMANCE = "performance"
     RELIABILITY = "reliability"
+    COMPETENCY = "competency"
 
 
 class EvalRunCreate(BaseModel):

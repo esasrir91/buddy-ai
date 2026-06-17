@@ -152,6 +152,18 @@ print(priya.report_status(task.task_id).message)
 | **Knowledge Explorer** | Search across everything PULSE has learned |
 | **Settings** | Configure AI model, API keys, and employee profile |
 
+### Desktop app (Windows & Mac)
+
+Run PULSE as a native desktop app with system tray support — the autonomous worker keeps running when you close the window.
+
+```bash
+pip install buddy-ai[all]
+cd pulse-ui && npm install && npm run build
+cd ../pulse-desktop && npm install && npm start
+```
+
+Build installers: `npm run build:win` or `npm run build:mac`. See [pulse-desktop/README.md](pulse-desktop/README.md).
+
 ---
 
 ## Core Features
@@ -270,6 +282,9 @@ buddy pulse status            # Module health check
 
 # Training
 buddy train /data --name my-model
+
+# Desktop app (Windows & Mac)
+cd pulse-desktop && npm install && npm start
 ```
 
 ---
@@ -292,6 +307,17 @@ COPY . /app
 WORKDIR /app
 CMD ["buddy", "pulse", "start", "--host", "0.0.0.0"]
 ```
+
+---
+
+## What's New in v2.2.0
+
+- **Competency Engine** — a balance-aware competency score (`buddy.eval.competency`) for agents and teams, decomposing competency into *vertical* (per-domain depth), *crosswise* (dependency-weighted cross-domain interaction), and *deficit* (gap to mastery) components.
+- **Autonomous learning loop** — `AutonomousCompetencyLoop` reads live signals, scores competency, and automatically enqueues training jobs for the weakest, highest-leverage gaps.
+- **Runtime competency routing** — `buddy.eval.competency_runtime` infers a task's domain, routes it to the most competent member, adapts the execution policy/model tier, and feeds the outcome back into a live tracker.
+- **Docs & example** — see [Competency Engine](https://esasrir91.github.io/buddy-ai/advanced/competency/) and `examples/12_competency_engine.py`.
+
+[Full CHANGELOG →](https://github.com/esasrir91/buddy-ai/blob/main/CHANGELOG.md)
 
 ---
 
