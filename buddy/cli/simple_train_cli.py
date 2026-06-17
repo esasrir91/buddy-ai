@@ -14,24 +14,20 @@ from typing import Optional
 
 import typer
 
-try:
-    from buddy.train import delete_model, list_available_models, list_models, test_model, train_model
-except Exception:
-    # Handle case where buddy.train is not available
-    def train_model(*args, **kwargs):
-        raise ImportError("buddy.train module not available")
 
-    def test_model(*args, **kwargs):
-        raise ImportError("buddy.train module not available")
-
-    def list_models(*args, **kwargs):
-        raise ImportError("buddy.train module not available")
-
-    def delete_model(*args, **kwargs):
-        raise ImportError("buddy.train module not available")
-
-    def list_available_models(*args, **kwargs):
-        raise ImportError("buddy.train module not available")
+def _get_train_fn(name: str):
+    """Lazily import a function from buddy.train (avoids slow startup)."""
+    try:
+        import importlib
+        mod = importlib.import_module("buddy.train")
+        return getattr(mod, name)
+    except Exception:
+        def _missing(*args, **kwargs):
+            raise ImportError(
+                "buddy.train module not available. "
+                "Run `buddy train install-deps` to install requirements."
+            )
+        return _missing
 
 
 app = typer.Typer(help="🚀 Train your own local LLMs with custom data - SUPER SIMPLE!")
@@ -72,6 +68,7 @@ def train(
         typer.echo(f"🚀 Training model '{name}' on data from: {data_path}")
         typer.echo("📋 We'll handle everything automatically!")
 
+        train_model = _get_train_fn("train_model")
         model_path = train_model(
             data_path=data_path, name=name, model=model, epochs=epochs, description=description, force=force
         )
@@ -99,6 +96,7 @@ def test(
     try:
         typer.echo(f"🧪 Testing model '{name}'...")
 
+        test_model = _get_train_fn("test_model")
         response = test_model(name, prompt, max_length)
         typer.echo("✨ Test completed!")
 
@@ -116,6 +114,7 @@ def list():
         buddy train list
     """
     try:
+        list_models = _get_train_fn("list_models")
         models = list_models()
 
         if not models:
@@ -155,6 +154,7 @@ def delete(
                 typer.echo("❌ Cancelled")
                 return
 
+        delete_model = _get_train_fn("delete_model")
         success = delete_model(name)
         if success:
             typer.echo(f"✨ Model '{name}' deleted successfully!")
@@ -200,6 +200,7 @@ def install_deps():
 def models():
     """List all available open source models for training"""
     try:
+        list_available_models = _get_train_fn("list_available_models")
         list_available_models()
     except Exception as e:
         typer.echo(f"❌ Error listing models: {e}", err=True)
