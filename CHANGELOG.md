@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [2.2.1] — 2026-06-17
+
+### Fixed
+- **CLI startup performance** — `import buddy` dropped from 8 s to 7 ms by replacing eager heavy
+  imports in `buddy/__init__.py` with a lazy `__getattr__` mechanism and filesystem-based feature
+  flag detection (avoids a circular `find_spec` stall that cost 7 s on first call).
+- **`buddy train` startup** — `buddy.train` (transformers/torch) is now imported lazily inside
+  each command callback instead of at module level, saving ~2 s on every CLI invocation.
+- **`buddy ws create`** — Command was failing with a git-clone error because template repos
+  (`github.com/buddy-ai/agent-app-aws`) don't exist. Replaced with bundled local templates
+  (`buddy/workspace/templates/`) that are copied without any network access. Custom repos can
+  still be cloned via the `--url` flag.
+- **Bundled starter templates** — Added `agent-app` (conversational agent) and `agent-api`
+  (FastAPI REST agent) templates shipped inside the package so `buddy ws create` works offline.
+
+---
+
 ## [2.2.0] — 2026-06-17
 
 ### Added
