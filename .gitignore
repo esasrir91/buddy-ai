@@ -61,8 +61,8 @@ chroma_db/
 lancedb/
 qdrant_data/
 
-# Model weights / training outputs
-models/
+# Model weights / training outputs (top-level only — buddy/models/ is source code)
+/models/
 checkpoints/
 runs/
 *.safetensors

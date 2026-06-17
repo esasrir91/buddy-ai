@@ -288,6 +288,15 @@ class Agent:
     # Save the response to a file
     save_response_to_file: Optional[str] = None
 
+    # --- Prompt Caching ---
+    # When True, the underlying model's prompt-caching support is activated:
+    # * Anthropic (Claude): injects cache_control on system prompt, tools list,
+    #   and stable conversation history — reducing cost and latency on long
+    #   multi-turn conversations.
+    # * OpenAI: server-side caching is automatic (no flag needed), but enabling
+    #   this surfaces cache hit/miss token counts in RunResponse metrics.
+    cache_prompt: bool = False
+
     # --- Agent Streaming ---
     # Stream the response from the Agent
     stream: Optional[bool] = None
@@ -423,6 +432,7 @@ class Agent:
         structured_outputs: Optional[bool] = None,
         use_json_mode: bool = False,
         save_response_to_file: Optional[str] = None,
+        cache_prompt: bool = False,
         stream: Optional[bool] = None,
         stream_intermediate_steps: bool = False,
         store_events: bool = False,
@@ -530,6 +540,7 @@ class Agent:
 
         self.use_json_mode = use_json_mode
         self.save_response_to_file = save_response_to_file
+        self.cache_prompt = cache_prompt
 
         self.stream = stream
         self.stream_intermediate_steps = stream_intermediate_steps
@@ -638,6 +649,16 @@ class Agent:
 
         if self.num_history_responses is not None:
             self.num_history_runs = self.num_history_responses
+
+        # Propagate cache_prompt to the model so the provider can activate
+        # its native caching mechanism (e.g. Anthropic cache_control blocks).
+        if self.cache_prompt and self.model is not None and not self.model.cache_prompt:
+            self.model.cache_prompt = True
+            # Trigger the model's __post_init__ logic to build prompt_cache_config
+            if self.model.prompt_cache_config is None:
+                from buddy.models.cache import PromptCacheConfig
+
+                self.model.prompt_cache_config = PromptCacheConfig(enabled=True)
 
     def reset_session(self) -> None:
         self.session_state = None

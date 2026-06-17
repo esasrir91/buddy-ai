@@ -25,6 +25,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   - LangGraph: `BuddyNode` (Buddy agent/team as a graph node), `add_buddy_node`, `build_sequential_graph`, `build_default_state`, and `make_competency_edge` (Competency Engine routing as a conditional edge).
   - `buddy.LANGCHAIN_AVAILABLE` / `buddy.LANGGRAPH_AVAILABLE` flags, new `[langchain]` and `[langgraph]` extras.
 - **Docs & examples** — new `docs/advanced/competency.md`, `docs/integrations/` pages, `examples/12_competency_engine.py`, and `examples/13_langchain_langgraph.py`.
+- **Built-in prompt caching (`cache_prompt`)** — provider-native prompt caching activated with a single flag on `Agent` or any `Model` subclass:
+  - **Anthropic (Claude)**: injects `cache_control` breakpoints on the system prompt, tools list, and stable conversation history prefix. Supports per-segment control and 5-minute or 1-hour TTL.
+  - **OpenAI (GPT-4o+)**: server-side automatic caching; enabling `cache_prompt=True` surfaces `cached_tokens` / `cache_write_tokens` in `RunResponse.metrics` and `session_metrics`.
+  - `PromptCacheConfig` dataclass (`buddy.models.cache`) for fine-grained control.
+  - `inject_anthropic_cache_breakpoints()` helper for custom usage.
+  - `cache_tools` flag on `Claude` for independent tools-list caching.
+  - Full streaming support — breakpoints applied in `invoke_stream` / `ainvoke_stream`.
+  - `Agent.cache_prompt: bool = False` constructor param, auto-propagated to the model.
+  - New `docs/advanced/prompt-caching.md` added to MkDocs nav.
 
 ### Notes
 - The competency index is an interpretable aggregation/orchestration layer; it does not by itself change model capability. With a non-trivial domain-dependency graph the crosswise term becomes a genuine, non-separable interaction signal.

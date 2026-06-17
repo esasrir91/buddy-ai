@@ -330,7 +330,8 @@ CMD ["buddy", "pulse", "start", "--host", "0.0.0.0"]
 - **Autonomous learning loop** — `AutonomousCompetencyLoop` reads live signals, scores competency, and automatically enqueues training jobs for the weakest, highest-leverage gaps.
 - **Runtime competency routing** — `buddy.eval.competency_runtime` infers a task's domain, routes it to the most competent member, adapts the execution policy/model tier, and feeds the outcome back into a live tracker.
 - **LangChain & LangGraph integrations** — `buddy.integrations` adds dependency-light adapters: use any Buddy model as a LangChain `BaseChatModel` (`BuddyChatModel`), expose Buddy agents as LangChain tools (`BuddyAgentTool`), convert tools/messages both ways, drop Buddy agents into a LangGraph `StateGraph` (`BuddyNode`, `build_sequential_graph`), and route between members with the Competency Engine (`make_competency_edge`).
-- **Docs & examples** — see [Competency Engine](https://esasrir91.github.io/buddy-ai/advanced/competency/), [Integrations](https://esasrir91.github.io/buddy-ai/integrations/overview/), `examples/12_competency_engine.py`, and `examples/13_langchain_langgraph.py`.
+- **Built-in prompt caching** — set `cache_prompt=True` on any `Agent` or `Model` to activate provider-native caching. Anthropic automatically receives `cache_control` breakpoints on the system prompt, tool list, and conversation history; OpenAI surfaces server-side cache hit/miss token counts in `RunResponse.metrics`. Fine-grained control via `PromptCacheConfig`.
+- **Docs & examples** — see [Competency Engine](https://esasrir91.github.io/buddy-ai/advanced/competency/), [Integrations](https://esasrir91.github.io/buddy-ai/integrations/overview/), [Prompt Caching](https://esasrir91.github.io/buddy-ai/advanced/prompt-caching/), `examples/12_competency_engine.py`, and `examples/13_langchain_langgraph.py`.
 
 [Full CHANGELOG →](https://github.com/esasrir91/buddy-ai/blob/main/CHANGELOG.md)
 
