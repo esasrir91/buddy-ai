@@ -223,18 +223,23 @@ def setup_workspace(ws_root_path: Path) -> Optional[WorkspaceConfig]:
     if ws_config is None:
         # There's no record of this workspace, reasons:
         # - The user is setting up a new workspace
-        # - The user ran `ag init -r` which erased existing workspaces
+        # - The user ran `buddy init -r` which erased existing workspaces
         logger.debug(f"Could not find a workspace at: {ws_root_path}")
 
         # Check if the workspace contains a `workspace` dir
         workspace_ws_dir_path = get_workspace_dir_path(ws_root_path)
-        logger.debug(f"Found the `workspace` configuration at: {workspace_ws_dir_path}")
+        if workspace_ws_dir_path:
+            logger.debug(f"Found the `workspace` configuration at: {workspace_ws_dir_path}")
+        else:
+            logger.debug(f"No `workspace` subdirectory found at: {ws_root_path}")
         ws_config = BUDDY_config.create_or_update_ws_config(ws_root_path=ws_root_path, set_as_active=True)
         if ws_config is None:
             logger.error(f"Failed to create WorkspaceConfig for {ws_root_path}")
             return None
     else:
         logger.debug(f"Found workspace at {ws_root_path}")
+        # Always mark this workspace as active when setup_workspace is called explicitly
+        BUDDY_config.set_active_ws_dir(ws_root_path)
 
     # 1.4 Get the workspace name
     workspace_name = ws_root_path.stem.replace(" ", "-").replace("_", "-").lower()

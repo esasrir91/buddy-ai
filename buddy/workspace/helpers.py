@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Optional
+from typing import Optional  # noqa: F401 — used in type hints
 
 from buddy.utils.log import logger
 
@@ -16,12 +16,13 @@ def get_workspace_dir_from_env() -> Optional[Path]:
     return None
 
 
-def get_workspace_dir_path(ws_root_path: Path) -> Path:
+def get_workspace_dir_path(ws_root_path: Path) -> Optional[Path]:
     """
     Get the workspace directory path from the given workspace root path.
     Buddy workspace dir can be found at:
         1. subdirectory: workspace
         2. In a folder defined by the pyproject.toml file
+    Returns None if no workspace directory is found (never exits).
     """
     from buddy.utils.pyproject import read_pyproject_buddy
 
@@ -41,12 +42,9 @@ def get_workspace_dir_path(ws_root_path: Path) -> Path:
             BUDDY_conf_workspace_dir_str = BUDDY_conf.get("workspace", None)
             if BUDDY_conf_workspace_dir_str is not None:
                 BUDDY_conf_workspace_dir_path = ws_root_path.joinpath(BUDDY_conf_workspace_dir_str)
-            else:
-                logger.error("Workspace directory not specified in pyproject.toml")
-                exit(0)
-            logger.debug(f"Searching {BUDDY_conf_workspace_dir_path}")
-            if BUDDY_conf_workspace_dir_path.exists() and BUDDY_conf_workspace_dir_path.is_dir():
-                return BUDDY_conf_workspace_dir_path
+                logger.debug(f"Searching {BUDDY_conf_workspace_dir_path}")
+                if BUDDY_conf_workspace_dir_path.exists() and BUDDY_conf_workspace_dir_path.is_dir():
+                    return BUDDY_conf_workspace_dir_path
 
-    logger.error(f"Could not find a workspace at: {ws_root_path}")
-    exit(0)
+    logger.debug(f"No workspace directory found at: {ws_root_path}")
+    return None
