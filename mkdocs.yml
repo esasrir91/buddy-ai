@@ -11,6 +11,7 @@ nav:
   - Home: index.md
   - Articles:
     - "Teaching AI Agents to Know What They Don't Know": articles/competency-engine-v2.2.0.md
+    - "Meet PULSE: Your AI Teammate That Actually Works": articles/pulse-virtual-employee.md
   - Getting Started:
     - Installation: getting-started/installation.md
     - Quick Start: getting-started/quickstart.md

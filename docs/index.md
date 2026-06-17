@@ -31,6 +31,11 @@ pip install buddy-ai[all]
 
     [:octicons-book-24: Read the release article](articles/competency-engine-v2.2.0.md){ .md-button .md-button--primary }
 
+!!! info "Featured article — PULSE"
+    **Meet your autonomous teammate.** What PULSE is, the nine-page web UI, desktop app with system tray, and a Python quick start — no invented features.
+
+    [:octicons-account-hard-hat-24: Read the PULSE article](articles/pulse-virtual-employee.md){ .md-button .md-button--primary }
+
 <div class="grid cards" markdown>
 
 -   :material-newspaper-variant-outline:{ .lg .middle } __Release article — Competency Engine__
@@ -49,7 +54,7 @@ pip install buddy-ai[all]
 
     One command starts it: `buddy pulse start`
 
-    [:octicons-arrow-right-24: Meet PULSE](advanced/pulse.md)
+    [:octicons-arrow-right-24: Read the article](articles/pulse-virtual-employee.md) · [Technical reference](advanced/pulse.md)
 
 -   :material-chart-bell-curve-cumulative:{ .lg .middle } __Competency Engine__
 
