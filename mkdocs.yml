@@ -80,6 +80,10 @@ nav:
     - Security Framework: advanced/security.md
     - Evaluation System: advanced/evaluation.md
     - Competency Engine: advanced/competency.md
+  - Integrations:
+    - Overview: integrations/overview.md
+    - LangChain: integrations/langchain.md
+    - LangGraph: integrations/langgraph.md
   - Training & Fine-tuning:
     - Training Overview: training/overview.md
     - Data Preparation: training/data-prep.md

@@ -16,7 +16,7 @@ Author: Sriram Sangeeth Mantha
 License: MIT
 """
 
-__version__ = "2.1.3"
+__version__ = "2.2.0"
 __author__ = "Sriram Sangeeth Mantha"
 __email__ = "sriram.sangeet@gmail.com"
 __license__ = "MIT"
@@ -117,6 +117,12 @@ try:
 except Exception:
     pass
 
+# Third-party integration availability (detected without importing heavy deps)
+import importlib.util as _importlib_util  # noqa: E402
+
+LANGCHAIN_AVAILABLE = _importlib_util.find_spec("langchain_core") is not None
+LANGGRAPH_AVAILABLE = _importlib_util.find_spec("langgraph") is not None
+
 # Feature availability flags
 __features__ = {
     "planning": PLANNING_AVAILABLE,
@@ -126,6 +132,8 @@ __features__ = {
     "personality": PERSONALITY_AVAILABLE,
     "security": SECURITY_AVAILABLE,
     "pulse": PULSE_AVAILABLE,
+    "langchain": LANGCHAIN_AVAILABLE,
+    "langgraph": LANGGRAPH_AVAILABLE,
     "core": True,
 }
 

@@ -101,6 +101,13 @@ tools = [
     "google-api-python-client>=2.108.0",
     "tavily-python>=0.3.0",
 ]
+langchain = [
+    "langchain-core>=0.3.0",
+]
+langgraph = [
+    "langgraph>=0.2.0",
+    "langchain-core>=0.3.0",
+]
 all = [
     "openai>=1.0.0",
     "anthropic>=0.25.0",
@@ -118,6 +125,8 @@ all = [
     "opencv-python>=4.8.0",
     "librosa>=0.10.0",
     "soundfile>=0.12.0",
+    "langchain-core>=0.3.0",
+    "langgraph>=0.2.0",
 ]
 
 [project.urls]
