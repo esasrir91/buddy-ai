@@ -262,6 +262,7 @@ graph TD
 | **[Knowledge](knowledge/overview.md)** | RAG and document processing | Multi-format, vector search |
 | **[Team](team/overview.md)** | Multi-agent collaboration | Orchestration, communication |
 | **[Workflows](workflows/overview.md)** | Process automation | Template-based, execution engine |
+| **[Integrations](integrations/overview.md)** | LangChain & LangGraph interop | Buddy models/agents as LangChain & LangGraph components, competency routing edges |
 | **[Training](training/overview.md)** | Model fine-tuning | Data prep, training, evaluation |
 | **[CLI](cli/overview.md)** | Command-line interface | Workspace management, operations |
 | **[API](api/overview.md)** | REST API framework | FastAPI integration, endpoints |
@@ -278,6 +279,7 @@ This documentation is organized into the following sections:
 - **[Memory System](memory/overview.md)** — Managing agent memory and state
 - **[Knowledge Management](knowledge/overview.md)** — RAG and document processing
 - **[Advanced Features](advanced/multimodal.md)** — Multi-modal, reasoning, planning, competency
+- **[Integrations](integrations/overview.md)** — Use Buddy with LangChain and LangGraph
 - **[Examples & Tutorials](examples/basic.md)** — Practical examples and use cases
 
 ## 🤝 Community & Support

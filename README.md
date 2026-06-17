@@ -39,6 +39,10 @@ pip install buddy-ai[openai]
 pip install buddy-ai[anthropic]
 pip install buddy-ai[google]
 pip install buddy-ai[groq]
+
+# Ecosystem integrations
+pip install buddy-ai[langchain]   # use Buddy models/agents/tools in LangChain
+pip install buddy-ai[langgraph]   # run Buddy agents as LangGraph nodes
 ```
 
 ---
@@ -325,7 +329,8 @@ CMD ["buddy", "pulse", "start", "--host", "0.0.0.0"]
 - **Competency Engine** — a balance-aware competency score (`buddy.eval.competency`) for agents and teams, decomposing competency into *vertical* (per-domain depth), *crosswise* (dependency-weighted cross-domain interaction), and *deficit* (gap to mastery) components.
 - **Autonomous learning loop** — `AutonomousCompetencyLoop` reads live signals, scores competency, and automatically enqueues training jobs for the weakest, highest-leverage gaps.
 - **Runtime competency routing** — `buddy.eval.competency_runtime` infers a task's domain, routes it to the most competent member, adapts the execution policy/model tier, and feeds the outcome back into a live tracker.
-- **Docs & example** — see [Competency Engine](https://esasrir91.github.io/buddy-ai/advanced/competency/) and `examples/12_competency_engine.py`.
+- **LangChain & LangGraph integrations** — `buddy.integrations` adds dependency-light adapters: use any Buddy model as a LangChain `BaseChatModel` (`BuddyChatModel`), expose Buddy agents as LangChain tools (`BuddyAgentTool`), convert tools/messages both ways, drop Buddy agents into a LangGraph `StateGraph` (`BuddyNode`, `build_sequential_graph`), and route between members with the Competency Engine (`make_competency_edge`).
+- **Docs & examples** — see [Competency Engine](https://esasrir91.github.io/buddy-ai/advanced/competency/), [Integrations](https://esasrir91.github.io/buddy-ai/integrations/overview/), `examples/12_competency_engine.py`, and `examples/13_langchain_langgraph.py`.
 
 [Full CHANGELOG →](https://github.com/esasrir91/buddy-ai/blob/main/CHANGELOG.md)
 

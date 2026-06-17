@@ -33,6 +33,10 @@ pip install "buddy-ai[google]"
 pip install "buddy-ai[cohere]"
 pip install "buddy-ai[aws]"
 
+# Ecosystem integrations
+pip install "buddy-ai[langchain]"   # use Buddy in LangChain
+pip install "buddy-ai[langgraph]"   # run Buddy agents as LangGraph nodes
+
 # Everything at once
 pip install "buddy-ai[all]"
 

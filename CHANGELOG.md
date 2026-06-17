@@ -20,7 +20,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   - `LLMDomainClassifier` (with keyword fallback) — infers a task's domain.
   - `CompetencyRouter` — routes each task to the most competent member, selects an execution policy (proceed / review / escalate) and model tier (standard / strong), and records the outcome back into the tracker.
 - **`EvalType.COMPETENCY`** — competency runs are recorded through the existing eval logging path.
-- **Docs & example** — new `docs/advanced/competency.md` page and `examples/12_competency_engine.py`.
+- **LangChain & LangGraph integrations (`buddy.integrations`)** — optional, dependency-light adapters with lazy imports:
+  - LangChain: `BuddyChatModel` (any Buddy model as a `BaseChatModel`), `BuddyAgentTool` (a Buddy agent/team as a LangChain tool), `to_langchain_tool` / `from_langchain_tool`, and `to_buddy_messages` / `from_buddy_message`.
+  - LangGraph: `BuddyNode` (Buddy agent/team as a graph node), `add_buddy_node`, `build_sequential_graph`, `build_default_state`, and `make_competency_edge` (Competency Engine routing as a conditional edge).
+  - `buddy.LANGCHAIN_AVAILABLE` / `buddy.LANGGRAPH_AVAILABLE` flags, new `[langchain]` and `[langgraph]` extras.
+- **Docs & examples** — new `docs/advanced/competency.md`, `docs/integrations/` pages, `examples/12_competency_engine.py`, and `examples/13_langchain_langgraph.py`.
 
 ### Notes
 - The competency index is an interpretable aggregation/orchestration layer; it does not by itself change model capability. With a non-trivial domain-dependency graph the crosswise term becomes a genuine, non-separable interaction signal.
