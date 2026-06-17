@@ -10,7 +10,7 @@ edit_uri: blob/main/docs/
 nav:
   - Home: index.md
   - Articles:
-    - Overview: articles/index.md
+    - All Articles: articles/index.md
     - "Meet PULSE: Your AI Teammate That Actually Works": articles/pulse-virtual-employee.md
     - "Teaching AI Agents to Know What They Don't Know": articles/competency-engine-v2.2.0.md
   - Getting Started:
