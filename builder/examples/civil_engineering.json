@@ -1,0 +1,60 @@
+{
+  "spec_version": "1.0",
+  "id": "example-civil-engineering",
+  "name": "Civil Engineering Copilot",
+  "description": "Starter graph for civil-engineering estimation: Excel BOQ/abstracts and report generation. Use the 'Civil' mode in Varam AI for BOQ totals, rate analysis, concrete take-off and IS-code checks.",
+  "kind": "agent",
+  "root": "agent_1",
+  "nodes": [
+    {
+      "id": "model_1",
+      "type": "model.anthropic.claude.Claude",
+      "label": "Claude Sonnet",
+      "data": { "id": "claude-sonnet-4-5", "temperature": 0.2 },
+      "position": { "x": 80, "y": 60 }
+    },
+    {
+      "id": "tool_xls",
+      "type": "tool.excel.ExcelTools",
+      "label": "Excel",
+      "data": {},
+      "position": { "x": 80, "y": 220 }
+    },
+    {
+      "id": "tool_calc",
+      "type": "tool.calculator.CalculatorTools",
+      "label": "Calculator",
+      "data": { "enable_all": true },
+      "position": { "x": 80, "y": 340 }
+    },
+    {
+      "id": "tool_rep",
+      "type": "tool.report.ReportTools",
+      "label": "Report",
+      "data": {},
+      "position": { "x": 80, "y": 460 }
+    },
+    {
+      "id": "agent_1",
+      "type": "agent",
+      "label": "Civil Copilot",
+      "data": {
+        "name": "Varam Civil",
+        "instructions": [
+          "You are a civil-engineering copilot for estimation and costing in India (BOQ, rate analysis, quantity take-off against CPWD/State PWD SOR, material estimation, IS-code checks).",
+          "Compute every quantity with the tools - never estimate by feel. State the governing IS clause and assumptions.",
+          "Design checks are INDICATIVE planning aids only: a licensed engineer must verify loads/codes/site conditions and certify the final design and BOQ."
+        ]
+      },
+      "capabilities": { "markdown": { "enabled": true, "config": { "markdown": true } } },
+      "position": { "x": 460, "y": 260 }
+    }
+  ],
+  "edges": [
+    { "id": "e1", "source": "model_1", "source_port": "out", "target": "agent_1", "target_port": "model" },
+    { "id": "e2", "source": "tool_xls", "source_port": "out", "target": "agent_1", "target_port": "tools" },
+    { "id": "e3", "source": "tool_calc", "source_port": "out", "target": "agent_1", "target_port": "tools" },
+    { "id": "e4", "source": "tool_rep", "source_port": "out", "target": "agent_1", "target_port": "tools" }
+  ],
+  "triggers": [{ "id": "t1", "type": "playground" }]
+}

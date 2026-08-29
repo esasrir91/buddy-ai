@@ -1,0 +1,60 @@
+{
+  "spec_version": "1.0",
+  "id": "example-ca-accountant",
+  "name": "CA — Accounting & Audit Copilot",
+  "description": "Starter graph for a Chartered Accountant: finance math, Excel workpapers and report generation. Use the dedicated 'CA' mode in Varam AI for the full GST/TDS/audit toolkit.",
+  "kind": "agent",
+  "root": "agent_1",
+  "nodes": [
+    {
+      "id": "model_1",
+      "type": "model.anthropic.claude.Claude",
+      "label": "Claude Sonnet",
+      "data": { "id": "claude-sonnet-4-5", "temperature": 0.2 },
+      "position": { "x": 80, "y": 60 }
+    },
+    {
+      "id": "tool_fin",
+      "type": "tool.finance.FinanceTools",
+      "label": "Finance",
+      "data": {},
+      "position": { "x": 80, "y": 220 }
+    },
+    {
+      "id": "tool_xls",
+      "type": "tool.excel.ExcelTools",
+      "label": "Excel",
+      "data": {},
+      "position": { "x": 80, "y": 340 }
+    },
+    {
+      "id": "tool_rep",
+      "type": "tool.report.ReportTools",
+      "label": "Report",
+      "data": {},
+      "position": { "x": 80, "y": 460 }
+    },
+    {
+      "id": "agent_1",
+      "type": "agent",
+      "label": "CA Copilot",
+      "data": {
+        "name": "Varam CA",
+        "instructions": [
+          "You are an Accounting & Audit copilot for a Chartered Accountant in India (GST, TDS, financial statements per Schedule III/Ind AS, ratios, audit working papers).",
+          "Compute every figure with the finance/excel tools - never estimate. Cite the source record or section (e.g. u/s 194J, AS 10).",
+          "Output is an AI-assisted draft, not an audit opinion: a qualified CA must review, verify and sign before any filing."
+        ]
+      },
+      "capabilities": { "markdown": { "enabled": true, "config": { "markdown": true } } },
+      "position": { "x": 460, "y": 240 }
+    }
+  ],
+  "edges": [
+    { "id": "e1", "source": "model_1", "source_port": "out", "target": "agent_1", "target_port": "model" },
+    { "id": "e2", "source": "tool_fin", "source_port": "out", "target": "agent_1", "target_port": "tools" },
+    { "id": "e3", "source": "tool_xls", "source_port": "out", "target": "agent_1", "target_port": "tools" },
+    { "id": "e4", "source": "tool_rep", "source_port": "out", "target": "agent_1", "target_port": "tools" }
+  ],
+  "triggers": [{ "id": "t1", "type": "playground" }]
+}

@@ -1,0 +1,11 @@
+<svg width="64" height="64" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Varam AI">
+  <defs>
+    <linearGradient id="vgm" x1="0" y1="0" x2="34" y2="34" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7C5CFF"/>
+      <stop offset="1" stop-color="#22D3EE"/>
+    </linearGradient>
+  </defs>
+  <rect x="1" y="1" width="32" height="32" rx="9" fill="#0E1117" stroke="url(#vgm)" stroke-width="2"/>
+  <path d="M9 11.5L17 23.5L25 11.5" stroke="url(#vgm)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="17" cy="9.5" r="2.1" fill="#22D3EE"/>
+</svg>

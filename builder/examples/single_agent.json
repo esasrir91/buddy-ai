@@ -1,0 +1,54 @@
+{
+  "spec_version": "1.0",
+  "id": "example-single-agent",
+  "name": "Research Assistant",
+  "description": "A single agent with a web-search tool, built entirely from the canvas.",
+  "kind": "agent",
+  "root": "agent_1",
+  "nodes": [
+    {
+      "id": "model_1",
+      "type": "model.anthropic.claude.Claude",
+      "label": "Claude Sonnet",
+      "data": { "id": "claude-sonnet-4-5" },
+      "position": { "x": 80, "y": 80 }
+    },
+    {
+      "id": "tool_1",
+      "type": "tool.googlesearch.GoogleSearchTools",
+      "label": "Google Search",
+      "data": {},
+      "position": { "x": 80, "y": 260 }
+    },
+    {
+      "id": "agent_1",
+      "type": "agent",
+      "label": "Research Assistant",
+      "data": {
+        "name": "Research Assistant",
+        "instructions": ["You are a helpful research assistant. Use search when needed."]
+      },
+      "capabilities": {
+        "markdown": { "enabled": true, "config": { "markdown": true } }
+      },
+      "position": { "x": 460, "y": 160 }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "source": "model_1",
+      "source_port": "out",
+      "target": "agent_1",
+      "target_port": "model"
+    },
+    {
+      "id": "e2",
+      "source": "tool_1",
+      "source_port": "out",
+      "target": "agent_1",
+      "target_port": "tools"
+    }
+  ],
+  "triggers": [{ "id": "t1", "type": "playground" }]
+}

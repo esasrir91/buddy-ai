@@ -1,0 +1,5 @@
+# Slim runtime deps for the standalone Varam License API container.
+fastapi>=0.100.0
+uvicorn>=0.23.0
+pydantic>=2.0.0
+cryptography>=42.0.0

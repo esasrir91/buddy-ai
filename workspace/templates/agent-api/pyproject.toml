@@ -1,0 +1,14 @@
+[project]
+name = "agent-api"
+version = "0.1.0"
+description = "A Buddy AI agent REST API"
+requires-python = ">=3.9"
+dependencies = [
+    "buddy-ai>=2.2.0",
+    "openai>=1.0.0",
+    "fastapi>=0.100.0",
+    "uvicorn>=0.23.0",
+]
+
+[tool.buddy]
+workspace = "workspace"
