@@ -58,19 +58,13 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 # ─────────────────────────────────────────────────────────────────────────────
-# API Keys — from environment or local .env (gitignored); never hardcode secrets
+# API Keys
 # ─────────────────────────────────────────────────────────────────────────────
-_env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
-if os.path.isfile(_env_path):
-    with open(_env_path, encoding="utf-8") as _env_file:
-        for _line in _env_file:
-            _line = _line.strip()
-            if not _line or _line.startswith("#") or "=" not in _line:
-                continue
-            _key, _, _val = _line.partition("=")
-            _key, _val = _key.strip(), _val.strip().strip('"').strip("'")
-            if _key and _key not in os.environ:
-                os.environ[_key] = _val
+os.environ["OPENAI_API_KEY"] = (
+    "")
+os.environ["ANTHROPIC_API_KEY"] = (
+    ""
+)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Model Catalogue
@@ -427,9 +421,11 @@ _try("IpGeo",       lambda: __import__("buddy.tools.ip_geolocation",    fromlist
 _try("QRCode",      lambda: __import__("buddy.tools.qr_code_generator", fromlist=["QRCodeTools"]).QRCodeTools())
 _try("Sleep",       lambda: __import__("buddy.tools.sleep",             fromlist=["SleepTool"]).SleepTool())
 _try("Docker",      lambda: __import__("buddy.tools.docker",            fromlist=["DockerTools"]).DockerTools())
-_try("Thinking",    lambda: __import__("buddy.tools.thinking",          fromlist=["ThinkingTools"]).ThinkingTools())
-_try("Reasoning",   lambda: __import__("buddy.tools.reasoning",         fromlist=["ReasoningTools"]).ReasoningTools())
-_try("Planning",    lambda: __import__("buddy.tools.planning",          fromlist=["PlanningTools"]).PlanningTools())
+# add_instructions=True so the model is prompted to use these (not just
+# have the schemas available among 100+ deferred tools).
+_try("Thinking",    lambda: __import__("buddy.tools.thinking",          fromlist=["ThinkingTools"]).ThinkingTools(add_instructions=True))
+_try("Reasoning",   lambda: __import__("buddy.tools.reasoning",         fromlist=["ReasoningTools"]).ReasoningTools(add_instructions=True))
+_try("Planning",    lambda: __import__("buddy.tools.planning",          fromlist=["PlanningTools"]).PlanningTools(add_instructions=True))
 
 # ── AI / Generation ────────────────────────────────────────────────────────────
 _try("DallE",       lambda: __import__("buddy.tools.dalle",              fromlist=["DalleTools"]).DalleTools())
@@ -1367,8 +1363,39 @@ _EV_CONTENT         = {RunEvent.run_response_content.value, TeamRunEvent.run_res
 _EV_COMPLETE        = {RunEvent.run_completed.value,        TeamRunEvent.run_completed.value}
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Rich console — markdown answers + lightweight status spinners
+# ─────────────────────────────────────────────────────────────────────────────
+from rich.console import Console
+from rich.markdown import Markdown
+from rich.status import Status
+from rich.text import Text
+
+try:
+    from buddy.utils.response import escape_markdown_tags
+except Exception:  # pragma: no cover
+    def escape_markdown_tags(content: str, tags=None) -> str:  # type: ignore[misc]
+        return content
+
+_console = Console(highlight=False, soft_wrap=True)
+_MD_TAGS = {"think", "thinking", "reason", "reasoning"}
+
+
+def _md(content: str) -> Markdown:
+    return Markdown(escape_markdown_tags(content, _MD_TAGS))
+
+
+def _note(msg: str, style: str = "dim") -> None:
+    """Print a one-line status note above the spinner (safe with Status)."""
+    _console.print(Text(msg, style=style))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Streaming output handler
 # Handles both Agent (RunEvent) and Team (TeamRunEvent) event streams.
+#
+# IMPORTANT: do NOT nest rich.live.Live around Status — Status owns its own
+# Live, and a second Live on the same console raises:
+#   LiveError: Only one live display may be active at once
 # ─────────────────────────────────────────────────────────────────────────────
 def _stream_once(user_input: str) -> None:
     """Single streaming attempt. Hard failures propagate so the autonomous
@@ -1376,42 +1403,44 @@ def _stream_once(user_input: str) -> None:
     run = _sess.runner.run(user_input, stream=True)
 
     in_thinking  = False
-    in_reasoning = False
-    printed_hdr  = False
     last_tool    = None
     runner_name  = "Team" if _sess.is_team else "Buddy"
+    content_buf  = ""
+    thinking_buf = ""
 
+    # Single Status (one Live). Spinner for phases; markdown printed at the end.
+    status = Status("Working…", spinner="dots", speed=1.0, console=_console)
+    status.start()
     try:
         for event in run:
             etype = getattr(event, "event", None)
 
-            # ── Reasoning ─────────────────────────────────────────────────────────────────
+            # ── Reasoning ─────────────────────────────────────────────────────
             if etype in _EV_REASONING_START:
-                print("[Reasoning...]", flush=True)
-                in_reasoning = True
+                status.update("Reasoning…")
 
             elif etype in _EV_REASONING_STEP:
                 step = (getattr(event, "content", "") or
                         getattr(event, "reasoning_content", "") or "")
                 if step:
-                    print(f"  >> {str(step)[:240]}", flush=True)
+                    snippet = str(step).replace("\n", " ")[:180]
+                    status.update(f"Reasoning…  {snippet}")
 
             elif etype in _EV_REASONING_END:
-                if in_reasoning:
-                    print()
-                in_reasoning = False
+                status.update("Working…")
 
-            # ── Tool calls ────────────────────────────────────────────────────────────────
+            # ── Tool calls ────────────────────────────────────────────────────
             elif etype in _EV_TOOL_START:
                 tool_obj = getattr(event, "tool", None)
                 if tool_obj:
                     tname = getattr(tool_obj, "name", "tool")
-                    targs = str(getattr(tool_obj, "arguments", ""))[:120].replace("\n", " ")
+                    targs = str(getattr(tool_obj, "arguments", ""))[:100].replace("\n", " ")
                 else:
                     tname = getattr(event, "tool_name", "tool")
-                    targs = str(getattr(event, "tool_args", ""))[:120].replace("\n", " ")
+                    targs = str(getattr(event, "tool_args", ""))[:100].replace("\n", " ")
                 last_tool = tname
-                print(f"\n[Tool: {tname}]  {targs}", flush=True)
+                status.update(f"Tool · {tname}")
+                _note(f"  → {tname}  {targs}", "dim yellow")
 
             elif etype in _EV_TOOL_END:
                 tool_obj = getattr(event, "tool", None)
@@ -1420,53 +1449,65 @@ def _stream_once(user_input: str) -> None:
                 result   = (getattr(event, "content", "")
                             or (str(getattr(tool_obj, "result", "")) if tool_obj else ""))
                 rstr     = str(result)
-                preview  = rstr[:300].replace("\n", " ")
-                if len(rstr) > 300:
+                preview  = rstr[:200].replace("\n", " ")
+                if len(rstr) > 200:
                     preview += f"  … ({len(rstr)} chars)"
-                print(f"[/{tname}]  {preview}", flush=True)
+                status.update("Working…")
+                _note(f"  ✓ {tname}  {preview}", "dim green")
 
-            # ── Memory updates ────────────────────────────────────────────────────────────
+            # ── Memory updates ────────────────────────────────────────────────
             elif etype in _EV_MEM_START:
-                print("[Memory: updating...]", flush=True)
+                status.update("Memory · updating…")
 
             elif etype in _EV_MEM_END:
-                print("[Memory: updated]", flush=True)
+                status.update("Memory · saved")
+                _note("  ✓ memory updated", "dim green")
 
-            # ── Content streaming ─────────────────────────────────────────────────────────
+            # ── Content streaming ─────────────────────────────────────────────
             elif etype in _EV_CONTENT:
                 content  = getattr(event, "content",  "") or ""
                 thinking = getattr(event, "thinking", None)
 
-                if thinking and not in_thinking:
-                    print("\n[Thinking]", flush=True)
-                    in_thinking = True
                 if thinking:
-                    print(thinking, end="", flush=True)
+                    if not in_thinking:
+                        in_thinking = True
+                        thinking_buf = ""
+                    thinking_buf += thinking
+                    tip = thinking_buf.replace("\n", " ")[-140:]
+                    status.update(f"Thinking…  {tip}")
 
                 if content:
                     if in_thinking:
-                        print("\n[/Thinking]\n", flush=True)
                         in_thinking = False
-                    if not printed_hdr:
-                        print(f"{runner_name}: ", end="", flush=True)
-                        printed_hdr = True
-                    print(content, end="", flush=True)
+                    status.update("Writing…")
+                    content_buf += content
 
-            # ── Run complete ──────────────────────────────────────────────────────────────
+            # ── Run complete ──────────────────────────────────────────────────
             elif etype in _EV_COMPLETE:
                 if in_thinking:
-                    print("\n[/Thinking]", flush=True)
                     in_thinking = False
-                if not printed_hdr:
-                    content = getattr(event, "content", "") or ""
-                    if content:
-                        print(f"{runner_name}: {content}", end="", flush=True)
+                if not content_buf:
+                    content_buf = getattr(event, "content", "") or ""
                 break
 
     except KeyboardInterrupt:
-        print("\n[interrupted]")
+        status.stop()
+        _console.print("\n[interrupted]", style="yellow")
+        return
+    finally:
+        # Always stop — avoids a stuck spinner after errors / Auto-Heal retries.
+        try:
+            status.stop()
+        except Exception:
+            pass
 
-    print("\n", flush=True)
+    if content_buf.strip():
+        _console.print()
+        _console.print(Text(runner_name, style="bold cyan"))
+        _console.print(_md(content_buf))
+        _console.print()
+    else:
+        _console.print()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1545,6 +1586,13 @@ def _stream(user_input: str) -> None:
                         "interrupted")
             return
         except Exception as exc:
+            # Display-layer failures (Rich Live conflicts, etc.) are not model
+            # failures — escalating effort won't help and leaves stuck spinners.
+            if type(exc).__name__ in ("LiveError",) or "live display" in str(exc).lower():
+                print(f"Buddy: [ERROR] {exc}\n")
+                _MON.record(user_input, _sess, _sess.analysis, time.time() - t0,
+                            "error")
+                return
             reason = f"Run failed ({type(exc).__name__}: {str(exc)[:160]})"
             if attempt < max_attempts and _escalate_and_rebuild(reason):
                 continue
