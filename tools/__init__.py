@@ -41,7 +41,11 @@ from buddy.tools.combinations import (
     browser_agent_tools,
     computer_use_tools,
     full_suite_tools,
+    cursor_agent_tools,
 )
+
+# CursorTools – Cursor-parity toolkit for Aura
+from buddy.tools.cursor import CursorTools
 
 __all__ = [
     # Core
@@ -81,4 +85,7 @@ __all__ = [
     "browser_agent_tools",
     "computer_use_tools",
     "full_suite_tools",
+    "cursor_agent_tools",
+    # CursorTools
+    "CursorTools",
 ]

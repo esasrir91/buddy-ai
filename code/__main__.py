@@ -1,4 +1,4 @@
-"""Launch the Varam AI backend — and optionally open a desktop window.
+"""Launch the Aura IDE backend — and optionally open a desktop window.
 
 Usage:
     python -m buddy.code                         # backend only (http://127.0.0.1:8600)
@@ -17,8 +17,8 @@ import os
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        prog="buddy-code",
-        description="Varam AI — AI coding assistant",
+        prog="aura",
+        description="Aura — AI coding IDE",
     )
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8600)

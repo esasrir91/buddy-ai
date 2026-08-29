@@ -19,21 +19,22 @@ _CATEGORY_PACKAGE = {
     "tool": "buddy.tools",
 }
 
-CODING_SYSTEM_PROMPT = """You are Varam AI, an expert AI software engineer working inside a user's
-workspace, similar to Cursor's agent. You can read, search, create, edit, and
-delete files, and run shell commands - all scoped to the current workspace.
+CODING_SYSTEM_PROMPT = """You are Aura, an expert AI software engineer embedded in the user's IDE.
+You have Cursor-class coding capabilities: read files, search with Glob/Grep,
+write/edit/delete files, run shell commands, manage todos, and launch sub-agents.
 
 Operating principles:
-- Before editing, READ the relevant files and SEARCH the codebase to understand
-  context. Never guess at file contents.
-- Make focused, correct edits with `edit_file` (exact find & replace) or
-  `write_file` for new/rewritten files. Preserve existing style and indentation.
-- After changes that should be verified, run the appropriate command (tests,
-  build, lint) with `run_command` and fix issues you introduced.
-- Work autonomously and thoroughly until the task is complete. Explain what you
-  did concisely. Show file paths you changed.
-- Prefer small, verifiable steps. If a task is ambiguous, make a reasonable
-  decision and state it rather than stalling.
+- Read first: use Read and Grep to understand context before editing.
+- Edit precisely: use StrReplace for targeted edits, Write for new/rewritten files.
+  Preserve the project's indentation and style.
+- Verify: after changes, run the relevant test/build/lint command with Shell and
+  fix any issues you introduced.
+- Communicate: after completing a task, give a concise summary of what you changed
+  and why. Always show the file paths you modified.
+- Stay autonomous: work through the task step-by-step without stopping to ask
+  unless truly blocked. Use AskQuestion only when user input is essential.
+- In Plan mode: use CreatePlan to lay out a plan before executing. In Ask mode:
+  answer without making changes.
 """
 
 
@@ -79,8 +80,19 @@ def build_model(settings: CodeSettings):
     return cls(**kwargs)
 
 
-def build_tools(settings: CodeSettings, workspace: str) -> List[Any]:
-    tools: List[Any] = [WorkspaceTools(base_path=workspace, enable_shell=settings.enable_shell)]
+def build_tools(settings: CodeSettings, workspace: str, session_id: str = None, event_queue=None) -> List[Any]:
+    # Prefer CursorTools over the legacy WorkspaceTools
+    try:
+        from buddy.tools.cursor import CursorTools
+        tools: List[Any] = [CursorTools(
+            base_path=workspace,
+            enable_shell=settings.enable_shell,
+            session_id=session_id,
+            event_queue=event_queue,
+        )]
+    except Exception:
+        tools = [WorkspaceTools(base_path=workspace, enable_shell=settings.enable_shell)]
+
     for tool_type in settings.enabled_tools:
         try:
             cls = _resolve_class(tool_type)
@@ -126,20 +138,20 @@ def recall_activity(query: str = "", limit: int = 30) -> str:
         return f"Could not read activity journal: {exc}"
 
 
-def build_code_agent(settings: CodeSettings, workspace: str):
+def build_code_agent(settings: CodeSettings, workspace: str, session_id: str = None, event_queue=None):
     """Assemble a ready-to-run Buddy Agent for coding in ``workspace``."""
     from buddy.agent import Agent
 
     settings.apply_to_env()
     model = build_model(settings)
-    tools = build_tools(settings, workspace)
+    tools = build_tools(settings, workspace, session_id=session_id, event_queue=event_queue)
 
     instructions = [CODING_SYSTEM_PROMPT]
     if settings.instructions:
         instructions.append(settings.instructions)
 
     agent_kwargs: dict = {
-        "name": "Buddy Code",
+        "name": "Aura",
         "model": model,
         "tools": tools,
         "instructions": instructions,

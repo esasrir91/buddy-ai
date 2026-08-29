@@ -202,11 +202,10 @@ class Function(BaseModel):
             sig = signature(c)
             type_hints = get_type_hints(c)
 
-            # If function has an the agent argument, remove the agent parameter from the type hints
-            if "agent" in sig.parameters:
-                del type_hints["agent"]
-            if "team" in sig.parameters:
-                del type_hints["team"]
+            # If function has an agent/team argument, remove it from the type hints
+            # (these are auto-injected by Buddy and must not appear in the tool schema)
+            type_hints.pop("agent", None)
+            type_hints.pop("team", None)
 
             excluded = {"return", "agent", "team", "self"}
             for pname, param in sig.parameters.items():
@@ -295,11 +294,10 @@ class Function(BaseModel):
             sig = signature(self.entrypoint)
             type_hints = get_type_hints(self.entrypoint)
 
-            # If function has an the agent argument, remove the agent parameter from the type hints
-            if "agent" in sig.parameters:
-                del type_hints["agent"]
-            if "team" in sig.parameters:
-                del type_hints["team"]
+            # If function has an agent/team argument, remove it from the type hints
+            # (these are auto-injected by Buddy and must not appear in the tool schema)
+            type_hints.pop("agent", None)
+            type_hints.pop("team", None)
 
             # Filter out return type and only process parameters
             excluded_params = ["return", "agent", "team", "self"]

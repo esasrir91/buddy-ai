@@ -354,4 +354,33 @@ __all__ = [
     "browser_agent_tools",
     "computer_use_tools",
     "full_suite_tools",
+    "cursor_agent_tools",
 ]
+
+
+def cursor_agent_tools(
+    base_dir: Optional[str] = None,
+    enable_shell: bool = True,
+    mode: str = "agent",
+    **kwargs: Any,
+) -> "List[Toolkit]":
+    """Cursor-parity toolkit for the Aura IDE agent.
+
+    Registers all CursorTools (Read, Write, StrReplace, Delete, Glob, Grep,
+    Shell, AwaitShell, TodoWrite, EditNotebook, ReadLints, Task,
+    SwitchMode, CreatePlan, AskQuestion).
+
+    Parameters
+    ----------
+    base_dir : str, optional
+        Workspace root to sandbox file operations in.  Defaults to cwd.
+    enable_shell : bool
+        Whether to include Shell and AwaitShell tools.
+    mode : str
+        Initial mode: ``"agent"``, ``"plan"``, or ``"ask"``.
+    """
+    import os
+    from buddy.tools.cursor import CursorTools
+
+    workspace = base_dir or os.getcwd()
+    return [CursorTools(base_path=workspace, enable_shell=enable_shell, mode=mode, **kwargs)]

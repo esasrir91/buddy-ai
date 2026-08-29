@@ -12,10 +12,9 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from buddy.code.settings import CodeSettings
-from buddy.code.tools import WorkspaceTools
 
 _DEFAULT_PROFILE: Dict[str, Any] = {
-    "full_name": "Varam AI",
+    "full_name": "Aura",
     "role": "Senior Software Engineer",
     "department": "engineering",
     "team": "Platform",
@@ -36,16 +35,21 @@ def build_pulse_employee(settings: CodeSettings, workspace: str, profile: Option
     try:
         emp_profile = EmployeeProfile(**data)
     except Exception:
-        # Be lenient about unknown/extra fields from the UI.
-        emp_profile = EmployeeProfile(full_name=data.get("full_name", "Varam AI"), role=data.get("role", "Engineer"))
+        emp_profile = EmployeeProfile(full_name=data.get("full_name", "Aura"), role=data.get("role", "Engineer"))
 
-    tools = [WorkspaceTools(base_path=workspace, enable_shell=settings.enable_shell)]
+    # Use CursorTools for full Cursor-parity coding capabilities
+    try:
+        from buddy.tools.cursor import CursorTools
+        tools = [CursorTools(base_path=workspace, enable_shell=settings.enable_shell)]
+    except Exception:
+        from buddy.code.tools import WorkspaceTools
+        tools = [WorkspaceTools(base_path=workspace, enable_shell=settings.enable_shell)]
+
     agent_kwargs = {"model": build_model(settings), "tools": tools, "markdown": True}
 
     try:
         return PulseEmployee(employee_profile=emp_profile, agent_kwargs=agent_kwargs)
     except TypeError:
-        # Fallback for differing signatures across versions.
         return PulseEmployee(employee_profile=emp_profile)
 
 

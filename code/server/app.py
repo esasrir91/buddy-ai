@@ -21,7 +21,11 @@ from __future__ import annotations
 
 import json
 import os
+import queue
 import subprocess
+import threading
+import time
+import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -136,7 +140,8 @@ class ChatContext(BaseModel):
 
 class ChatRequest(BaseModel):
     message: str
-    mode: str = "code"  # "code" | "pulse" | "ca" | "valuation" | "civil"
+    mode: str = "agent"  # "agent" | "plan" | "ask" | "pulse" | "ca" | "valuation" | "civil"
+    session_id: Optional[str] = None
     profile: Optional[Dict[str, Any]] = None
     context: Optional[ChatContext] = None
 
@@ -200,7 +205,7 @@ class FileWrite(BaseModel):
 
 def create_app() -> FastAPI:
     _load_env()
-    app = FastAPI(title="Varam AI", version="1.0", docs_url="/api/docs")
+    app = FastAPI(title="Aura", version="1.0", docs_url="/api/docs")
     state = _State()
     training = TrainingManager()
 
@@ -313,6 +318,9 @@ def create_app() -> FastAPI:
         return {"ok": True}
 
     # ----------------------------------------------------------------- chat
+    # Active abort controllers per session
+    _abort_flags: Dict[str, threading.Event] = {}
+
     @app.post("/api/chat")
     def chat(req: ChatRequest):
         if req.mode == "pulse":
@@ -320,33 +328,103 @@ def create_app() -> FastAPI:
         elif req.mode in PACK_FEATURE:
             entitlements_gate.require(PACK_FEATURE[req.mode])
 
-        # Build a rich message from the context object (Cursor-style injection).
+        session_id = req.session_id or str(uuid.uuid4())
         message = _enrich_message(req.message, req.context, state.workspace)
 
-        def stream():
-            yield _sse({"type": "started"})
+        # Per-session event queue and abort flag
+        ev_q: queue.Queue = queue.Queue()
+        abort_flag = threading.Event()
+        _abort_flags[session_id] = abort_flag
+
+        def run_agent():
             try:
                 if req.mode == "pulse":
                     agent = state.pulse_agent(req.profile)
                 elif req.mode in PACK_FEATURE:
                     agent = state.vertical_agent(req.mode)
                 else:
-                    agent = state.agent()
-            except Exception as e:
-                yield _sse({"type": "error", "content": f"Failed to build agent: {e}"})
-                yield "data: [DONE]\n\n"
-                return
-            try:
+                    # Build agent with CursorTools wired to our event queue
+                    from buddy.code.agent import build_code_agent
+                    agent = build_code_agent(
+                        state.settings,
+                        str(state.workspace),
+                        session_id=session_id,
+                        event_queue=ev_q,
+                    )
+                    # Also update any existing tool instances' mode
+                    for tool in getattr(agent, 'tools', []):
+                        if hasattr(tool, '_mode'):
+                            if req.mode in ('agent', 'plan', 'ask'):
+                                tool._mode = req.mode
                 for event in agent.run(message, stream=True):
+                    if abort_flag.is_set():
+                        break
                     payload = _normalize_event(event)
                     if payload:
-                        yield _sse(payload)
+                        ev_q.put(payload)
             except Exception as e:
-                yield _sse({"type": "error", "content": str(e)})
+                ev_q.put({"type": "error", "content": str(e)})
+            finally:
+                ev_q.put(None)  # sentinel
+
+        t = threading.Thread(target=run_agent, daemon=True)
+        t.start()
+
+        def stream():
+            yield _sse({"type": "started", "session_id": session_id})
+            while True:
+                try:
+                    ev = ev_q.get(timeout=60)
+                    if ev is None:
+                        break
+                    yield _sse(ev)
+                except queue.Empty:
+                    if not t.is_alive():
+                        break
+            _abort_flags.pop(session_id, None)
             yield _sse({"type": "completed"})
             yield "data: [DONE]\n\n"
 
         return StreamingResponse(stream(), media_type="text/event-stream")
+
+    @app.post("/api/chat/cancel")
+    def chat_cancel(body: Dict[str, Any] = Body(default={})):
+        sid = body.get("session_id")
+        if sid and sid in _abort_flags:
+            _abort_flags[sid].set()
+            return {"ok": True}
+        # Cancel all active if no session_id
+        for flag in _abort_flags.values():
+            flag.set()
+        return {"ok": True}
+
+    @app.post("/api/chat/answer")
+    def chat_answer(body: Dict[str, Any] = Body(...)):
+        """Answer an AskQuestion pause."""
+        sid = body.get("session_id")
+        answers = body.get("answers", {})
+        if not sid:
+            raise HTTPException(status_code=400, detail="session_id required")
+        try:
+            from buddy.code.server._events import post_answer
+            post_answer(sid, answers)
+        except Exception:
+            pass
+        return {"ok": True}
+
+    @app.post("/api/chat/plan-confirm")
+    def chat_plan_confirm(body: Dict[str, Any] = Body(...)):
+        """Confirm or cancel a CreatePlan pause."""
+        sid = body.get("session_id")
+        confirmed = body.get("confirmed", False)
+        if not sid:
+            raise HTTPException(status_code=400, detail="session_id required")
+        try:
+            from buddy.code.server._events import post_answer
+            post_answer(sid, {"plan_confirmed": confirmed})
+        except Exception:
+            pass
+        return {"ok": True}
 
     # ----------------------------------------------------------- inline edit
     @app.post("/api/inline-edit")
@@ -417,7 +495,23 @@ def create_app() -> FastAPI:
     @app.get("/api/git/status")
     def git_status():
         """Git status of the workspace."""
-        return _git(state.workspace, ["status", "--short", "--branch"])
+        raw = _git(state.workspace, ["status", "--short", "--branch"])
+        output = raw.get("output", "")
+        # Parse branch from first line  (## main...origin/main [ahead 1])
+        lines = output.splitlines()
+        branch = ""
+        files = []
+        for line in lines:
+            if line.startswith("## "):
+                branch = line[3:].split("...")[0].split(" ")[0]
+            elif len(line) >= 3:
+                status = line[:2].strip()
+                path = line[3:].strip()
+                staged = line[0] not in (" ", "?", "!")
+                files.append({"path": path, "status": status, "staged": staged})
+        raw["branch"] = branch
+        raw["files"] = files
+        return raw
 
     @app.get("/api/git/log")
     def git_log(limit: int = Query(20)):
@@ -541,6 +635,153 @@ def create_app() -> FastAPI:
     def codebase_search(q: str = Query(...), max_results: int = Query(30)):
         """Fast text search across the workspace (ripgrep if available, fallback walk)."""
         return _search_workspace(state.workspace, q, max_results)
+
+    # ------------------------------------------------------- sessions
+    _sessions: Dict[str, Dict[str, Any]] = {}
+
+    @app.get("/api/sessions")
+    def list_sessions():
+        return {"sessions": [
+            {"id": k, "title": v.get("title", "Chat"), "updated": v.get("updated", 0)}
+            for k, v in sorted(_sessions.items(), key=lambda x: x[1].get("updated", 0), reverse=True)
+        ]}
+
+    @app.post("/api/sessions")
+    def create_session():
+        sid = str(uuid.uuid4())
+        _sessions[sid] = {"title": "New chat", "updated": time.time()}
+        return {"id": sid}
+
+    @app.delete("/api/sessions/{session_id}")
+    def delete_session(session_id: str):
+        _sessions.pop(session_id, None)
+        return {"ok": True}
+
+    # ----------------------------------------- WebSocket PTY terminal
+    from fastapi import WebSocket, WebSocketDisconnect
+
+    @app.websocket("/ws/terminal")
+    async def ws_terminal(websocket: WebSocket):
+        await websocket.accept()
+        import asyncio
+        import platform
+        cwd = str(state.workspace)
+
+        if platform.system() == "Windows":
+            proc = await asyncio.create_subprocess_exec(
+                "powershell", "-NoLogo", "-NoExit",
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+                cwd=cwd,
+            )
+        else:
+            proc = await asyncio.create_subprocess_exec(
+                "/bin/bash", "--login", "-i",
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+                cwd=cwd,
+            )
+
+        async def read_output():
+            try:
+                while True:
+                    chunk = await proc.stdout.read(4096)
+                    if not chunk:
+                        break
+                    await websocket.send_json({"type": "output", "data": chunk.decode(errors="replace")})
+            except Exception:
+                pass
+
+        read_task = asyncio.ensure_future(read_output())
+        try:
+            while True:
+                msg = await websocket.receive_json()
+                msg_type = msg.get("type", "")
+                if msg_type == "input" and proc.stdin:
+                    data = msg.get("data", "")
+                    proc.stdin.write(data.encode())
+                    await proc.stdin.drain()
+                elif msg_type == "cwd":
+                    pass  # cwd already set
+                elif msg_type == "resize":
+                    pass  # resize not trivial without PTY - skip
+        except (WebSocketDisconnect, Exception):
+            pass
+        finally:
+            read_task.cancel()
+            try:
+                proc.terminate()
+            except Exception:
+                pass
+
+    # ---------------------------------------------------------- MCP servers config
+    _mcp_config_path = lambda: state.workspace / ".aura" / "mcp.json"
+
+    def _load_mcp_config() -> Dict[str, Any]:
+        p = _mcp_config_path()
+        if p.exists():
+            try:
+                return json.loads(p.read_text(encoding="utf-8"))
+            except Exception:
+                pass
+        return {"servers": {}}
+
+    def _save_mcp_config(cfg: Dict[str, Any]) -> None:
+        p = _mcp_config_path()
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(json.dumps(cfg, indent=2, ensure_ascii=False), encoding="utf-8")
+
+    @app.get("/api/mcp/servers")
+    def mcp_list():
+        cfg = _load_mcp_config()
+        servers = [
+            {"name": k, **v}
+            for k, v in cfg.get("servers", {}).items()
+        ]
+        return {"servers": servers}
+
+    @app.post("/api/mcp/servers")
+    def mcp_add(body: Dict[str, Any] = Body(...)):
+        name = body.get("name")
+        if not name:
+            raise HTTPException(status_code=400, detail="name required")
+        cfg = _load_mcp_config()
+        if "servers" not in cfg:
+            cfg["servers"] = {}
+        cfg["servers"][name] = {k: v for k, v in body.items() if k != "name"}
+        _save_mcp_config(cfg)
+        state.invalidate()
+        return {"ok": True}
+
+    @app.delete("/api/mcp/servers/{name}")
+    def mcp_remove(name: str):
+        cfg = _load_mcp_config()
+        cfg.get("servers", {}).pop(name, None)
+        _save_mcp_config(cfg)
+        state.invalidate()
+        return {"ok": True}
+
+    @app.put("/api/mcp/servers/{name}")
+    def mcp_update(name: str, body: Dict[str, Any] = Body(...)):
+        cfg = _load_mcp_config()
+        if name in cfg.get("servers", {}):
+            cfg["servers"][name].update(body)
+            _save_mcp_config(cfg)
+        return {"ok": True}
+
+    # ------------------------------------------------------- diagnostics
+    @app.post("/api/diagnostics")
+    def set_diagnostics(body: Dict[str, Any] = Body(...)):
+        from buddy.code.server._diagnostics import set_diagnostics as _set
+        _set(body.get("markers", []))
+        return {"ok": True}
+
+    @app.get("/api/diagnostics")
+    def get_diagnostics_endpoint():
+        from buddy.code.server._diagnostics import get_diagnostics
+        return {"markers": get_diagnostics()}
 
     # -------------------------------------------------------------- offline
     @app.get("/api/offline/status")
@@ -734,13 +975,20 @@ def _git(workspace: Path, args: List[str]) -> Dict[str, Any]:
 
 
 def _load_rules(workspace: Path) -> str:
-    for name in (".varamrules", ".cursorrules"):
+    for name in (".aurarules", ".varamrules", ".cursorrules"):
         p = workspace / name
         if p.exists():
             try:
                 return p.read_text(encoding="utf-8", errors="ignore")[:8000]
             except Exception:
                 pass
+    # Also try .aura/rules
+    aura_rules = workspace / ".aura" / "rules.md"
+    if aura_rules.exists():
+        try:
+            return aura_rules.read_text(encoding="utf-8", errors="ignore")[:8000]
+        except Exception:
+            pass
     return ""
 
 
@@ -874,8 +1122,8 @@ def serve(
         import webbrowser
         threading.Timer(1.5, lambda: webbrowser.open(url)).start()
 
-    print(f"\n  Varam AI  →  {url}")
-    print(f"  API docs  →  {url}/api/docs\n")
+    print(f"\n  Aura  ->  {url}")
+    print(f"  API docs  ->  {url}/api/docs\n")
 
     if reload:
         uvicorn.run("buddy.code.server.app:create_app", host=host, port=port, reload=True, factory=True)
@@ -908,7 +1156,7 @@ def _launch_desktop_window(url: str, host: str, port: int, reload: bool) -> None
     try:
         import webview  # pywebview
         window = webview.create_window(
-            title="Varam AI",
+            title="Aura",
             url=url,
             width=1400,
             height=900,
