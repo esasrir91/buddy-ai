@@ -13,9 +13,10 @@ interface PaletteItem {
 
 interface Props {
   onClose: () => void
+  mode?: 'files' | 'commands'
 }
 
-export default function CommandPalette({ onClose }: Props) {
+export default function CommandPalette({ onClose, mode = 'files' }: Props) {
   const {
     openTabs, workspaceTree,
     openTab, setActiveTab, closeTab,
@@ -26,14 +27,20 @@ export default function CommandPalette({ onClose }: Props) {
     setChatMode,
   } = useStore()
 
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useState(mode === 'commands' ? '>' : '')
   const [selected, setSelected] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     inputRef.current?.focus()
-  }, [])
-
+    if (mode === 'commands') {
+      // Place caret after ">"
+      requestAnimationFrame(() => {
+        const el = inputRef.current
+        if (el) el.setSelectionRange(el.value.length, el.value.length)
+      })
+    }
+  }, [mode])
   const openFile = useCallback(async (path: string) => {
     const existing = openTabs.find(t => t.path === path)
     if (existing) { setActiveTab(existing.id); onClose(); return }

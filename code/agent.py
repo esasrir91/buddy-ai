@@ -19,22 +19,24 @@ _CATEGORY_PACKAGE = {
     "tool": "buddy.tools",
 }
 
-CODING_SYSTEM_PROMPT = """You are Aura, an expert AI software engineer embedded in the user's IDE.
-You have Cursor-class coding capabilities: read files, search with Glob/Grep,
-write/edit/delete files, run shell commands, manage todos, and launch sub-agents.
+CODING_SYSTEM_PROMPT = """You are Aura, an org-wide AI teammate embedded in the user's workspace.
+You support Engineering, Testing/QA, Platform, Hardware, Security, Product, Data, and General work.
+You have Cursor-class capabilities: read files, search with Glob/Grep, write/edit/delete files,
+run shell commands, manage todos, and launch sub-agents.
 
 Operating principles:
 - Read first: use Read and Grep to understand context before editing.
 - Edit precisely: use StrReplace for targeted edits, Write for new/rewritten files.
   Preserve the project's indentation and style.
-- Verify: after changes, run the relevant test/build/lint command with Shell and
-  fix any issues you introduced.
-- Communicate: after completing a task, give a concise summary of what you changed
-  and why. Always show the file paths you modified.
+- Verify: after changes, run the relevant test/build/lint/hardware-check command with Shell
+  when applicable, and fix issues you introduced.
+- Communicate: after completing a task, give a concise summary of what changed, how to verify,
+  and residual risks. Always show the file paths you modified.
 - Stay autonomous: work through the task step-by-step without stopping to ask
   unless truly blocked. Use AskQuestion only when user input is essential.
 - In Plan mode: use CreatePlan to lay out a plan before executing. In Ask mode:
   answer without making changes.
+- Adapt to the active org team role instructions below.
 """
 
 
@@ -77,21 +79,44 @@ def build_model(settings: CodeSettings):
     api_key = settings.api_keys.get(provider)
     if api_key and _accepts(cls, "api_key"):
         kwargs["api_key"] = api_key
+    # OpenAI-compatible base URL
+    if settings.base_url and _accepts(cls, "base_url"):
+        kwargs["base_url"] = settings.base_url
+    # Timeout
+    if settings.timeout is not None and _accepts(cls, "timeout"):
+        kwargs["timeout"] = settings.timeout
+    # httpx client with proxy / ssl / retries
+    needs_client = settings.http_proxy or not settings.verify_ssl or settings.max_retries != 2
+    if needs_client and _accepts(cls, "http_client"):
+        try:
+            import httpx
+            transport = httpx.HTTPTransport(
+                proxy=settings.http_proxy or None,
+                verify=settings.verify_ssl,
+                retries=settings.max_retries,
+            )
+            kwargs["http_client"] = httpx.Client(transport=transport)
+        except ImportError:
+            pass
     return cls(**kwargs)
 
 
 def build_tools(settings: CodeSettings, workspace: str, session_id: str = None, event_queue=None) -> List[Any]:
-    # Prefer CursorTools over the legacy WorkspaceTools
-    try:
-        from buddy.tools.cursor import CursorTools
-        tools: List[Any] = [CursorTools(
-            base_path=workspace,
-            enable_shell=settings.enable_shell,
-            session_id=session_id,
-            event_queue=event_queue,
-        )]
-    except Exception:
-        tools = [WorkspaceTools(base_path=workspace, enable_shell=settings.enable_shell)]
+    # Agent-free mode: skip all workspace file tools
+    if not settings.workspace_tools or not workspace:
+        tools: List[Any] = []
+    else:
+        # Prefer CursorTools over the legacy WorkspaceTools
+        try:
+            from buddy.tools.cursor import CursorTools
+            tools = [CursorTools(
+                base_path=workspace,
+                enable_shell=settings.enable_shell,
+                session_id=session_id,
+                event_queue=event_queue,
+            )]
+        except Exception:
+            tools = [WorkspaceTools(base_path=workspace, enable_shell=settings.enable_shell)]
 
     for tool_type in settings.enabled_tools:
         try:
@@ -103,7 +128,6 @@ def build_tools(settings: CodeSettings, workspace: str, session_id: str = None, 
     # LLM-generated custom tools the user added are always available.
     try:
         from buddy.code.custom_tools import load_custom_tools
-
         tools.extend(load_custom_tools())
     except Exception:
         pass
@@ -138,20 +162,59 @@ def recall_activity(query: str = "", limit: int = 30) -> str:
         return f"Could not read activity journal: {exc}"
 
 
-def build_code_agent(settings: CodeSettings, workspace: str, session_id: str = None, event_queue=None):
-    """Assemble a ready-to-run Buddy Agent for coding in ``workspace``."""
+AGENT_FREE_PROMPT = """You are Aura, a helpful AI assistant for organizations and individuals.
+You can think deeply, answer questions, write and explain code, do research, make plans,
+and complete complex tasks autonomously across engineering, testing, platform, hardware,
+security, product, and data work.
+You do NOT have access to the user's local files or project codebase in this mode.
+Respond thoroughly and directly. Use markdown formatting."""
+
+
+def build_code_agent(
+    settings: CodeSettings,
+    workspace: str,
+    session_id: str = None,
+    event_queue=None,
+    team_role: str = None,
+):
+    """Assemble a ready-to-run Buddy Agent for the active org team role."""
     from buddy.agent import Agent
+    from buddy.code.teams import normalize_team, role_prompt
 
     settings.apply_to_env()
     model = build_model(settings)
     tools = build_tools(settings, workspace, session_id=session_id, event_queue=event_queue)
 
-    instructions = [CODING_SYSTEM_PROMPT]
+    team = normalize_team(team_role or getattr(settings, "team_role", None) or "engineering")
+
+    # Agent-free mode: simpler prompt + still apply team specialty
+    base_prompt = CODING_SYSTEM_PROMPT if settings.workspace_tools else AGENT_FREE_PROMPT
+    instructions = [base_prompt, role_prompt(team)]
+
+    org = (getattr(settings, "org_name", None) or "").strip()
+    uname = (getattr(settings, "user_name", None) or "").strip()
+    title = (getattr(settings, "user_title", None) or "").strip()
+    focuses = list(getattr(settings, "focus_areas", None) or [])
+    identity_bits = []
+    if org:
+        identity_bits.append(f"Organization: {org}")
+    if uname:
+        identity_bits.append(f"User: {uname}" + (f" ({title})" if title else ""))
+    elif title:
+        identity_bits.append(f"Role title: {title}")
+    if focuses:
+        identity_bits.append("Focus areas: " + ", ".join(focuses))
+    if identity_bits:
+        instructions.append(
+            "Org context for this session:\n- " + "\n- ".join(identity_bits)
+            + "\nTailor language, priorities, and examples to this org and team."
+        )
+
     if settings.instructions:
         instructions.append(settings.instructions)
 
     agent_kwargs: dict = {
-        "name": "Aura",
+        "name": f"Aura ({team})",
         "model": model,
         "tools": tools,
         "instructions": instructions,

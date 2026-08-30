@@ -20,6 +20,32 @@ export interface EditorTab {
 
 export type ChatMode = 'agent' | 'plan' | 'ask'
 
+/** Org-wide team role that shapes agent prompts + UI workflows */
+export type TeamRole =
+  | 'engineering'
+  | 'testing'
+  | 'platform'
+  | 'hardware'
+  | 'security'
+  | 'product'
+  | 'data'
+  | 'general'
+
+export interface TeamMeta {
+  id: TeamRole
+  label: string
+  short: string
+  description: string
+  color: string
+  icon: string
+}
+
+export interface TeamWorkflow {
+  id: string
+  label: string
+  prompt: string
+}
+
 export type ToolStatus = 'running' | 'done' | 'error'
 
 export interface ToolCall {
@@ -49,6 +75,7 @@ export interface ChatMessage {
   planPayload?: PlanPayload
   timestamp: number
   streaming?: boolean
+  editing?: boolean
 }
 
 export interface AskPayload {
@@ -110,5 +137,26 @@ export interface GitStatus {
   behind: number
 }
 
-export type SidebarView = 'explorer' | 'search' | 'git' | 'mcp' | 'settings' | null
-export type BottomTab = 'terminal' | 'problems' | 'output'
+export interface Session {
+  id: string
+  title: string
+  updated: number
+}
+
+export interface OrgProfile {
+  org_name: string
+  user_name: string
+  user_title: string
+  team_role: TeamRole
+  focus_areas: string[]
+  onboarding_complete: boolean
+}
+
+export type SidebarView = 'explorer' | 'search' | 'git' | 'mcp' | 'teams' | 'testing' | 'settings' | null
+export type BottomTab = 'terminal' | 'agent' | 'problems' | 'output'
+
+export interface TerminalSession {
+  id: string
+  name: string
+  shell: string
+}

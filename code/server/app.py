@@ -31,7 +31,7 @@ from typing import Any, Dict, List, Optional
 
 import buddy.models as _models  # noqa: F401  init order
 
-from fastapi import Body, FastAPI, HTTPException, Query
+from fastapi import Body, FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -57,13 +57,99 @@ from buddy.code.training import TrainingManager, available_models, training_deps
 from buddy.code.tools import _IGNORE_DIRS  # noqa: F401 (also used in _search_workspace)
 
 _STATIC_DIR = Path(__file__).parent / "static"
+_AURA_DIR = Path.home() / ".aura"
+_RECENT_PATH = _AURA_DIR / "recent.json"
+
+
+def _load_last_workspace() -> Path:
+    """Return last opened workspace, falling back to home dir."""
+    try:
+        if _RECENT_PATH.exists():
+            data = json.loads(_RECENT_PATH.read_text(encoding="utf-8"))
+            recent = data.get("recent", [])
+            if recent:
+                p = Path(recent[0])
+                if p.is_dir():
+                    return p
+    except Exception:
+        pass
+    return Path.home()
+
+
+def _save_recent_workspace(path: Path) -> None:
+    """Persist opened folder to recent list (max 10)."""
+    try:
+        _AURA_DIR.mkdir(parents=True, exist_ok=True)
+        data: Dict[str, Any] = {}
+        if _RECENT_PATH.exists():
+            try:
+                data = json.loads(_RECENT_PATH.read_text(encoding="utf-8"))
+            except Exception:
+                pass
+        recent: List[str] = [str(path)] + [
+            p for p in data.get("recent", []) if p != str(path)
+        ]
+        data["recent"] = recent[:10]
+        _RECENT_PATH.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    except Exception:
+        pass
+
+
+# ── File-backed session store ─────────────────────────────────────────────
+
+def _sessions_dir(workspace: Path) -> Path:
+    d = workspace / ".aura" / "sessions"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def _session_path(workspace: Path, session_id: str) -> Path:
+    return _sessions_dir(workspace) / f"{session_id}.json"
+
+
+def _load_session(workspace: Path, session_id: str) -> Optional[Dict[str, Any]]:
+    p = _session_path(workspace, session_id)
+    if p.exists():
+        try:
+            return json.loads(p.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    return None
+
+
+def _save_session(workspace: Path, data: Dict[str, Any]) -> None:
+    p = _session_path(workspace, data["id"])
+    p.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def _list_sessions(workspace: Path) -> List[Dict[str, Any]]:
+    d = _sessions_dir(workspace)
+    sessions = []
+    for f in d.glob("*.json"):
+        try:
+            s = json.loads(f.read_text(encoding="utf-8"))
+            sessions.append({"id": s["id"], "title": s.get("title", "Chat"), "updated": s.get("updated", 0)})
+        except Exception:
+            pass
+    return sorted(sessions, key=lambda x: x["updated"], reverse=True)
+
+
+def _delete_session(workspace: Path, session_id: str) -> None:
+    p = _session_path(workspace, session_id)
+    if p.exists():
+        p.unlink()
 
 
 class _State:
     """Runtime state: current workspace + cached agent (rebuilt on change)."""
 
     def __init__(self) -> None:
-        self.workspace: Path = Path(os.getenv("BUDDY_CODE_WORKSPACE", Path.cwd())).resolve()
+        env_ws = os.getenv("BUDDY_CODE_WORKSPACE")
+        if env_ws:
+            self.workspace: Path = Path(env_ws).resolve()
+        else:
+            # Load last workspace from ~/.aura/recent.json, fall back to home dir
+            self.workspace = _load_last_workspace()
         self.settings: CodeSettings = load_settings()
         self.settings.apply_to_env()
         self._agent = None
@@ -72,7 +158,10 @@ class _State:
 
     def signature(self) -> str:
         s = self.settings
-        return f"{self.workspace}|{s.model_type}|{s.model_id}|{s.enable_shell}|{','.join(s.enabled_tools)}"
+        return (
+            f"{self.workspace}|{s.model_type}|{s.model_id}|{s.enable_shell}"
+            f"|{s.workspace_tools}|{s.base_url}|{getattr(s, 'team_role', '')}|{','.join(s.enabled_tools)}"
+        )
 
     def agent(self):
         sig = self.signature()
@@ -80,6 +169,10 @@ class _State:
             self._agent = build_code_agent(self.settings, str(self.workspace))
             self._agent_signature = sig
         return self._agent
+
+    def invalidate(self):
+        self._agent = None
+        self._agent_signature = None
 
     def pulse_agent(self, profile: Optional[Dict[str, Any]] = None):
         from buddy.code.pulse import build_pulse_employee
@@ -138,11 +231,22 @@ class ChatContext(BaseModel):
     diagnostics: Optional[str] = None         # linter/error context
 
 
+class ProfileUpdate(BaseModel):
+    org_name: Optional[str] = None
+    user_name: Optional[str] = None
+    user_title: Optional[str] = None
+    team_role: Optional[str] = None
+    focus_areas: Optional[List[str]] = None
+    onboarding_complete: Optional[bool] = None
+
+
 class ChatRequest(BaseModel):
     message: str
-    mode: str = "agent"  # "agent" | "plan" | "ask" | "pulse" | "ca" | "valuation" | "civil"
+    mode: str = "agent"  # "agent" | "plan" | "ask" | "agent_free" | "pulse" | …
     session_id: Optional[str] = None
     profile: Optional[Dict[str, Any]] = None
+    workspace_tools: Optional[bool] = None  # override per-message; None = use settings
+    team_role: Optional[str] = None         # engineering | testing | platform | …
     context: Optional[ChatContext] = None
 
 
@@ -219,7 +323,7 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
-        allow_credentials=True,
+        allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],
     )
@@ -227,7 +331,11 @@ def create_app() -> FastAPI:
     # ----------------------------------------------------------------- meta
     @app.get("/api/health")
     def health():
-        return {"status": "ok", "workspace": str(state.workspace)}
+        return {
+            "status": "ok",
+            "workspace": str(state.workspace),
+            "terminal": True,
+        }
 
     @app.get("/api/settings")
     def get_settings():
@@ -263,6 +371,58 @@ def create_app() -> FastAPI:
     def tools():
         return _catalog_by_category("tool")
 
+    @app.get("/api/teams")
+    def teams(role: Optional[str] = None):
+        """Org team roles + workflows for the Aura workspace."""
+        from buddy.code.teams import team_payload, normalize_team
+        active = normalize_team(role or getattr(state.settings, "team_role", None))
+        return team_payload(active)
+
+    @app.get("/api/profile")
+    def get_profile():
+        s = state.settings
+        from buddy.code.teams import normalize_team, ORG_TEAMS
+        team = normalize_team(getattr(s, "team_role", None))
+        return {
+            "org_name": getattr(s, "org_name", "") or "",
+            "user_name": getattr(s, "user_name", "") or "",
+            "user_title": getattr(s, "user_title", "") or "",
+            "team_role": team,
+            "focus_areas": list(getattr(s, "focus_areas", None) or []),
+            "onboarding_complete": bool(getattr(s, "onboarding_complete", False)),
+            "workspace": str(state.workspace),
+            "team": ORG_TEAMS.get(team, ORG_TEAMS["general"]),
+        }
+
+    def _apply_profile(body: ProfileUpdate):
+        from buddy.code.settings import merge_settings_update, save_settings
+        from buddy.code.teams import normalize_team
+        update: Dict[str, Any] = {}
+        if body.org_name is not None:
+            update["org_name"] = str(body.org_name or "").strip()[:120]
+        if body.user_name is not None:
+            update["user_name"] = str(body.user_name or "").strip()[:80]
+        if body.user_title is not None:
+            update["user_title"] = str(body.user_title or "").strip()[:80]
+        if body.team_role is not None:
+            update["team_role"] = normalize_team(body.team_role)
+        if body.focus_areas is not None:
+            update["focus_areas"] = [str(a)[:60] for a in (body.focus_areas or [])][:12]
+        if body.onboarding_complete is not None:
+            update["onboarding_complete"] = bool(body.onboarding_complete)
+        if update:
+            state.settings = save_settings(merge_settings_update(state.settings, update))
+            state.invalidate()
+        return get_profile()
+
+    @app.put("/api/profile")
+    def put_profile(body: ProfileUpdate):
+        return _apply_profile(body)
+
+    @app.post("/api/profile")
+    def post_profile(body: ProfileUpdate):
+        return _apply_profile(body)
+
     # ------------------------------------------------------------ workspace
     @app.get("/api/workspace")
     def get_workspace():
@@ -275,6 +435,7 @@ def create_app() -> FastAPI:
             raise HTTPException(status_code=400, detail="Not a directory")
         state.workspace = p
         state.invalidate()
+        _save_recent_workspace(p)
         return {"ok": True, "path": str(p)}
 
     # ------------------------------------------------------------------- fs
@@ -331,10 +492,25 @@ def create_app() -> FastAPI:
         session_id = req.session_id or str(uuid.uuid4())
         message = _enrich_message(req.message, req.context, state.workspace)
 
+        # Ensure session exists on disk; create if new
+        sess = _load_session(state.workspace, session_id)
+        if sess is None:
+            sess = {"id": session_id, "title": req.message[:60], "updated": time.time(), "messages": []}
+        # Append user message to transcript
+        sess["messages"].append({"role": "user", "content": req.message, "ts": time.time()})
+        sess["updated"] = time.time()
+        if sess.get("title", "New chat") == "New chat":
+            sess["title"] = req.message[:60]
+        _save_session(state.workspace, sess)
+
         # Per-session event queue and abort flag
         ev_q: queue.Queue = queue.Queue()
         abort_flag = threading.Event()
         _abort_flags[session_id] = abort_flag
+
+        # Collect streamed assistant text for saving
+        assistant_chunks: list = []
+        assistant_tools: list = []
 
         def run_agent():
             try:
@@ -343,24 +519,36 @@ def create_app() -> FastAPI:
                 elif req.mode in PACK_FEATURE:
                     agent = state.vertical_agent(req.mode)
                 else:
-                    # Build agent with CursorTools wired to our event queue
+                    # Build agent respecting workspace_tools, team role, and mode settings
+                    settings_copy = state.settings.model_copy(deep=True)
+                    if req.mode == "agent_free":
+                        settings_copy.workspace_tools = False
+                    elif req.workspace_tools is not None:
+                        settings_copy.workspace_tools = req.workspace_tools
+                    team_role = req.team_role or getattr(settings_copy, "team_role", None)
+                    if team_role:
+                        settings_copy.team_role = team_role
                     from buddy.code.agent import build_code_agent
                     agent = build_code_agent(
-                        state.settings,
+                        settings_copy,
                         str(state.workspace),
                         session_id=session_id,
                         event_queue=ev_q,
+                        team_role=team_role,
                     )
-                    # Also update any existing tool instances' mode
                     for tool in getattr(agent, 'tools', []):
-                        if hasattr(tool, '_mode'):
-                            if req.mode in ('agent', 'plan', 'ask'):
-                                tool._mode = req.mode
+                        if hasattr(tool, '_mode') and req.mode in ('agent', 'plan', 'ask'):
+                            tool._mode = req.mode
                 for event in agent.run(message, stream=True):
                     if abort_flag.is_set():
                         break
                     payload = _normalize_event(event)
                     if payload:
+                        # Track assistant text for persistence
+                        if payload.get("type") == "content":
+                            assistant_chunks.append(payload.get("content", ""))
+                        elif payload.get("type") == "tool" and payload.get("phase") == "completed":
+                            assistant_tools.append(payload.get("tool", ""))
                         ev_q.put(payload)
             except Exception as e:
                 ev_q.put({"type": "error", "content": str(e)})
@@ -382,6 +570,20 @@ def create_app() -> FastAPI:
                     if not t.is_alive():
                         break
             _abort_flags.pop(session_id, None)
+            # Persist assistant turn
+            try:
+                s2 = _load_session(state.workspace, session_id) or sess
+                text = "".join(assistant_chunks)
+                s2["messages"].append({
+                    "role": "assistant",
+                    "content": text,
+                    "tools": assistant_tools,
+                    "ts": time.time(),
+                })
+                s2["updated"] = time.time()
+                _save_session(state.workspace, s2)
+            except Exception:
+                pass
             yield _sse({"type": "completed"})
             yield "data: [DONE]\n\n"
 
@@ -636,83 +838,314 @@ def create_app() -> FastAPI:
         """Fast text search across the workspace (ripgrep if available, fallback walk)."""
         return _search_workspace(state.workspace, q, max_results)
 
-    # ------------------------------------------------------- sessions
-    _sessions: Dict[str, Dict[str, Any]] = {}
+    # ------------------------------------------------------- sessions (file-backed)
 
     @app.get("/api/sessions")
     def list_sessions():
-        return {"sessions": [
-            {"id": k, "title": v.get("title", "Chat"), "updated": v.get("updated", 0)}
-            for k, v in sorted(_sessions.items(), key=lambda x: x[1].get("updated", 0), reverse=True)
-        ]}
+        return {"sessions": _list_sessions(state.workspace)}
 
     @app.post("/api/sessions")
     def create_session():
         sid = str(uuid.uuid4())
-        _sessions[sid] = {"title": "New chat", "updated": time.time()}
+        data: Dict[str, Any] = {"id": sid, "title": "New chat", "updated": time.time(), "messages": []}
+        _save_session(state.workspace, data)
         return {"id": sid}
+
+    @app.get("/api/sessions/{session_id}")
+    def get_session(session_id: str):
+        data = _load_session(state.workspace, session_id)
+        if not data:
+            raise HTTPException(status_code=404, detail="Session not found")
+        return data
+
+    @app.patch("/api/sessions/{session_id}")
+    def rename_session(session_id: str, body: Dict[str, Any] = Body(...)):
+        data = _load_session(state.workspace, session_id)
+        if not data:
+            raise HTTPException(status_code=404, detail="Session not found")
+        if "title" in body:
+            data["title"] = body["title"]
+        data["updated"] = time.time()
+        _save_session(state.workspace, data)
+        return {"ok": True}
 
     @app.delete("/api/sessions/{session_id}")
     def delete_session(session_id: str):
-        _sessions.pop(session_id, None)
+        _delete_session(state.workspace, session_id)
         return {"ok": True}
 
+    @app.put("/api/sessions/{session_id}/messages")
+    def replace_messages(session_id: str, body: Dict[str, Any] = Body(...)):
+        """Replace transcript (for edit/delete message). Body: {messages: [...]}"""
+        data = _load_session(state.workspace, session_id)
+        if not data:
+            raise HTTPException(status_code=404, detail="Session not found")
+        data["messages"] = body.get("messages", [])
+        data["updated"] = time.time()
+        _save_session(state.workspace, data)
+        return {"ok": True}
+
+    @app.get("/api/recents")
+    def list_recents():
+        try:
+            if _RECENT_PATH.exists():
+                data = json.loads(_RECENT_PATH.read_text(encoding="utf-8"))
+                return {"recent": [p for p in data.get("recent", []) if Path(p).is_dir()]}
+        except Exception:
+            pass
+        return {"recent": []}
+
     # ----------------------------------------- WebSocket PTY terminal
-    from fastapi import WebSocket, WebSocketDisconnect
+    # NOTE: WebSocket must be imported at module top (future annotations).
+
+    def _resolve_shell(shell: str | None = None):
+        """Return (appname, cmdline, display_name) for the interactive shell."""
+        import platform
+        import shutil
+
+        system = platform.system()
+        requested = (shell or "").strip().lower()
+
+        if system == "Windows":
+            windir = os.environ.get("SystemRoot", r"C:\Windows")
+            if requested in ("pwsh", "powershell-core"):
+                path = shutil.which("pwsh.exe") or shutil.which("pwsh")
+                if path:
+                    return path, "-NoLogo -NoExit", "pwsh"
+            if requested == "cmd":
+                path = (
+                    shutil.which("cmd.exe")
+                    or os.path.join(windir, "System32", "cmd.exe")
+                )
+                return path, "/K", "cmd"
+
+            # Default: Windows PowerShell
+            ps = (
+                shutil.which("powershell.exe")
+                or shutil.which("powershell")
+                or os.path.join(
+                    windir, "System32", "WindowsPowerShell", "v1.0", "powershell.exe"
+                )
+            )
+            if os.path.exists(ps) or shutil.which("powershell"):
+                return ps, "-NoLogo -NoExit", "powershell"
+            cmd = shutil.which("cmd.exe") or os.path.join(windir, "System32", "cmd.exe")
+            return cmd, "/K", "cmd"
+
+        if requested in ("zsh", "fish", "sh", "bash"):
+            path = shutil.which(requested) or f"/bin/{requested}"
+            return path, None, requested
+        for name in ("bash", "zsh", "sh"):
+            path = shutil.which(name)
+            if path:
+                return path, None, name
+        return "/bin/sh", None, "sh"
 
     @app.websocket("/ws/terminal")
     async def ws_terminal(websocket: WebSocket):
         await websocket.accept()
         import asyncio
         import platform
-        cwd = str(state.workspace)
+        import queue
+        import threading
 
+        cwd = str(state.workspace) if state.workspace else os.getcwd()
+        if not os.path.isdir(cwd):
+            cwd = os.getcwd()
+
+        shell_q = websocket.query_params.get("shell")
+        appname, cmdline, shell_name = _resolve_shell(shell_q)
+        cols = max(20, min(int(websocket.query_params.get("cols") or 80), 500))
+        rows = max(5, min(int(websocket.query_params.get("rows") or 24), 200))
+
+        await websocket.send_json({
+            "type": "ready",
+            "shell": shell_name,
+            "cwd": cwd,
+            "pty": True,
+        })
+
+        # ── Windows: force WinPTY (ConPTY is unreliable on many hosts) ──
         if platform.system() == "Windows":
-            proc = await asyncio.create_subprocess_exec(
-                "powershell", "-NoLogo", "-NoExit",
-                stdin=asyncio.subprocess.PIPE,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.STDOUT,
-                cwd=cwd,
-            )
-        else:
-            proc = await asyncio.create_subprocess_exec(
-                "/bin/bash", "--login", "-i",
-                stdin=asyncio.subprocess.PIPE,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.STDOUT,
-                cwd=cwd,
-            )
+            try:
+                from winpty import PTY, Backend  # type: ignore
+            except ImportError:
+                await websocket.send_json({
+                    "type": "output",
+                    "data": (
+                        "\r\n\x1b[33m[Terminal needs pywinpty]\x1b[0m\r\n"
+                        "  pip install pywinpty\r\n"
+                    ),
+                })
+                await websocket.close()
+                return
 
-        async def read_output():
+            try:
+                pty = PTY(cols, rows, backend=Backend.WinPTY)
+            except Exception:
+                pty = PTY(cols, rows)
+
+            ok = pty.spawn(appname, cmdline=cmdline, cwd=cwd)
+            if not ok:
+                await websocket.send_json({
+                    "type": "output",
+                    "data": f"\r\n\x1b[31mFailed to spawn {shell_name}\x1b[0m\r\n",
+                })
+                await websocket.close()
+                return
+
+            out_q: queue.Queue = queue.Queue()
+            stop = threading.Event()
+
+            def reader_thread():
+                while not stop.is_set():
+                    try:
+                        data = pty.read(blocking=False)
+                    except Exception as exc:
+                        out_q.put(("err", str(exc)))
+                        break
+                    if data:
+                        out_q.put(("data", data))
+                    else:
+                        if not pty.isalive():
+                            out_q.put(("dead", None))
+                            break
+                        time.sleep(0.015)
+
+            threading.Thread(target=reader_thread, daemon=True).start()
+
+            async def pump_ws():
+                while not stop.is_set():
+                    try:
+                        kind, payload = await asyncio.get_event_loop().run_in_executor(
+                            None, lambda: out_q.get(timeout=0.2)
+                        )
+                    except Exception:
+                        continue
+                    if kind == "data":
+                        await websocket.send_json({"type": "output", "data": payload})
+                    else:
+                        break
+
+            pump_task = asyncio.ensure_future(pump_ws())
             try:
                 while True:
-                    chunk = await proc.stdout.read(4096)
-                    if not chunk:
+                    msg = await websocket.receive_json()
+                    msg_type = msg.get("type", "")
+                    if msg_type == "input":
+                        data = msg.get("data", "")
+                        if data:
+                            try:
+                                pty.write(data)
+                            except Exception:
+                                break
+                    elif msg_type == "resize":
+                        try:
+                            c = max(20, int(msg.get("cols") or cols))
+                            r = max(5, int(msg.get("rows") or rows))
+                            pty.set_size(c, r)
+                        except Exception:
+                            pass
+            except (WebSocketDisconnect, Exception):
+                pass
+            finally:
+                stop.set()
+                pump_task.cancel()
+                try:
+                    if pty.isalive():
+                        pty.write("exit\r\n")
+                except Exception:
+                    pass
+            return
+
+        # ── Unix PTY ─────────────────────────────────────────────────────
+        import pty as unix_pty
+        import fcntl
+        import struct
+        import termios
+        import select
+
+        master, slave = unix_pty.openpty()
+        try:
+            fcntl.ioctl(master, termios.TIOCSWINSZ, struct.pack("HHHH", rows, cols, 0, 0))
+        except Exception:
+            pass
+
+        env = os.environ.copy()
+        env["TERM"] = "xterm-256color"
+        env["COLORTERM"] = "truecolor"
+
+        args = [appname]
+        if shell_name in ("bash", "zsh"):
+            args.append("-l")
+
+        proc = await asyncio.create_subprocess_exec(
+            *args,
+            stdin=slave,
+            stdout=slave,
+            stderr=slave,
+            cwd=cwd,
+            env=env,
+            start_new_session=True,
+        )
+        os.close(slave)
+
+        async def pump_unix():
+            loop = asyncio.get_event_loop()
+            try:
+                while True:
+                    ready = await loop.run_in_executor(
+                        None, lambda: select.select([master], [], [], 0.05)
+                    )
+                    if ready[0]:
+                        try:
+                            data = os.read(master, 4096)
+                        except OSError:
+                            break
+                        if not data:
+                            break
+                        await websocket.send_json({
+                            "type": "output",
+                            "data": data.decode(errors="replace"),
+                        })
+                    if proc.returncode is not None:
                         break
-                    await websocket.send_json({"type": "output", "data": chunk.decode(errors="replace")})
             except Exception:
                 pass
 
-        read_task = asyncio.ensure_future(read_output())
+        read_task = asyncio.ensure_future(pump_unix())
         try:
             while True:
                 msg = await websocket.receive_json()
                 msg_type = msg.get("type", "")
-                if msg_type == "input" and proc.stdin:
+                if msg_type == "input":
                     data = msg.get("data", "")
-                    proc.stdin.write(data.encode())
-                    await proc.stdin.drain()
-                elif msg_type == "cwd":
-                    pass  # cwd already set
+                    if data:
+                        try:
+                            os.write(master, data.encode())
+                        except OSError:
+                            break
                 elif msg_type == "resize":
-                    pass  # resize not trivial without PTY - skip
+                    try:
+                        c = max(20, int(msg.get("cols") or cols))
+                        r = max(5, int(msg.get("rows") or rows))
+                        fcntl.ioctl(
+                            master,
+                            termios.TIOCSWINSZ,
+                            struct.pack("HHHH", r, c, 0, 0),
+                        )
+                    except Exception:
+                        pass
         except (WebSocketDisconnect, Exception):
             pass
         finally:
             read_task.cancel()
             try:
                 proc.terminate()
+            except Exception:
+                pass
+            try:
+                os.close(master)
             except Exception:
                 pass
 
@@ -940,14 +1373,26 @@ def _normalize_event(event: Any) -> Optional[Dict[str, Any]]:
         tool = getattr(event, "tool", None)
         tool_name = None
         args = None
+        result = None
         if tool is not None:
             tool_name = getattr(tool, "tool_name", None) or getattr(tool, "name", None)
             args = getattr(tool, "tool_args", None)
+            # Grab result from completed events
+            result = getattr(tool, "tool_result", None) or getattr(tool, "result", None)
             if tool_name is None and isinstance(tool, dict):
                 tool_name = tool.get("tool_name") or tool.get("name")
                 args = tool.get("tool_args")
+                result = tool.get("tool_result") or tool.get("result")
         phase = "completed" if "completed" in name else "started"
-        return {"type": "tool", "phase": phase, "tool": tool_name or "tool", "args": _safe_args(args)}
+        payload: Dict[str, Any] = {
+            "type": "tool",
+            "phase": phase,
+            "tool": tool_name or "tool",
+            "args": _safe_args(args),
+        }
+        if result is not None:
+            payload["result"] = str(result)[:2000]
+        return payload
 
     return None
 
@@ -1131,6 +1576,49 @@ def serve(
         uvicorn.run(create_app(), host=host, port=port)
 
 
+def _resolve_aura_icon() -> str | None:
+    """Return absolute path to Aura.ico if present."""
+    from pathlib import Path as _P
+    here = _P(__file__).resolve()
+    candidates = [
+        here.parents[2] / "Aura.ico",                 # repo root
+        here.parents[2] / "assets" / "aura.ico",
+        here.parents[1] / "static" / "favicon.ico",   # code/server/static
+        _P.home() / ".buddy" / "aura.ico",
+    ]
+    for p in candidates:
+        if p.is_file():
+            return str(p)
+    return None
+
+
+def _apply_windows_hwnd_icon(icon_path: str, title: str = "Aura") -> None:
+    """Force title-bar + taskbar icons via Win32 (covers EdgeChromium cases)."""
+    import ctypes
+    from ctypes import wintypes
+
+    user32 = ctypes.windll.user32
+    WM_SETICON = 0x0080
+    ICON_SMALL, ICON_BIG = 0, 1
+    IMAGE_ICON = 1
+    LR_LOADFROMFILE = 0x0010
+    LR_DEFAULTSIZE = 0x0040
+
+    hwnd = user32.FindWindowW(None, title)
+    if not hwnd:
+        return
+
+    # Load both sizes
+    hicon_big = user32.LoadImageW(None, icon_path, IMAGE_ICON, 32, 32, LR_LOADFROMFILE)
+    hicon_small = user32.LoadImageW(None, icon_path, IMAGE_ICON, 16, 16, LR_LOADFROMFILE)
+    if not hicon_big:
+        hicon_big = user32.LoadImageW(0, icon_path, IMAGE_ICON, 0, 0, LR_LOADFROMFILE | LR_DEFAULTSIZE)
+    if hicon_big:
+        user32.SendMessageW(hwnd, WM_SETICON, ICON_BIG, hicon_big)
+    if hicon_small:
+        user32.SendMessageW(hwnd, WM_SETICON, ICON_SMALL, hicon_small)
+
+
 def _launch_desktop_window(url: str, host: str, port: int, reload: bool) -> None:
     """Start the FastAPI server in a background thread, then open a pywebview window."""
     import threading
@@ -1155,16 +1643,57 @@ def _launch_desktop_window(url: str, host: str, port: int, reload: bool) -> None
 
     try:
         import webview  # pywebview
+
+        # Windows taskbar / jump-list identity (keeps icon grouping correct)
+        try:
+            import ctypes as _ct
+            _ct.windll.shell32.SetCurrentProcessExplicitAppUserModelID("com.aura.ide")
+        except Exception:
+            pass
+
+        # Detect screen dimensions for a good default size
+        import ctypes, sys as _sys
+        try:
+            if _sys.platform == "win32":
+                user32 = ctypes.windll.user32
+                sw = user32.GetSystemMetrics(0)
+                sh = user32.GetSystemMetrics(1)
+                w = min(int(sw * 0.9), 1600)
+                h = min(int(sh * 0.9), 1000)
+            else:
+                w, h = 1440, 900
+        except Exception:
+            w, h = 1440, 900
+
+        icon_path = _resolve_aura_icon()
+
         window = webview.create_window(
             title="Aura",
             url=url,
-            width=1400,
-            height=900,
-            min_size=(900, 600),
-            background_color="#0c0c14",
+            width=w,
+            height=h,
+            min_size=(960, 640),
+            background_color="#11111b",
             text_select=True,
         )
-        webview.start(debug=False)
+
+        def _on_shown():
+            if icon_path and _sys.platform == "win32":
+                try:
+                    _apply_windows_hwnd_icon(icon_path, "Aura")
+                except Exception:
+                    pass
+
+        try:
+            window.events.shown += _on_shown
+        except Exception:
+            pass
+
+        # Icon belongs on start() for winforms/GTK/QT backends
+        if icon_path:
+            webview.start(debug=False, icon=icon_path)
+        else:
+            webview.start(debug=False)
     except ImportError:
         # pywebview not installed — fall back to browser
         import webbrowser

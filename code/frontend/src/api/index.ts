@@ -44,13 +44,52 @@ export const getTools = () => get<unknown[]>('/tools')
 // ── sessions (thread persistence) ─────────────────────────────────────────
 export const getSessions = () => get<{ sessions: Array<{ id: string; title: string; updated: number }> }>('/sessions')
 export const createSession = () => post<{ id: string }>('/sessions')
+export const getSession = (id: string) => get<{ id: string; title: string; messages: unknown[] }>(`/sessions/${id}`)
+export const renameSession = (id: string, title: string) => req('PATCH', `/sessions/${id}`, { title })
 export const deleteSession = (id: string) => del(`/sessions/${id}`)
+export const replaceMessages = (id: string, messages: unknown[]) => put(`/sessions/${id}/messages`, { messages })
+export const getRecents = () => get<{ recent: string[] }>('/recents')
+export const getTeams = (role?: string) =>
+  get<{
+    team: string
+    label: string
+    short: string
+    description: string
+    color: string
+    workflows: Array<{ id: string; label: string; prompt: string }>
+    teams: Array<{ id: string; label: string; short: string; description: string; color: string; icon: string }>
+  }>(`/teams${role ? `?role=${encodeURIComponent(role)}` : ''}`)
+
+export const getProfile = () =>
+  get<{
+    org_name: string
+    user_name: string
+    user_title: string
+    team_role: string
+    focus_areas: string[]
+    onboarding_complete: boolean
+    workspace: string
+    team?: { id: string; label: string; short: string; description: string; color: string }
+  }>('/profile')
+
+export const saveProfile = (profile: Record<string, unknown>) =>
+  post<{
+    org_name: string
+    user_name: string
+    user_title: string
+    team_role: string
+    focus_areas: string[]
+    onboarding_complete: boolean
+    workspace: string
+  }>('/profile', profile)
 
 // ── chat (SSE) ────────────────────────────────────────────────────────────
 export interface ChatRequest {
   message: string
   mode?: string
   session_id?: string
+  workspace_tools?: boolean
+  team_role?: string
   context?: {
     active_file?: string
     active_file_content?: string

@@ -1,5 +1,6 @@
 import React from 'react'
 import { useStore } from '../../store'
+import { fsRead } from '../../api'
 import type { Diagnostic } from '../../types'
 
 export default function ProblemsPanel() {
@@ -17,7 +18,6 @@ export default function ProblemsPanel() {
       setActiveTab(existing.id)
       return
     }
-    const { fsRead } = await import('../../api')
     try {
       const { content } = await fsRead(d.path)
       openTab(d.path, content)

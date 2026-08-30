@@ -5,6 +5,8 @@ import SearchPanel from './SearchPanel'
 import GitPanel from './GitPanel'
 import McpPanel from './McpPanel'
 import SettingsPanel from './SettingsPanel'
+import TeamsPanel from './TeamsPanel'
+import TestingPanel from './TestingPanel'
 
 interface Props {
   style?: React.CSSProperties
@@ -19,6 +21,8 @@ export default function Sidebar({ style }: Props) {
       {sidebarView === 'search' && <SearchPanel />}
       {sidebarView === 'git' && <GitPanel />}
       {sidebarView === 'mcp' && <McpPanel />}
+      {sidebarView === 'teams' && <TeamsPanel />}
+      {sidebarView === 'testing' && <TestingPanel />}
       {sidebarView === 'settings' && <SettingsPanel />}
       {sidebarView === null && null}
     </div>

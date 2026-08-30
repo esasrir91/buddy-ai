@@ -1,8 +1,9 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react'
 import Editor from '@monaco-editor/react'
 import { useStore } from '../../store'
-import { fsWrite, getCompletion } from '../../api'
+import { fsWrite, getCompletion, setWorkspace as apiSetWorkspace, getWorkspace, getRecents } from '../../api'
 import InlineEdit from './InlineEdit'
+import AuraLogo from '../AuraLogo'
 import type { editor as MonacoEditor } from 'monaco-editor'
 
 export default function EditorArea() {
@@ -170,9 +171,9 @@ export default function EditorArea() {
 
   return (
     <div className="editor-area">
-      {/* Tabs */}
+      {/* Tab bar */}
       {openTabs.length > 0 && (
-        <div className="tabs-bar">
+        <div className="tab-bar">
           {openTabs.map(tab => (
             <div
               key={tab.id}
@@ -180,8 +181,9 @@ export default function EditorArea() {
               onClick={() => setActiveTab(tab.id)}
               title={tab.path}
             >
-              {tab.dirty && <span className="editor-tab__dot" />}
-              <span>{tab.name}</span>
+              <span className="editor-tab__icon">{fileIcon(tab.name)}</span>
+              <span className="editor-tab__name">{tab.name}</span>
+              {tab.dirty && <span className="editor-tab__dirty" title="Unsaved changes" />}
               <button
                 className="editor-tab__close"
                 onClick={e => { e.stopPropagation(); closeTab(tab.id) }}
@@ -195,10 +197,12 @@ export default function EditorArea() {
       {/* Breadcrumbs */}
       {activeTab && (
         <div className="breadcrumbs">
-          {activeTab.path.split(/[\\/]/).map((part, i, arr) => (
+          {activeTab.path.split(/[\\/]/).filter(Boolean).map((part, i, arr) => (
             <React.Fragment key={i}>
-              {i > 0 && <span>/</span>}
-              <a title={part}>{part}</a>
+              {i > 0 && <span className="breadcrumbs__sep">›</span>}
+              <span className={`breadcrumbs__part${i === arr.length - 1 ? ' breadcrumbs__part--active' : ''}`}>
+                {part}
+              </span>
             </React.Fragment>
           ))}
         </div>
@@ -206,7 +210,7 @@ export default function EditorArea() {
 
       {/* Editor */}
       {activeTab ? (
-        <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
+        <div className="editor-body">
           <Editor
             key={activeTab.id}
             path={activeTab.path}
@@ -251,17 +255,94 @@ export default function EditorArea() {
           )}
         </div>
       ) : (
-        <div className="editor-welcome">
-          <h2>Aura</h2>
-          <p>Open a file from the Explorer,<br />or start a conversation with the Agent.</p>
-          <div style={{ display: 'flex', gap: 10, marginTop: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
-            <span><kbd>Ctrl+P</kbd> Open file</span>
-            <span><kbd>Ctrl+L</kbd> Agent chat</span>
-            <span><kbd>Ctrl+K</kbd> Inline edit</span>
-            <span><kbd>Ctrl+`</kbd> Terminal</span>
-          </div>
+        <EditorWelcome />
+      )}
+    </div>
+  )
+}
+
+function fileIcon(name: string): string {
+  const ext = name.split('.').pop()?.toLowerCase() ?? ''
+  const map: Record<string, string> = {
+    ts: '🔷', tsx: '⚛', js: '📜', jsx: '⚛',
+    py: '🐍', rs: '🦀', go: '🐹',
+    json: '{ }', yaml: '📋', yml: '📋', toml: '⚙',
+    md: '📝', txt: '📄', html: '🌐', css: '🎨',
+    sh: '$', ps1: '$', bat: '$',
+    sql: '🗄',
+  }
+  return map[ext] ?? '📄'
+}
+
+function EditorWelcome() {
+  const { setSidebarView, setAgentPaneVisible } = useStore()
+  const [recents, setRecents] = React.useState<string[]>([])
+
+  React.useEffect(() => {
+    getRecents().then(r => setRecents(r.recent)).catch(() => {})
+  }, [])
+
+  const openFolder = () => {
+    const path = window.prompt('Enter folder path to open:')
+    if (!path) return
+    apiSetWorkspace(path).then(() => getWorkspace()).then(({ path: resolved }) => {
+      useStore.getState().setWorkspace(resolved)
+    }).catch(e => alert(`Cannot open: ${e.message}`))
+  }
+
+  return (
+    <div className="editor-empty">
+      <div className="editor-empty__logo">
+        <AuraLogo size={64} />
+      </div>
+      <div className="editor-empty__title">Aura</div>
+      <div className="editor-empty__sub">AI Coding IDE</div>
+
+      <div className="editor-empty__actions">
+        <button className="editor-empty__action" onClick={openFolder}>
+          <span className="editor-empty__action-label">📂 Open Folder</span>
+          <span className="editor-empty__action-kbd">Ctrl+O</span>
+        </button>
+        <button className="editor-empty__action" onClick={() => {
+          useStore.getState().setBottomPanelVisible(true)
+          useStore.getState().setBottomTab('terminal')
+        }}>
+          <span className="editor-empty__action-label">$ Open Terminal</span>
+          <span className="editor-empty__action-kbd">Ctrl+`</span>
+        </button>
+        <button className="editor-empty__action" onClick={() => setAgentPaneVisible(true)}>
+          <span className="editor-empty__action-label">✨ Start Agent</span>
+          <span className="editor-empty__action-kbd">Ctrl+L</span>
+        </button>
+        <button className="editor-empty__action" onClick={() => setSidebarView('explorer')}>
+          <span className="editor-empty__action-label">🔍 Browse Files</span>
+          <span className="editor-empty__action-kbd">Ctrl+P</span>
+        </button>
+      </div>
+
+      {recents.length > 0 && (
+        <div className="editor-empty__recents">
+          <div className="editor-empty__recents-title">Recent</div>
+          {recents.slice(0, 5).map(p => (
+            <div
+              key={p}
+              className="editor-empty__recent-item"
+              onClick={() => {
+                apiSetWorkspace(p).then(() => getWorkspace()).then(({ path: resolved }) => {
+                  useStore.getState().setWorkspace(resolved)
+                }).catch(() => {})
+              }}
+            >
+              <span>📁</span>
+              <span style={{ fontWeight: 600 }}>{p.split(/[\\/]/).filter(Boolean).pop()}</span>
+              <span style={{ fontSize: 10.5, color: 'var(--text-faint)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p}</span>
+            </div>
+          ))}
         </div>
       )}
     </div>
   )
 }
+
+
+

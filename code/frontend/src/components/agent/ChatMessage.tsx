@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import type { ChatMessage as ChatMsg, FileDiff, AskPayload, PlanPayload } from '../../types'
 import ToolCallChip from './ToolCallChip'
 import DiffApply from './DiffApply'
@@ -11,10 +11,14 @@ interface Props {
   onRejectDiff: (msgId: string, diffId: string) => void
   onAnswerAsk: (msgId: string, answers: Record<string, any>) => void
   onConfirmPlan: (msgId: string, confirmed: boolean) => void
+  onEdit: (msgId: string) => void
+  onSaveEdit: (msgId: string, content: string) => void
+  onCancelEdit: (msgId: string) => void
+  onDelete: (msgId: string) => void
+  onRetry: (msgId: string) => void
 }
 
 function renderMarkdown(text: string): string {
-  // simple markdown renderer
   return text
     .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
     .replace(/`([^`]+)`/g, '<code>$1</code>')
@@ -30,22 +34,72 @@ function renderMarkdown(text: string): string {
     .replace(/^(.+)$(?!<\/?(h\d|ul|li|pre|p))/gm, (_, l) => l)
 }
 
-export default function ChatMessage({ msg, onApplyDiff, onRejectDiff, onAnswerAsk, onConfirmPlan }: Props) {
+export default function ChatMessage({
+  msg, onApplyDiff, onRejectDiff, onAnswerAsk, onConfirmPlan,
+  onEdit, onSaveEdit, onCancelEdit, onDelete, onRetry,
+}: Props) {
   const isUser = msg.role === 'user'
   const ts = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const [hovered, setHovered] = useState(false)
+  const [editDraft, setEditDraft] = useState(msg.content)
+  const editRef = useRef<HTMLTextAreaElement>(null)
+
+  const handleEditClick = () => {
+    setEditDraft(msg.content)
+    onEdit(msg.id)
+    setTimeout(() => editRef.current?.focus(), 50)
+  }
 
   return (
-    <div className={`chat-msg chat-msg--${msg.role}`}>
+    <div
+      className={`chat-msg chat-msg--${msg.role}`}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
       {isUser ? (
         <>
-          <div className="chat-msg__meta"><span>You</span><span>{ts}</span></div>
-          <div className="chat-msg__bubble">{msg.content}</div>
+          <div className="chat-msg__meta">
+            <span>You</span>
+            <span>{ts}</span>
+            {hovered && !msg.editing && (
+              <div className="chat-msg__actions">
+                <button className="msg-action-btn" onClick={handleEditClick} title="Edit">✎</button>
+                <button className="msg-action-btn msg-action-btn--danger" onClick={() => onDelete(msg.id)} title="Delete">✕</button>
+              </div>
+            )}
+          </div>
+          {msg.editing ? (
+            <div className="chat-msg__edit">
+              <textarea
+                ref={editRef}
+                value={editDraft}
+                onChange={e => setEditDraft(e.target.value)}
+                rows={3}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onSaveEdit(msg.id, editDraft) }
+                  if (e.key === 'Escape') onCancelEdit(msg.id)
+                }}
+              />
+              <div className="chat-msg__edit-actions">
+                <button className="btn btn--xs btn--primary" onClick={() => onSaveEdit(msg.id, editDraft)}>Send</button>
+                <button className="btn btn--xs btn--ghost" onClick={() => onCancelEdit(msg.id)}>Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <div className="chat-msg__bubble">{msg.content}</div>
+          )}
         </>
       ) : (
         <>
           <div className="chat-msg__meta">
             <span style={{ color: 'var(--accent-ai)' }}>✨ Aura</span>
             <span>{ts}</span>
+            {hovered && !msg.streaming && (
+              <div className="chat-msg__actions">
+                <button className="msg-action-btn" onClick={() => onRetry(msg.id)} title="Regenerate">↺</button>
+                <button className="msg-action-btn msg-action-btn--danger" onClick={() => onDelete(msg.id)} title="Delete">✕</button>
+              </div>
+            )}
           </div>
 
           {/* tool calls */}

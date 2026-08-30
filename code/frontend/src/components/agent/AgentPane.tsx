@@ -1,10 +1,15 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react'
 import { useStore } from '../../store'
-import { streamChat, cancelRun, chatAnswer, confirmPlan, fsWrite, fsRead } from '../../api'
+import {
+  streamChat, cancelRun, chatAnswer, confirmPlan, fsWrite,
+  getSessions, createSession, deleteSession, renameSession, replaceMessages, getSession,
+} from '../../api'
 import ChatMessage from './ChatMessage'
-import type { ChatMessage as ChatMsg, FileDiff, ToolCall, AskPayload, PlanPayload } from '../../types'
+import type { ChatMessage as ChatMsg, FileDiff, ToolCall, AskPayload, PlanPayload, Session } from '../../types'
 import AtMentionMenu from './AtMentionMenu'
 import TodoList from './TodoList'
+import { teamMeta, teamWorkflows } from '../../teams'
+import { writeToActiveTerminal } from '../panel/terminalBus'
 
 let _msgSeq = 0
 const nid = () => `msg_${Date.now()}_${++_msgSeq}`
@@ -20,13 +25,18 @@ interface Props {
 export default function AgentPane({ style }: Props) {
   const {
     messages, isStreaming, chatMode, sessionId, inputDraft, mentionedFiles,
-    openTabs, activeTabId, diagnostics, todos,
+    openTabs, activeTabId, diagnostics, todos, sessions, useCodebase, teamRole,
+    orgName, userName,
     setChatMode, addMessage, appendContent, addToolCall, updateToolCall,
     addFileDiff, updateFileDiff, setAskPayload, setPlanPayload,
     setIsStreaming, setStreamingMsgId, streamingMsgId,
-    setInputDraft, setMentionedFiles,
+    setInputDraft, setMentionedFiles, setSessions, setSessionId, addSession,
+    removeSession: removeSessionStore, renameSession: renameSessionStore,
     openTab, updateTabContent, markTabDirty,
-    setTodos, updateTodo, finalizeMessage,
+    setTodos, updateTodo, finalizeMessage, clearChat, loadMessages,
+    truncateMessages, removeMessage, updateMessageContent, setMessageEditing,
+    setUseCodebase, appendAgentTerminal, clearAgentTerminal, setBottomTab,
+    setBottomPanelVisible,
   } = useStore()
 
   const bodyRef = useRef<HTMLDivElement>(null)
@@ -37,6 +47,24 @@ export default function AgentPane({ style }: Props) {
   const [showAt, setShowAt] = useState(false)
   const [atAnchor, setAtAnchor] = useState<{ query: string; startPos: number } | null>(null)
   const [imgBase64, setImgBase64] = useState<string[]>([])
+  const [showSessionMenu, setShowSessionMenu] = useState(false)
+  const sessionMenuRef = useRef<HTMLDivElement>(null)
+
+  // Load sessions on mount
+  useEffect(() => {
+    getSessions().then(r => setSessions(r.sessions)).catch(() => {})
+  }, [])
+
+  // Close session menu on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (sessionMenuRef.current && !sessionMenuRef.current.contains(e.target as Node)) {
+        setShowSessionMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
 
   // auto-scroll
   useEffect(() => {
@@ -65,6 +93,42 @@ export default function AgentPane({ style }: Props) {
     }
   }, [openTabs, activeTabId])
 
+  // Core streaming logic, reusable for send + retry
+  const runStream = useCallback(async (text: string, assistantId: string, existingSessionId: string) => {
+    const diag = diagnostics.slice(0, 20)
+    const diagStr = diag.map(d => `${d.path}:${d.line} [${d.severity}] ${d.message}`).join('\n')
+    abortRef.current = new AbortController()
+    try {
+      await streamChat(
+        {
+          message: text,
+          mode: chatMode,
+          session_id: existingSessionId,
+          workspace_tools: useCodebase,
+          team_role: teamRole,
+          context: {
+            ...getActiveFileContext(),
+            mentioned_files: mentionedFiles,
+            images: imgBase64,
+            diagnostics: diagStr || undefined,
+          },
+        },
+        (ev) => handleEvent(ev, assistantId),
+        abortRef.current.signal,
+      )
+    } catch (e: any) {
+      if (e.name !== 'AbortError') {
+        appendContent(assistantId, `\n\n_Error: ${e.message}_`)
+      }
+    } finally {
+      finalizeMessage(assistantId)
+      setIsStreaming(false)
+      setStreamingMsgId(null)
+      // Refresh session list
+      getSessions().then(r => setSessions(r.sessions)).catch(() => {})
+    }
+  }, [chatMode, sessionId, useCodebase, teamRole, mentionedFiles, imgBase64, diagnostics, openTabs, activeTabId])
+
   const send = useCallback(async (text: string) => {
     if (!text.trim() || isStreaming) return
 
@@ -92,39 +156,8 @@ export default function AgentPane({ style }: Props) {
     addMessage(assistantMsg)
     setIsStreaming(true)
     setStreamingMsgId(assistantId)
-
-    abortRef.current = new AbortController()
-
-    // Build context
-    const diag = diagnostics.slice(0, 20)
-    const diagStr = diag.map(d => `${d.path}:${d.line} [${d.severity}] ${d.message}`).join('\n')
-
-    try {
-      await streamChat(
-        {
-          message: text,
-          mode: chatMode,
-          session_id: sessionId,
-          context: {
-            ...getActiveFileContext(),
-            mentioned_files: mentionedFiles,
-            images: imgBase64,
-            diagnostics: diagStr || undefined,
-          },
-        },
-        (ev) => handleEvent(ev, assistantId),
-        abortRef.current.signal,
-      )
-    } catch (e: any) {
-      if (e.name !== 'AbortError') {
-        appendContent(assistantId, `\n\n_Error: ${e.message}_`)
-      }
-    } finally {
-      finalizeMessage(assistantId)
-      setIsStreaming(false)
-      setStreamingMsgId(null)
-    }
-  }, [isStreaming, chatMode, sessionId, mentionedFiles, imgBase64, diagnostics, openTabs, activeTabId])
+    await runStream(text, assistantId, sessionId)
+  }, [isStreaming, sessionId, runStream])
 
   const handleEvent = useCallback((ev: Record<string, unknown>, msgId: string) => {
     const type = ev.type as string
@@ -146,7 +179,6 @@ export default function AgentPane({ style }: Props) {
     else if (type === 'tool_end' || (type === 'tool' && ev.phase === 'completed')) {
       const name = (ev.tool_name ?? ev.tool) as string
       const result = String(ev.result ?? ev.output ?? '')
-      // find the running tool call with this name
       const msgs = useStore.getState().messages
       const msg = msgs.find(m => m.id === msgId)
       const tc = msg?.toolCalls?.find(t => t.name === name && t.status === 'running')
@@ -171,12 +203,32 @@ export default function AgentPane({ style }: Props) {
         applied: null,
       }
       addFileDiff(msgId, diff)
-      // also update tab if open
       const tab = useStore.getState().openTabs.find(t => t.path === diff.path)
       if (tab) {
         updateTabContent(tab.id, diff.newContent)
         markTabDirty(tab.id, true)
       }
+    }
+
+    else if (type === 'shell_start') {
+      clearAgentTerminal()
+      const cmd = String(ev.command ?? '')
+      writeToActiveTerminal(`\r\n\x1b[36m$ ${cmd}\x1b[0m\r\n`)
+      setBottomTab('terminal')
+      setBottomPanelVisible(true)
+    }
+
+    else if (type === 'shell_output') {
+      const chunk = String(ev.chunk ?? '')
+      appendAgentTerminal(chunk)
+      writeToActiveTerminal(chunk.replace(/\n/g, '\r\n'))
+    }
+
+    else if (type === 'shell_end') {
+      const code = ev.exit_code as number
+      const line = `\r\n\x1b[90m[exit ${code}]\x1b[0m\r\n`
+      appendAgentTerminal(`\n[exit ${code}]\n`)
+      writeToActiveTerminal(line)
     }
 
     else if (type === 'todo_update') {
@@ -198,13 +250,84 @@ export default function AgentPane({ style }: Props) {
       const mode = ev.mode as 'agent' | 'plan' | 'ask'
       if (mode) setChatMode(mode)
     }
-  }, [appendContent, addToolCall, updateToolCall, addFileDiff, setAskPayload, setPlanPayload, setTodos, setChatMode, updateTabContent, markTabDirty])
+  }, [appendContent, addToolCall, updateToolCall, addFileDiff, setAskPayload, setPlanPayload, setTodos, setChatMode, updateTabContent, markTabDirty, appendAgentTerminal, clearAgentTerminal, setBottomTab, setBottomPanelVisible])
 
+  // ── Edit message ─────────────────────────────────────────────────────────
+  const handleEditMessage = useCallback((msgId: string) => {
+    setMessageEditing(msgId, true)
+  }, [setMessageEditing])
+
+  const handleSaveEdit = useCallback(async (msgId: string, newContent: string) => {
+    const msgs = useStore.getState().messages
+    const idx = msgs.findIndex(m => m.id === msgId)
+    if (idx < 0) return
+    updateMessageContent(msgId, newContent)
+    // truncate everything after this message
+    truncateMessages(idx + 1)
+    // sync to server
+    try {
+      const updated = useStore.getState().messages.slice(0, idx + 1)
+      await replaceMessages(sessionId, updated.map(m => ({ role: m.role, content: m.content, ts: m.timestamp })))
+    } catch {}
+    // re-run agent from this message
+    const assistantId = nid()
+    const assistantMsg: ChatMsg = {
+      id: assistantId, role: 'assistant', content: '', toolCalls: [], fileDiffs: [],
+      timestamp: Date.now(), streaming: true,
+    }
+    addMessage(assistantMsg)
+    setIsStreaming(true)
+    setStreamingMsgId(assistantId)
+    await runStream(newContent, assistantId, sessionId)
+  }, [sessionId, truncateMessages, updateMessageContent, addMessage, setIsStreaming, setStreamingMsgId, runStream])
+
+  const handleCancelEdit = useCallback((msgId: string) => {
+    setMessageEditing(msgId, false)
+  }, [setMessageEditing])
+
+  // ── Delete message ────────────────────────────────────────────────────────
+  const handleDeleteMessage = useCallback(async (msgId: string) => {
+    const msgs = useStore.getState().messages
+    const idx = msgs.findIndex(m => m.id === msgId)
+    if (idx < 0) return
+    // Remove this message + the following assistant if it's a pair
+    const toRemove = [msgId]
+    if (msgs[idx].role === 'user' && msgs[idx + 1]?.role === 'assistant') {
+      toRemove.push(msgs[idx + 1].id)
+    }
+    toRemove.forEach(id => removeMessage(id))
+    // sync to server
+    try {
+      const remaining = useStore.getState().messages
+      await replaceMessages(sessionId, remaining.map(m => ({ role: m.role, content: m.content, ts: m.timestamp })))
+    } catch {}
+  }, [sessionId, removeMessage])
+
+  // ── Retry (regenerate last assistant) ────────────────────────────────────
+  const handleRetry = useCallback(async (msgId: string) => {
+    const msgs = useStore.getState().messages
+    const idx = msgs.findIndex(m => m.id === msgId)
+    if (idx < 0) return
+    // Remove this assistant message, find preceding user message
+    removeMessage(msgId)
+    const userMsg = msgs.slice(0, idx).reverse().find(m => m.role === 'user')
+    if (!userMsg) return
+    const assistantId = nid()
+    const assistantMsg: ChatMsg = {
+      id: assistantId, role: 'assistant', content: '', toolCalls: [], fileDiffs: [],
+      timestamp: Date.now(), streaming: true,
+    }
+    addMessage(assistantMsg)
+    setIsStreaming(true)
+    setStreamingMsgId(assistantId)
+    await runStream(userMsg.content, assistantId, sessionId)
+  }, [sessionId, removeMessage, addMessage, setIsStreaming, setStreamingMsgId, runStream])
+
+  // ── Diff handlers ─────────────────────────────────────────────────────────
   const handleApplyDiff = useCallback(async (msgId: string, diffId: string, diff: FileDiff) => {
     try {
       await fsWrite(diff.path, diff.newContent)
       updateFileDiff(msgId, diffId, { applied: true })
-      // reload open tab
       const tab = useStore.getState().openTabs.find(t => t.path === diff.path)
       if (tab) {
         updateTabContent(tab.id, diff.newContent)
@@ -243,12 +366,49 @@ export default function AgentPane({ style }: Props) {
     setStreamingMsgId(null)
   }, [sessionId])
 
+  // ── Session management ───────────────────────────────────────────────────
+  const handleNewChat = useCallback(async () => {
+    setShowSessionMenu(false)
+    clearChat()
+    try {
+      const { id } = await createSession()
+      setSessionId(id)
+      getSessions().then(r => setSessions(r.sessions)).catch(() => {})
+    } catch {}
+  }, [clearChat, setSessionId, setSessions])
+
+  const handleSwitchSession = useCallback(async (s: Session) => {
+    setShowSessionMenu(false)
+    clearChat()
+    setSessionId(s.id)
+    // load messages from server
+    try {
+      const data = await getSession(s.id)
+      const msgs = (data.messages as any[]).map((m: any, i: number) => ({
+        id: nid(),
+        role: m.role as 'user' | 'assistant',
+        content: m.content ?? '',
+        timestamp: (m.ts ?? i) * 1000,
+        toolCalls: [],
+        fileDiffs: [],
+      }))
+      loadMessages(msgs)
+    } catch {}
+  }, [clearChat, setSessionId, loadMessages])
+
+  const handleDeleteSession = useCallback(async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    await deleteSession(id).catch(() => {})
+    removeSessionStore(id)
+    if (id === sessionId) {
+      clearChat()
+    }
+  }, [sessionId, removeSessionStore, clearChat])
+
   // @ mention handling
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value
     setInputDraft(val)
-
-    // detect @
     const caret = e.target.selectionStart ?? val.length
     const before = val.slice(0, caret)
     const atIdx = before.lastIndexOf('@')
@@ -288,7 +448,6 @@ export default function AgentPane({ style }: Props) {
     }
   }
 
-  // paste image
   const handlePaste = (e: React.ClipboardEvent) => {
     const items = e.clipboardData?.items
     if (!items) return
@@ -309,27 +468,67 @@ export default function AgentPane({ style }: Props) {
     ask: 'var(--ok)',
   }
 
+  const currentSession = sessions.find(s => s.id === sessionId)
+
   return (
     <div className="agent-pane" style={style}>
       {/* Header */}
       <div className="agent-pane__header">
-        <div className="mode-tabs">
-          {(['agent', 'plan', 'ask'] as const).map(m => (
-            <button
-              key={m}
-              className={`mode-tab${chatMode === m ? ' mode-tab--active' : ''}`}
-              onClick={() => setChatMode(m)}
-              style={chatMode === m ? { background: modeColors[m] } : {}}
-            >
-              {m.charAt(0).toUpperCase() + m.slice(1)}
-            </button>
-          ))}
-        </div>
-        <div style={{ display: 'flex', gap: 4 }}>
-          <button className="icon-btn" title="Todos" onClick={() => setShowTodos(v => !v)}>
-            ☑ {todos.length > 0 && <span style={{ marginLeft: 2, color: 'var(--accent-2)', fontSize: 10 }}>{todos.length}</span>}
+        {/* Sessions dropdown */}
+        <div className="session-dropdown" ref={sessionMenuRef}>
+          <button
+            className="session-trigger"
+            onClick={() => setShowSessionMenu(v => !v)}
+            title="Chat history"
+          >
+            <span className="session-title">{currentSession?.title ?? 'New chat'}</span>
+            <span className="session-chevron">{showSessionMenu ? '▲' : '▼'}</span>
           </button>
-          <button className="icon-btn" title="Clear chat" onClick={() => useStore.getState().clearChat()}>🗑</button>
+          {showSessionMenu && (
+            <div className="session-menu">
+              <button className="session-menu__new" onClick={handleNewChat}>
+                + New chat
+              </button>
+              <div className="session-menu__list">
+                {sessions.length === 0 && (
+                  <div style={{ padding: '8px 12px', color: 'var(--text-faint)', fontSize: 12 }}>No history yet</div>
+                )}
+                {sessions.map(s => (
+                  <div
+                    key={s.id}
+                    className={`session-menu__item${s.id === sessionId ? ' session-menu__item--active' : ''}`}
+                    onClick={() => handleSwitchSession(s)}
+                  >
+                    <span className="session-menu__item-title">{s.title}</span>
+                    <button
+                      className="session-menu__item-del"
+                      onClick={(e) => handleDeleteSession(s.id, e)}
+                      title="Delete"
+                    >✕</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="agent-header-right">
+          <div className="mode-tabs">
+            {(['agent', 'plan', 'ask'] as const).map(m => (
+              <button
+                key={m}
+                className={`mode-tab${chatMode === m ? ' mode-tab--active' : ''}`}
+                onClick={() => setChatMode(m)}
+                style={chatMode === m ? { background: modeColors[m] } : {}}
+              >
+                {m.charAt(0).toUpperCase() + m.slice(1)}
+              </button>
+            ))}
+          </div>
+          <button className="icon-btn" title="Todos" onClick={() => setShowTodos(v => !v)}>
+            ☑{todos.length > 0 && <span style={{ marginLeft: 2, color: 'var(--accent-2)', fontSize: 10 }}>{todos.length}</span>}
+          </button>
+          <button className="icon-btn" title="Clear chat" onClick={handleNewChat}>🗑</button>
           {isStreaming && (
             <button className="btn btn--sm btn--danger" onClick={handleCancel}>■ Stop</button>
           )}
@@ -347,13 +546,25 @@ export default function AgentPane({ style }: Props) {
       {/* Messages */}
       <div className="agent-pane__body" ref={bodyRef}>
         {messages.length === 0 && (
-          <div className="empty-state" style={{ paddingTop: 40 }}>
-            <div style={{ fontSize: 28, marginBottom: 8 }}>✨</div>
-            <div style={{ fontWeight: 600, color: 'var(--text-dim)', fontSize: 15 }}>Aura Agent</div>
-            <p>Ask me anything about your code.<br />I can read files, run commands, search, and edit.</p>
+          <div className="empty-state" style={{ paddingTop: 32 }}>
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              padding: '4px 10px', borderRadius: 999, marginBottom: 10,
+              background: teamMeta(teamRole).color, color: '#fff',
+              fontSize: 11, fontWeight: 700, letterSpacing: '.3px',
+            }}>
+              {teamMeta(teamRole).short} · {teamMeta(teamRole).label}
+            </div>
+            <div style={{ fontWeight: 650, color: 'var(--text)', fontSize: 15 }}>
+              {userName ? `Hi ${userName.split(' ')[0]}` : 'Aura Agent'}
+              {orgName ? ` · ${orgName}` : ''}
+            </div>
+            <p style={{ maxWidth: 280 }}>
+              {teamMeta(teamRole).description}
+            </p>
             <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
-              {['Explain this file', 'Fix the linting errors', 'Write tests', 'Refactor to use async/await'].map(q => (
-                <button key={q} className="btn btn--xs btn--ghost" onClick={() => send(q)}>{q}</button>
+              {teamWorkflows(teamRole).slice(0, 4).map(q => (
+                <button key={q.id} className="btn btn--xs btn--ghost" onClick={() => send(q.prompt)}>{q.label}</button>
               ))}
             </div>
           </div>
@@ -367,6 +578,11 @@ export default function AgentPane({ style }: Props) {
             onRejectDiff={handleRejectDiff}
             onAnswerAsk={handleAnswerAsk}
             onConfirmPlan={handleConfirmPlan}
+            onEdit={handleEditMessage}
+            onSaveEdit={handleSaveEdit}
+            onCancelEdit={handleCancelEdit}
+            onDelete={handleDeleteMessage}
+            onRetry={handleRetry}
           />
         ))}
 
@@ -379,6 +595,18 @@ export default function AgentPane({ style }: Props) {
 
       {/* Input area */}
       <div className="agent-input-wrap">
+        {/* Use codebase toggle */}
+        <div className="agent-input-meta">
+          <label className="codebase-toggle" title="Toggle workspace file tools on/off">
+            <input
+              type="checkbox"
+              checked={useCodebase}
+              onChange={e => setUseCodebase(e.target.checked)}
+            />
+            <span>Use codebase</span>
+          </label>
+        </div>
+
         {/* mentioned files */}
         {mentionedFiles.length > 0 && (
           <div className="ctx-pills-row">
@@ -403,7 +631,7 @@ export default function AgentPane({ style }: Props) {
         )}
 
         {/* active file context indicator */}
-        {openTabs.find(t => t.id === activeTabId) && (
+        {useCodebase && openTabs.find(t => t.id === activeTabId) && (
           <div className="ctx-pills-row">
             <span className="ctx-pill" title="Current file is in context">
               📄 {openTabs.find(t => t.id === activeTabId)?.name}
@@ -425,7 +653,7 @@ export default function AgentPane({ style }: Props) {
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             onPaste={handlePaste}
-            placeholder={`Message Aura (${chatMode} mode)… @ to mention files`}
+            placeholder={useCodebase ? `Message Aura (${chatMode} mode)… @ to mention files` : `Message Aura (no project)…`}
             rows={1}
             style={{ overflowY: 'hidden' }}
             onInput={(e) => {

@@ -45,6 +45,13 @@ class CodeSettings(BaseModel):
     model_id: str = DEFAULT_MODEL_ID
     temperature: Optional[float] = None
 
+    # OpenAI-compatible / custom endpoint
+    base_url: Optional[str] = None          # e.g. "https://openrouter.ai/api/v1"
+    timeout: Optional[int] = None           # request timeout in seconds
+    http_proxy: Optional[str] = None        # e.g. "http://proxy:8080"
+    verify_ssl: bool = True
+    max_retries: int = 2
+
     # provider -> api key
     api_keys: Dict[str, str] = Field(default_factory=dict)
 
@@ -54,9 +61,19 @@ class CodeSettings(BaseModel):
 
     # Agent behaviour
     enable_shell: bool = True
+    workspace_tools: bool = True            # False = agent-free / no file tools
     reasoning: bool = False
     max_tool_calls: int = 50
     instructions: Optional[str] = None
+    # Org team role: engineering | testing | platform | hardware | security | product | data | general
+    team_role: str = "testing"
+
+    # First-run org profile (collected by onboarding)
+    org_name: str = ""
+    user_name: str = ""
+    user_title: str = ""
+    focus_areas: List[str] = Field(default_factory=list)
+    onboarding_complete: bool = False
 
     def apply_to_env(self) -> None:
         """Export configured API keys into the process environment."""

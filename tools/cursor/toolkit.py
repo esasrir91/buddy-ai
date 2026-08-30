@@ -422,20 +422,37 @@ class CursorTools(Toolkit):
             if is_win else
             ["/bin/bash", "-c", command]
         )
+
+        self._emit("shell_start", {"command": command, "cwd": cwd})
+
         try:
-            proc = subprocess.run(
+            import subprocess as _sp
+            proc = _sp.Popen(
                 shell_cmd,
-                capture_output=True,
+                stdout=_sp.PIPE,
+                stderr=_sp.STDOUT,
                 text=True,
-                timeout=timeout,
                 cwd=cwd,
             )
-            combined = (proc.stdout or "") + (proc.stderr or "")
+            chunks: list[str] = []
+            deadline = time.time() + timeout
+            # Stream output line-by-line
+            assert proc.stdout is not None
+            for line in proc.stdout:
+                if time.time() > deadline:
+                    proc.kill()
+                    self._emit("shell_end", {"command": command, "exit_code": -1, "timed_out": True})
+                    combined = "".join(chunks)
+                    return f"exit_code=-1 (timeout)\n{combined[-8000:]}"
+                chunks.append(line)
+                self._emit("shell_output", {"chunk": line})
+            proc.wait()
+            combined = "".join(chunks)
+            self._emit("shell_end", {"command": command, "exit_code": proc.returncode})
             header = f"exit_code={proc.returncode}\n"
-            return header + (combined[:8000] if len(combined) > 8000 else combined)
-        except subprocess.TimeoutExpired:
-            return f"Error: command timed out after {timeout}s"
+            return header + (combined[-8000:] if len(combined) > 8000 else combined)
         except Exception as e:
+            self._emit("shell_end", {"command": command, "exit_code": -1, "error": str(e)})
             return f"Error: {e}"
 
     def await_shell(
