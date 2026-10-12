@@ -23,7 +23,7 @@ Most AI tools wait for you to ask a question. **PULSE** is different — it is B
 | **Continuity** | Often forgets between sessions | Long-term memory + conversation history across restarts |
 | **Reporting** | None | Daily standups, activity feed, notifications |
 
-PULSE is built for **doing work**, not just answering questions. The [Competency Engine](../advanced/competency.md) (new in v2.2.0) complements it by measuring *who* on your team is strongest in each domain — PULSE is the teammate that actually executes.
+PULSE is built for **doing work**, not just answering questions. The [Competency Engine](../advanced/competency.md), introduced in v2.2.0, complements it by measuring *who* on your team is strongest in each domain — PULSE is the teammate that actually executes.
 
 ---
 

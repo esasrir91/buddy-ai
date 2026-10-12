@@ -48,7 +48,7 @@ pip install "buddy-ai[dev]"
 
 ```python
 import buddy
-print(buddy.__version__)       # e.g. 2.2.0
+print(buddy.__version__)       # e.g. 3.0.0
 print(buddy.get_version_info())
 ```
 

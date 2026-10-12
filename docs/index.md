@@ -24,21 +24,33 @@ pip install buddy-ai[all]
 
 ---
 
-## ⭐ Featured in v2.2.0
+## ⭐ Featured in v3.0.0
 
-!!! success "New in v2.2.0 — Built-in Prompt Caching"
-    Save up to **90 % of repeated prompt-token costs** with a single flag.  Anthropic gets explicit `cache_control` breakpoints on system prompt, tools, and conversation history.  OpenAI gets automatic server-side caching with cache-hit metrics surfaced automatically.
+!!! success "New in v3.0.0 — Agent Collaboration"
+    Add **subagent delegation**, pre-response advisor guidance, and post-response judging to an Agent. Opt into parallel tool calls while confirmation and user-input steps remain gated.
 
     ```python
-    agent = Agent(model=Claude(id="claude-opus-4-5"), cache_prompt=True)
+    from buddy import Agent
+    from buddy.models.openai import OpenAIChat
+
+    model = OpenAIChat(id="gpt-4o-mini")
+    researcher = Agent(name="researcher", model=model)
+    agent = Agent(
+        model=model,
+        subagents=[researcher],
+        advisor=True,
+        judge=True,
+        parallel_tool_calls=True,
+        cache_prompt=True,
+    )
     ```
 
-    [:octicons-arrow-right-24: Prompt Caching guide](advanced/prompt-caching.md){ .md-button .md-button--primary }
+    [:octicons-arrow-right-24: Read the 3.0.0 release article](articles/buddy-ai-v3.0.0.md){ .md-button .md-button--primary }
 
-!!! info "New in v2.2.0 — Competency Engine"
-    **Teaching AI Agents to Know What They Don't Know.** Read the full story — plain English, runnable code, honest framing.
+!!! info "New in v3.0.0 — Robust Planning and Tools"
+    Model-assisted plan decomposition, dependency-aware execution and retries, custom token counting, and shell commands for Windows and Linux.
 
-    [:octicons-book-24: Read the release article](articles/competency-engine-v2.2.0.md){ .md-button .md-button--primary }
+    [:octicons-book-24: Explore the release details](articles/buddy-ai-v3.0.0.md){ .md-button .md-button--primary }
 
 !!! info "Featured article — PULSE"
     **Meet your autonomous teammate.** What PULSE is, the nine-page web UI, desktop app with system tray, and a Python quick start — no invented features.
@@ -55,13 +67,13 @@ pip install buddy-ai[all]
 
     [:octicons-arrow-right-24: Token Efficiency guide](advanced/token-efficiency.md) · [Prompt Caching](advanced/prompt-caching.md)
 
--   :material-newspaper-variant-outline:{ .lg .middle } __Release article — Competency Engine__
+-   :material-newspaper-variant-outline:{ .lg .middle } __Release article — Buddy AI 3.0.0__
 
     ---
 
-    **Teaching AI Agents to Know What They Don't Know** — what's new in v2.2.0, the report-card metaphor, and three runnable code walkthroughs (scoring, autonomous loop, runtime routing).
+    Planning, agent collaboration, token-management, and cross-platform shell improvements in the 3.0.0 release.
 
-    [:octicons-arrow-right-24: Read the article](articles/competency-engine-v2.2.0.md)
+    [:octicons-arrow-right-24: Read the article](articles/buddy-ai-v3.0.0.md)
 
 -   :material-account-hard-hat:{ .lg .middle } __PULSE — Autonomous Virtual Employee__
 

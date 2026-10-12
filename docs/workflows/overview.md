@@ -7,7 +7,7 @@ what, a `Workflow` puts **you** in control: you subclass `Workflow`, implement a
 logic requires.
 
 !!! note "Version"
-    Documents buddy-ai **2.2.0**. The base class and execution model below are
+    Documents buddy-ai **3.0.0**. The base class and execution model below are
     verified against `buddy/workflow/workflow.py`.
 
 ## Imports

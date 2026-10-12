@@ -8,7 +8,7 @@ help.
 
 ```bash
 pip install buddy-ai
-buddy --version   # buddy-ai version: 2.2.0
+buddy --version   # buddy-ai version: 3.0.0
 buddy --help
 ```
 

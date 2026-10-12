@@ -4,6 +4,14 @@ Release notes, deep dives, and feature stories from the Buddy AI team.
 
 <div class="grid cards" markdown>
 
+-   :material-newspaper-variant-outline:{ .lg .middle } __Buddy AI 3.0.0: Planning and Agent Collaboration__
+
+    ---
+
+    **Advisor and judge agents, subagent delegation, parallel tool calls, model-assisted planning, token management, and portable shell commands.**
+
+    [:octicons-arrow-right-24: Read the release article](buddy-ai-v3.0.0.md)
+
 -   :material-newspaper-variant-outline:{ .lg .middle } __Teaching AI Agents to Know What They Don't Know__
 
     ---

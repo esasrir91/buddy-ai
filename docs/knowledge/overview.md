@@ -7,7 +7,7 @@ chunks, and stores the vectors in a vector database so the agent can pull back
 relevant passages at query time.
 
 !!! note "Version"
-    This page documents buddy-ai **2.2.0**. Every class and parameter below is
+    This page documents buddy-ai **3.0.0**. Every class and parameter below is
     verified against the package source under `buddy/`.
 
 ## Architecture

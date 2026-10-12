@@ -5,7 +5,7 @@ a coordinating leader. The leader is itself driven by a model; it decides how to
 involve the members and how to assemble the final answer.
 
 !!! note "Version"
-    Documents buddy-ai **2.2.0**. The `Team` API below is verified against
+    Documents buddy-ai **3.0.0**. The `Team` API below is verified against
     `buddy/team/team.py`.
 
 ## Anatomy of a team

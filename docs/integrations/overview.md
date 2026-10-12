@@ -7,7 +7,7 @@ unified models, agents, and tools where you already are, and bring LangChain
 tools into Buddy.
 
 !!! note "Version"
-    Documents buddy-ai **2.2.0**. Adapters are verified against
+    Documents buddy-ai **3.0.0**. Adapters are verified against
     `langchain-core >= 0.3` and `langgraph >= 0.2`.
 
 ## Why integrate instead of replace?

@@ -19,7 +19,7 @@
 
 Buddy AI is a comprehensive Python framework for creating, deploying, and managing intelligent AI agents. It provides a unified interface across 25+ LLM providers, a powerful memory system, extensible tools, RAG-based knowledge management, multi-agent teams, and workflows — all production-ready out of the box.
 
-**New in v2.2.0 → [Competency Engine](#whats-new-in-v220)** — a balance-aware competency score that routes tasks to the most competent member and prioritizes what to train next.
+**New in v3.0.0 → [Planning and Agent Collaboration](#whats-new-in-v300)** — subagents, advisor/judge support, parallel tool calls, model-assisted planning, and robust token management.
 
 **v2.1.0 → [PULSE](#-pulse--virtual-employees-era)** — give your AI an employee identity, teach it through interactive knowledge transfer, have it attend meetings, manage tasks, and more.
 
@@ -321,6 +321,17 @@ COPY . /app
 WORKDIR /app
 CMD ["buddy", "pulse", "start", "--host", "0.0.0.0"]
 ```
+
+---
+
+## What's New in v3.0.0
+
+- **Agent collaboration** — built-in advisor and judge options, subagent delegation, and opt-in parallel tool calls.
+- **Model-assisted planning** — dependency validation and scheduling, retries, registered-tool dispatch, and replanning.
+- **Provider-aware token management** — custom token counters, broader usage extraction, and improved limit enforcement.
+- **Cross-platform shell tools** — native shell command strings and direct argument-list execution on Windows/Linux.
+- **Prompt-cache propagation** — `cache_prompt=True` carries through auxiliary, review, and subagent models where supported.
+- **Docs and tests** — see the [3.0.0 release article](https://esasrir91.github.io/buddy-ai/articles/buddy-ai-v3.0.0/) and [full changelog](https://github.com/esasrir91/buddy-ai/blob/main/CHANGELOG.md).
 
 ---
 

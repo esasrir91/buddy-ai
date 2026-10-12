@@ -32,7 +32,7 @@ team = Team(
     model=OpenAIChat(id="gpt-4o"),
     show_members_responses=True,
 )
-team.print_response("Draft a release note for v2.2.0.")
+team.print_response("Draft a release note for v3.0.0.")
 ```
 
 ## Sharing context between members
