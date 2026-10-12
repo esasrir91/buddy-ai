@@ -242,7 +242,7 @@ def get_sync_playground_router(
                             provider=provider,
                         )
                     if agent.memory.db is not None:
-                        memory_dict["db"] = agent.memory.db.__dict__()  # type: ignore
+                        memory_dict["db"] = vars(agent.memory.db)
 
                 else:
                     memory_dict = None
@@ -543,14 +543,14 @@ def get_sync_playground_router(
         if agent.storage is None:
             return JSONResponse(status_code=404, content="Agent does not have storage enabled.")
 
-        agent_session: Optional[AgentSession] = agent.storage.read(session_id)  # type: ignore
+        agent_session: Optional[AgentSession] = agent.storage.read(session_id, user_id)  # type: ignore
         if agent_session is None:
             return JSONResponse(status_code=404, content="Session not found.")
 
         agent_session_dict = agent_session.to_dict()
         if agent_session.memory is not None:
             runs = agent_session.memory.get("runs")
-            if runs is not None:
+            if runs:
                 first_run = runs[0]
                 if "content" in first_run or first_run.get("is_paused", False) or first_run.get("event") == "RunPaused":
                     agent_session_dict["runs"] = []
@@ -560,12 +560,13 @@ def get_sync_playground_router(
                             if msg.get("role") == "user" and msg.get("from_history", False) is False:
                                 first_user_message = msg
                                 break
-                        # Remove the memory from the response
-                        run.pop("memory", None)
+                        # Remove the memory from the response without mutating storage data
+                        response_run = dict(run)
+                        response_run.pop("memory", None)
                         agent_session_dict["runs"].append(
                             {
                                 "message": first_user_message,
-                                "response": run,
+                                "response": response_run,
                             }
                         )
 
@@ -710,7 +711,7 @@ def get_sync_playground_router(
                     )
                 else:
                     # Return as a normal response
-                    return workflow.arun(**body.input, session_id=body.session_id or str(uuid4()), user_id=body.user_id)
+                    return workflow.run(**body.input, session_id=body.session_id or str(uuid4()), user_id=body.user_id)
             except Exception as e:
                 # Handle unexpected runtime errors
                 raise HTTPException(status_code=500, detail=f"Error running workflow: {str(e)}")
@@ -784,15 +785,21 @@ def get_sync_playground_router(
         if workflow is None:
             raise HTTPException(status_code=404, detail="Workflow not found")
 
+        if workflow.storage is None or workflow.storage.read(session_id, body.user_id) is None:  # type: ignore
+            raise HTTPException(status_code=404, detail="Session not found")
+
         workflow.session_id = session_id
         workflow.rename_session(body.name)
         return JSONResponse(content={"message": f"successfully renamed workflow {workflow.name}"})
 
     @playground_router.delete("/workflows/{workflow_id}/sessions/{session_id}")
-    def delete_workflow_session(workflow_id: str, session_id: str):
+    def delete_workflow_session(workflow_id: str, session_id: str, user_id: str = Query(..., min_length=1)):
         workflow = get_workflow_by_id(workflow_id, workflows)
         if workflow is None:
             raise HTTPException(status_code=404, detail="Workflow not found")
+
+        if workflow.storage is None or workflow.storage.read(session_id, user_id) is None:  # type: ignore
+            raise HTTPException(status_code=404, detail="Session not found")
 
         workflow.delete_session(session_id)
         return JSONResponse(content={"message": f"successfully deleted workflow {workflow.name}"})
@@ -965,7 +972,7 @@ def get_sync_playground_router(
         team_session_dict = team_session.to_dict()
         if team_session.memory is not None:
             runs = team_session.memory.get("runs")
-            if runs is not None:
+            if runs:
                 first_run = runs[0]
                 if "content" in first_run or first_run.get("is_paused", False) or first_run.get("event") == "RunPaused":
                     team_session_dict["runs"] = []
@@ -980,10 +987,12 @@ def get_sync_playground_router(
                                 break
                         # Remove the memory from the response
                         run.pop("memory", None)
+                        response_run = dict(run)
+                        response_run.pop("memory", None)
                         team_session_dict["runs"].append(
                             {
                                 "message": first_user_message,
-                                "response": run,
+                                "response": response_run,
                             }
                         )
         return team_session_dict

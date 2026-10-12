@@ -1,5 +1,6 @@
 import json
 from typing import Any, List, Optional, Union, cast
+from urllib.parse import urlparse
 
 from buddy.document import Document
 from buddy.knowledge.combined import CombinedKnowledgeBase
@@ -23,6 +24,13 @@ class WebsiteTools(Toolkit):
 
         super().__init__(name="website_tools", tools=tools, **kwargs)
 
+    @staticmethod
+    def _validate_url(url: str) -> Optional[str]:
+        parsed_url = urlparse(url)
+        if parsed_url.scheme not in {"http", "https"} or not parsed_url.netloc:
+            return "Error: URL must be an absolute HTTP or HTTPS URL"
+        return None
+
     def add_website_to_knowledge_base(self, url: str) -> str:
         """This function adds a websites content to the knowledge base.
         NOTE: The website must start with https:// and should be a valid website.
@@ -35,6 +43,10 @@ class WebsiteTools(Toolkit):
         self.knowledge_base = cast(WebsiteKnowledgeBase, self.knowledge_base)
         if self.knowledge_base is None:
             return "Knowledge base not provided"
+        if error := self._validate_url(url):
+            return error
+        if url in self.knowledge_base.urls:
+            return "Website already added"
 
         log_debug(f"Adding to knowledge base: {url}")
         self.knowledge_base.urls.append(url)
@@ -63,6 +75,10 @@ class WebsiteTools(Toolkit):
 
         if website_knowledge_base is None:
             return "Website knowledge base not found"
+        if error := self._validate_url(url):
+            return error
+        if url in website_knowledge_base.urls:
+            return "Website already added"
 
         log_debug(f"Adding to knowledge base: {url}")
         website_knowledge_base.urls.append(url)
@@ -77,6 +93,9 @@ class WebsiteTools(Toolkit):
         :return: Relevant documents from the website.
         """
         from buddy.document.reader.website_reader import WebsiteReader
+
+        if error := self._validate_url(url):
+            return error
 
         website = WebsiteReader()
 

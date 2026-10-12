@@ -53,7 +53,9 @@ def _prepare_command(command: str) -> list[str]:
         "ruby",
     }
 
-    executable = parts[0].split("/")[-1]
+    executable = parts[0].replace("\\", "/").rsplit("/", 1)[-1]
+    if executable.lower().endswith(".exe"):
+        executable = executable[:-4]
     if executable not in ALLOWED_COMMANDS:
         raise ValueError(f"MCP command needs to use one of the following executables: {ALLOWED_COMMANDS}")
 

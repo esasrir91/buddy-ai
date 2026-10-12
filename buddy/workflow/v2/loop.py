@@ -138,6 +138,7 @@ class Loop:
 
         all_results = []
         iteration = 0
+        early_termination = False
 
         while iteration < self.max_iterations:
             # Execute all steps in this iteration - mirroring workflow logic
@@ -158,6 +159,7 @@ class Loop:
 
                         if any(output.stop for output in step_output):
                             logger.info(f"Early termination requested by step {step_name}")
+                            early_termination = True
                             break
                 else:
                     # Single StepOutput
@@ -167,6 +169,7 @@ class Loop:
 
                     if step_output.stop:
                         logger.info(f"Early termination requested by step {step_name}")
+                        early_termination = True
                         break
 
                 # Update step input for next step
@@ -176,6 +179,9 @@ class Loop:
 
             all_results.append(iteration_results)
             iteration += 1
+
+            if early_termination:
+                break
 
             # Check end condition
             if self.end_condition and callable(self.end_condition):
@@ -374,6 +380,7 @@ class Loop:
 
         all_results = []
         iteration = 0
+        early_termination = False
 
         while iteration < self.max_iterations:
             # Execute all steps in this iteration - mirroring workflow logic
@@ -394,6 +401,7 @@ class Loop:
 
                         if any(output.stop for output in step_output):
                             logger.info(f"Early termination requested by step {step_name}")
+                            early_termination = True
                             break
                 else:
                     # Single StepOutput
@@ -403,6 +411,7 @@ class Loop:
 
                     if step_output.stop:
                         logger.info(f"Early termination requested by step {step_name}")
+                        early_termination = True
                         break
 
                 # Update step input for next step
@@ -412,6 +421,9 @@ class Loop:
 
             all_results.append(iteration_results)
             iteration += 1
+
+            if early_termination:
+                break
 
             # Check end condition
             if self.end_condition and callable(self.end_condition):

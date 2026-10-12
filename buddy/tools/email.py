@@ -11,12 +11,14 @@ class EmailTools(Toolkit):
         sender_name: Optional[str] = None,
         sender_email: Optional[str] = None,
         sender_passkey: Optional[str] = None,
+        timeout: float = 30.0,
         **kwargs,
     ):
         self.receiver_email: Optional[str] = receiver_email
         self.sender_name: Optional[str] = sender_name
         self.sender_email: Optional[str] = sender_email
         self.sender_passkey: Optional[str] = sender_passkey
+        self.timeout = timeout
 
         tools = []
         tools.append(self.email_user)
@@ -55,7 +57,7 @@ class EmailTools(Toolkit):
 
         log_info(f"Sending Email to {self.receiver_email}")
         try:
-            with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+            with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=self.timeout) as smtp:
                 smtp.login(self.sender_email, self.sender_passkey)
                 smtp.send_message(msg)
         except Exception as e:

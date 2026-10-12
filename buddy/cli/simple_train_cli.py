@@ -8,7 +8,6 @@ Commands:
     buddy train delete my-model                  # Delete a model
 """
 
-import os
 from pathlib import Path
 from typing import Optional
 
@@ -21,7 +20,7 @@ def _get_train_fn(name: str):
         import importlib
         mod = importlib.import_module("buddy.train")
         return getattr(mod, name)
-    except Exception:
+    except (ImportError, AttributeError):
         def _missing(*args, **kwargs):
             raise ImportError(
                 "buddy.train module not available. "
@@ -61,21 +60,26 @@ def train(
         buddy train /my/documents --name my-smart-bot
     """
     try:
-        if not os.path.exists(data_path):
+        if not Path(data_path).exists():
             typer.echo(f"❌ Path not found: {data_path}")
+            raise typer.Exit(1)
+        if epochs is not None and epochs <= 0:
+            typer.echo("❌ Epochs must be greater than zero.")
             raise typer.Exit(1)
 
         typer.echo(f"🚀 Training model '{name}' on data from: {data_path}")
         typer.echo("📋 We'll handle everything automatically!")
 
         train_model = _get_train_fn("train_model")
-        model_path = train_model(
+        train_model(
             data_path=data_path, name=name, model=model, epochs=epochs, description=description, force=force
         )
 
         typer.echo(f"✨ Success! Your model '{name}' is ready!")
         typer.echo(f"💡 Test it with: buddy train test {name}")
 
+    except typer.Exit:
+        raise
     except Exception as e:
         typer.echo(f"❌ Training failed: {e}")
         raise typer.Exit(1)
@@ -97,9 +101,14 @@ def test(
         typer.echo(f"🧪 Testing model '{name}'...")
 
         test_model = _get_train_fn("test_model")
-        response = test_model(name, prompt, max_length)
+        if max_length <= 0:
+            typer.echo("❌ Max length must be greater than zero.")
+            raise typer.Exit(1)
+        test_model(name, prompt, max_length)
         typer.echo("✨ Test completed!")
 
+    except typer.Exit:
+        raise
     except Exception as e:
         typer.echo(f"❌ Testing failed: {e}")
         raise typer.Exit(1)
@@ -131,6 +140,8 @@ def list():
                     typer.echo(f"   📁 Files: {model['num_files']}")
                 typer.echo()
 
+    except typer.Exit:
+        raise
     except Exception as e:
         typer.echo(f"❌ Failed to list models: {e}")
         raise typer.Exit(1)
@@ -162,6 +173,8 @@ def delete(
             typer.echo(f"❌ Failed to delete model '{name}'")
             raise typer.Exit(1)
 
+    except typer.Exit:
+        raise
     except Exception as e:
         typer.echo(f"❌ Delete failed: {e}")
         raise typer.Exit(1)
@@ -188,7 +201,7 @@ def install_deps():
         typer.echo(f"Installing {package}...")
         try:
             subprocess.check_call([sys.executable, "-m", "pip", "install", package])
-        except subprocess.CalledProcessError as e:
+        except (OSError, subprocess.CalledProcessError) as e:
             typer.echo(f"❌ Failed to install {package}: {e}")
             raise typer.Exit(1)
 
@@ -202,6 +215,8 @@ def models():
     try:
         list_available_models = _get_train_fn("list_available_models")
         list_available_models()
+    except typer.Exit:
+        raise
     except Exception as e:
         typer.echo(f"❌ Error listing models: {e}", err=True)
         raise typer.Exit(1)

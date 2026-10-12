@@ -1,5 +1,6 @@
 from enum import Enum
-from typing import Any, Dict, Optional, Union, get_args, get_origin
+from types import UnionType
+from typing import Any, Union, get_args, get_origin
 
 from pydantic import BaseModel
 
@@ -7,14 +8,7 @@ from buddy.utils.log import logger
 
 
 def is_origin_union_type(origin: Any) -> bool:
-    import sys
-
-    if sys.version_info.minor >= 10:
-        from types import UnionType  # type: ignore
-
-        return origin in [Union, UnionType]
-
-    return origin is Union
+    return origin in (Union, UnionType)
 
 
 def get_json_type_for_py_type(arg: str) -> str:
@@ -41,14 +35,14 @@ def get_json_type_for_py_type(arg: str) -> str:
     return "object"
 
 
-def inline_pydantic_schema(schema: Dict[str, Any]) -> Dict[str, Any]:
+def inline_pydantic_schema(schema: dict[str, Any]) -> dict[str, Any]:
     """
     Recursively inline Pydantic model schemas by replacing $ref with actual schema.
     """
     if not isinstance(schema, dict):
         return schema
 
-    def resolve_ref(ref: str, defs: Dict[str, Any]) -> Dict[str, Any]:
+    def resolve_ref(ref: str, defs: dict[str, Any]) -> dict[str, Any]:
         """Resolve a $ref to its actual schema."""
         if not ref.startswith("#/$defs/"):
             return {"type": "object"}  # Fallback for external refs
@@ -58,7 +52,7 @@ def inline_pydantic_schema(schema: Dict[str, Any]) -> Dict[str, Any]:
             return defs[def_name]
         return {"type": "object"}  # Fallback if definition not found
 
-    def process_schema(s: Dict[str, Any], defs: Dict[str, Any]) -> Dict[str, Any]:
+    def process_schema(s: dict[str, Any], defs: dict[str, Any]) -> dict[str, Any]:
         """Process a schema dictionary, resolving all references."""
         if not isinstance(s, dict):
             return s
@@ -98,6 +92,7 @@ def inline_pydantic_schema(schema: Dict[str, Any]) -> Dict[str, Any]:
         return result
 
     # Store definitions for later use
+    schema = schema.copy()
     definitions = schema.pop("$defs", {})
 
     # First, resolve any nested references in definitions
@@ -115,7 +110,7 @@ def inline_pydantic_schema(schema: Dict[str, Any]) -> Dict[str, Any]:
     return result
 
 
-def get_json_schema_for_arg(type_hint: Any) -> Optional[Dict[str, Any]]:
+def get_json_schema_for_arg(type_hint: Any) -> dict[str, Any] | None:
     # log_info(f"Getting JSON schema for arg: {t}")
     type_args = get_args(type_hint)
     # log_info(f"Type args: {type_args}")
@@ -137,7 +132,8 @@ def get_json_schema_for_arg(type_hint: Any) -> Optional[Dict[str, Any]]:
                     schema = get_json_schema_for_arg(arg)
                     if schema:
                         types.append(schema)
-                except Exception:
+                except (AttributeError, TypeError, ValueError) as exc:
+                    logger.debug("Could not parse union member %r: %s", arg, exc)
                     continue
             return {"anyOf": types} if types else None
 
@@ -180,7 +176,7 @@ def get_json_schema_for_arg(type_hint: Any) -> Optional[Dict[str, Any]]:
             arg_json_schema["required"] = required
         return arg_json_schema
 
-    json_schema: Dict[str, Any] = {"type": get_json_type_for_py_type(type_hint.__name__)}
+    json_schema: dict[str, Any] = {"type": get_json_type_for_py_type(type_hint.__name__)}
     if json_schema["type"] == "object":
         json_schema["properties"] = {}
         json_schema["additionalProperties"] = False
@@ -188,9 +184,9 @@ def get_json_schema_for_arg(type_hint: Any) -> Optional[Dict[str, Any]]:
 
 
 def get_json_schema(
-    type_hints: Dict[str, Any], param_descriptions: Optional[Dict[str, str]] = None, strict: bool = False
-) -> Dict[str, Any]:
-    json_schema: Dict[str, Any] = {
+    type_hints: dict[str, Any], param_descriptions: dict[str, str] | None = None, strict: bool = False
+) -> dict[str, Any]:
+    json_schema: dict[str, Any] = {
         "type": "object",
         "properties": {},
     }
@@ -207,7 +203,11 @@ def get_json_schema(
             # Check if type is Optional (Union with NoneType)
             type_origin = get_origin(type_hint)
             type_args = get_args(type_hint)
-            is_optional = type_origin is Union and len(type_args) == 2 and any(arg is type(None) for arg in type_args)
+            is_optional = (
+                is_origin_union_type(type_origin)
+                and len(type_args) == 2
+                and any(arg is type(None) for arg in type_args)
+            )
 
             # Get the actual type if it's Optional
             if is_optional:
@@ -227,8 +227,8 @@ def get_json_schema(
 
             else:
                 logger.warning(f"Could not parse argument {parameter_name} of type {type_hint}")
-        except Exception as e:
-            logger.error(f"Error processing argument {parameter_name}: {str(e)}")
+        except Exception as e:  # noqa: BLE001 - schema generation is best-effort per parameter
+            logger.error(f"Error processing argument {parameter_name}: {e!s}")
             continue
 
     return json_schema

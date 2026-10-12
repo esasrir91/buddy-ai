@@ -135,3 +135,124 @@ def test_no_circular_dependency_in_hierarchical_plan():
     plan = agent.create_execution_plan("test goal")
     result = agent._validate_plan(plan)
     assert "Circular dependencies detected" not in result.get("issues", [])
+
+
+def test_hierarchical_planning_uses_model_tasks_from_json():
+    from buddy.models.response import ModelResponse
+    from buddy.planning.planner import HierarchicalPlanning
+
+    class ModelStub:
+        def response(self, **kwargs):
+            return ModelResponse(content='```json\n{"tasks":[{"name":"research","description":"Find sources"}]}\n```')
+
+    strategy = HierarchicalPlanning.model_construct(decomposition_model=ModelStub())
+    tasks = strategy._request_tasks("prompt", [])
+    assert tasks == [{"name": "research", "description": "Find sources", "action": None, "parameters": {}}]
+
+
+def test_plan_validation_reports_missing_dependencies():
+    from buddy.planning.planner import PlanningAgent
+
+    agent = PlanningAgent(name="validator")
+    plan = ExecutionPlan(goal="g", description="d")
+    plan.add_step(PlanStep(name="blocked", step_type=PlanStepType.ACTION, description="d", dependencies=["missing"]))
+    result = agent.validate_plan(plan)
+    assert result["valid"] is False
+    assert any("Unknown dependencies" in issue for issue in result["issues"])
+
+
+def test_execute_plan_resolves_dependencies_out_of_order():
+    from buddy.planning.planner import PlanningAgent
+
+    agent = PlanningAgent(adaptive_replanning=False)
+    executed = []
+    agent._execute_action = lambda action, parameters: executed.append(action) or action
+    prerequisite = PlanStep(name="first", step_type=PlanStepType.ACTION, description="d", action="first")
+    dependent = PlanStep(
+        name="second",
+        step_type=PlanStepType.ACTION,
+        description="d",
+        action="second",
+        dependencies=[prerequisite.step_id],
+    )
+    plan = ExecutionPlan(goal="g", description="d", steps=[dependent, prerequisite])
+
+    result = agent.execute_plan(plan)
+    assert executed == ["first", "second"]
+    assert result["completed_steps"] == 2
+    assert result["failed_steps"] == 0
+
+
+def test_planner_executes_matching_registered_tool():
+    from types import SimpleNamespace
+
+    from buddy.planning.planner import PlanningAgent
+
+    agent = PlanningAgent()
+    tool_function = SimpleNamespace(name="lookup", entrypoint=lambda query: f"found: {query}")
+    agent.tools = [SimpleNamespace(functions={"lookup": tool_function})]
+    assert agent._execute_action("lookup", {"query": "item"}) == "found: item"
+
+
+def test_optimization_remaps_dependencies_from_duplicate_actions():
+    from buddy.planning.planner import PlanningAgent
+
+    agent = PlanningAgent()
+    first = PlanStep(name="first", step_type=PlanStepType.ACTION, description="d", action="lookup")
+    duplicate = PlanStep(name="duplicate", step_type=PlanStepType.ACTION, description="d", action="lookup")
+    dependent = PlanStep(
+        name="dependent",
+        step_type=PlanStepType.ACTION,
+        description="d",
+        action="summarize",
+        dependencies=[duplicate.step_id],
+    )
+    plan = ExecutionPlan(goal="g", description="d", steps=[first, duplicate, dependent])
+
+    agent.optimize_plan(plan)
+    assert plan.steps == [first, dependent]
+    assert dependent.dependencies == [first.step_id]
+
+
+def test_replan_preserves_replaced_step_id_for_downstream_dependencies():
+    from buddy.planning.planner import PlanningAgent
+
+    agent = PlanningAgent()
+    failed = PlanStep(
+        name="failed", step_type=PlanStepType.ACTION, description="d", status=PlanStatus.FAILED, retry_count=3
+    )
+    dependent = PlanStep(
+        name="dependent", step_type=PlanStepType.ACTION, description="d", dependencies=[failed.step_id]
+    )
+    plan = ExecutionPlan(goal="g", description="d", steps=[failed, dependent])
+
+    result = agent._adaptive_replan(plan, failed)
+    assert result["replanned"] is True
+    assert plan.steps[0].step_id == failed.step_id
+    assert dependent.dependencies == [plan.steps[0].step_id]
+
+
+def test_execute_plan_retries_transient_action_failures():
+    from buddy.planning.planner import PlanningAgent
+
+    agent = PlanningAgent(adaptive_replanning=False)
+    attempts = 0
+
+    def transient_action(action, parameters):
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise RuntimeError("temporary failure")
+        return "done"
+
+    agent._execute_action = transient_action
+    plan = ExecutionPlan(
+        goal="g",
+        description="d",
+        steps=[PlanStep(name="retry", step_type=PlanStepType.ACTION, description="d", action="run", max_retries=2)],
+    )
+
+    result = agent.execute_plan(plan)
+    assert attempts == 2
+    assert result["completed_steps"] == 1
+    assert result["failed_steps"] == 0

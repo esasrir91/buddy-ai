@@ -12,7 +12,7 @@ from buddy.models.base import MessageData, Model, _add_usage_metrics_to_assistan
 from buddy.models.message import Citations, Message, UrlCitation
 from buddy.models.response import ModelResponse
 from buddy.utils.log import log_debug, log_error, log_warning
-from buddy.utils.models.openai_responses import images_to_message
+from buddy.utils.openai import images_to_message
 from buddy.utils.models.schema_utils import get_response_schema_for_provider
 
 try:
@@ -20,6 +20,20 @@ try:
     from openai.resources.responses.responses import Response, ResponseStreamEvent
 except (ImportError, ModuleNotFoundError) as e:
     raise ImportError("`openai` not installed. Please install using `pip install openai -U`") from e
+
+
+def _images_to_response_message(images: Any) -> List[Dict[str, Any]]:
+    """Convert shared OpenAI image blocks to Responses API input blocks."""
+    response_images: List[Dict[str, Any]] = []
+    for image in images_to_message(images=images):
+        image_url = image.get("image_url", {})
+        if "url" not in image_url:
+            continue
+        block: Dict[str, Any] = {"type": "input_image", "image_url": image_url["url"]}
+        if "detail" in image_url:
+            block["detail"] = image_url["detail"]
+        response_images.append(block)
+    return response_images
 
 
 @dataclass
@@ -416,7 +430,7 @@ class OpenAIResponses(Model):
                     if isinstance(message.content, str):
                         message_dict["content"] = [{"type": "input_text", "text": message.content}]
                         if message.images is not None:
-                            message_dict["content"].extend(images_to_message(images=message.images))
+                            message_dict["content"].extend(_images_to_response_message(images=message.images))
 
                 if message.audio is not None and len(message.audio) > 0:
                     log_warning("Audio input is currently unsupported.")
@@ -929,5 +943,31 @@ class OpenAIResponses(Model):
                 yield model_response
 
     def parse_provider_response_delta(self, response: Any) -> ModelResponse:  # type: ignore
-        pass
+        """Parse a Responses API stream event into a model response delta."""
+        model_response = ModelResponse()
+
+        if response.type == "response.output_text.delta":
+            model_response.content = response.delta
+        elif response.type == "response.output_text.annotation.added":
+            annotation = response.annotation
+            citations = Citations(raw=[annotation], urls=[], documents=[])
+            if isinstance(annotation, dict):
+                if annotation.get("type") == "url_citation":
+                    citations.urls.append(
+                        UrlCitation(url=annotation.get("url"), title=annotation.get("title"))
+                    )
+            elif getattr(annotation, "type", None) == "url_citation":
+                citations.urls.append(UrlCitation(url=annotation.url, title=annotation.title))
+            model_response.citations = citations
+        elif response.type == "response.function_call_arguments.delta":
+            model_response.tool_calls = [
+                {
+                    "type": "function",
+                    "function": {"arguments": response.delta},
+                }
+            ]
+        elif response.type == "response.completed" and response.response.usage is not None:
+            model_response.response_usage = response.response.usage
+
+        return model_response
 

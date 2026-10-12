@@ -396,9 +396,6 @@ class Qdrant(VectorDb):
                 if self.search_type in [SearchType.keyword, SearchType.hybrid]:
                     vector[self.sparse_vector_name] = next(self.sparse_encoder.embed([document.content])).as_object()
 
-            if self.search_type in [SearchType.keyword, SearchType.hybrid]:
-                vector[self.sparse_vector_name] = next(self.sparse_encoder.embed([document.content])).as_object()
-
             # Create payload with document properties
             payload = {
                 "name": document.name,
@@ -707,4 +704,7 @@ class Qdrant(VectorDb):
         pass
 
     def delete(self) -> bool:
-        return self.client.delete_collection(collection_name=self.collection)
+        if not self.exists():
+            return False
+        self.client.delete_collection(collection_name=self.collection)
+        return True

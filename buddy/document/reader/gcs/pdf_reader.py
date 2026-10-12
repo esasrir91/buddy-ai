@@ -1,5 +1,6 @@
 import asyncio
 from io import BytesIO
+from pathlib import Path
 from typing import List
 from uuid import uuid4
 
@@ -22,14 +23,14 @@ class GCSPDFReader(Reader):
     def read(self, blob: storage.Blob) -> List[Document]:
         log_info(f"Reading: gs://{blob.bucket.name}/{blob.name}")
         data = blob.download_as_bytes()
-        doc_name = blob.name.split("/")[-1].split(".")[0].replace("/", "_").replace(" ", "_")
+        doc_name = Path(blob.name).stem.replace(" ", "_")
         doc_reader = DocumentReader(BytesIO(data))
         documents = [
             Document(
                 name=doc_name,
                 id=str(uuid4()),
                 meta_data={"page": page_number},
-                content=page.extract_text(),
+                content=page.extract_text() or "",
             )
             for page_number, page in enumerate(doc_reader.pages, start=1)
         ]

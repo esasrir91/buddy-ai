@@ -49,7 +49,7 @@ class InfraResource(InfraBase):
             return [self.get_resource_type().lower()]
 
         type_list: List[str] = [resource_type.lower() for resource_type in self.resource_type_list]
-        if self.get_resource_type() not in type_list:
+        if self.get_resource_type().lower() not in type_list:
             type_list.append(self.get_resource_type().lower())
         return type_list
 

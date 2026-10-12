@@ -4,13 +4,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable, Optional, Union
 
-from buddy.tools.function import Function
-
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from langchain_core.tools import BaseTool
 
     from buddy.agent import Agent
     from buddy.team import Team
+    from buddy.tools.function import Function
 
 
 def to_langchain_tool(tool: Union[Function, Callable]) -> "BaseTool":
@@ -24,6 +23,7 @@ def to_langchain_tool(tool: Union[Function, Callable]) -> "BaseTool":
         A LangChain ``StructuredTool`` that invokes the underlying entrypoint.
     """
     from langchain_core.tools import StructuredTool
+    from buddy.tools.function import Function
 
     if isinstance(tool, Function):
         fn = tool
@@ -38,6 +38,7 @@ def to_langchain_tool(tool: Union[Function, Callable]) -> "BaseTool":
         func=entrypoint,
         name=fn.name,
         description=fn.description or fn.name,
+        args_schema=_parameters_to_args_schema(fn.name, fn.parameters),
     )
 
 
@@ -48,12 +49,13 @@ def from_langchain_tool(tool: "BaseTool") -> Function:
     list. Invocation is delegated to the LangChain tool's ``run`` method.
     """
     from langchain_core.tools import BaseTool
+    from buddy.tools.function import Function
 
     if not isinstance(tool, BaseTool):
         raise TypeError(f"Expected a LangChain BaseTool, got {type(tool).__name__}.")
 
     def _entrypoint(**kwargs: Any) -> Any:
-        return tool.run(kwargs)
+        return tool.invoke(kwargs)
 
     _entrypoint.__name__ = tool.name
     _entrypoint.__doc__ = tool.description or tool.name
@@ -104,6 +106,20 @@ def _clean_schema(schema: dict) -> dict:
         "properties": schema.get("properties", {}),
         "required": schema.get("required", []),
     }
+
+
+def _parameters_to_args_schema(name: str, parameters: dict) -> type:
+    """Build a permissive Pydantic model from a Buddy function schema."""
+    from pydantic import Field, create_model
+
+    properties = parameters.get("properties", {})
+    required = set(parameters.get("required", []))
+    fields = {}
+    for field_name, definition in properties.items():
+        default = ... if field_name in required else None
+        description = definition.get("description") if isinstance(definition, dict) else None
+        fields[field_name] = (Any, Field(default=default, description=description))
+    return create_model(f"{name.title().replace('_', '')}Input", **fields)
 
 
 class BuddyAgentTool:

@@ -16,6 +16,9 @@ from buddy.utils.log import logger
 
 
 def get_teams_for_user(user: UserSchema) -> Optional[List[TeamSchema]]:
+    if not BUDDY_cli_settings.api_enabled:
+        return None
+
     logger.debug("--**-- Reading teams for user")
     with api.AuthenticatedClient() as api_client:
         try:
@@ -30,7 +33,7 @@ def get_teams_for_user(user: UserSchema) -> Optional[List[TeamSchema]]:
                 return None
 
             response_json: Optional[List[Dict]] = r.json()
-            if response_json is None:
+            if response_json is None or not isinstance(response_json, list):
                 return None
 
             teams: List[TeamSchema] = [TeamSchema.model_validate(team) for team in response_json]
@@ -43,6 +46,9 @@ def get_teams_for_user(user: UserSchema) -> Optional[List[TeamSchema]]:
 def create_workspace_for_user(
     user: UserSchema, workspace: WorkspaceCreate, team: Optional[TeamIdentifier] = None
 ) -> Optional[WorkspaceSchema]:
+    if not BUDDY_cli_settings.api_enabled:
+        return None
+
     logger.debug("--**-- Creating workspace")
     with api.AuthenticatedClient() as api_client:
         try:
@@ -79,6 +85,9 @@ def create_workspace_for_user(
 
 
 def update_workspace_for_user(user: UserSchema, workspace: WorkspaceUpdate) -> Optional[WorkspaceSchema]:
+    if not BUDDY_cli_settings.api_enabled:
+        return None
+
     logger.debug("--**-- Updating workspace for user")
     with api.AuthenticatedClient() as api_client:
         try:
@@ -114,12 +123,17 @@ def update_workspace_for_user(user: UserSchema, workspace: WorkspaceUpdate) -> O
 def update_workspace_for_team(
     user: UserSchema, workspace: WorkspaceUpdate, team: TeamIdentifier
 ) -> Optional[WorkspaceSchema]:
+    if not BUDDY_cli_settings.api_enabled:
+        return None
+
     logger.debug("--**-- Updating workspace for team")
     with api.AuthenticatedClient() as api_client:
         try:
+            team_workspace = workspace.model_dump(exclude_none=True)
+            team_workspace.update(team.model_dump(exclude_none=True))
             payload = {
                 "user": user.model_dump(include={"id_user", "email"}),
-                "team_workspace": workspace.model_dump(exclude_none=True).update({"id_team": team.id_team}),
+                "team_workspace": team_workspace,
             }
 
             r: Response = api_client.post(

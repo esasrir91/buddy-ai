@@ -28,6 +28,8 @@ class CohereEmbedder(Embedder):
         client_params: Dict[str, Any] = {}
         if self.api_key:
             client_params["api_key"] = self.api_key
+        if self.client_params:
+            client_params.update(self.client_params)
         self.cohere_client = CohereClient(**client_params)
         return self.cohere_client
 

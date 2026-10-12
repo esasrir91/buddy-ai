@@ -24,10 +24,12 @@ class FastEmbedEmbedder(Embedder):
 
     id: str = "BAAI/bge-small-en-v1.5"
     dimensions: int = 384
+    model: Optional[TextEmbedding] = None
 
     def get_embedding(self, text: str) -> List[float]:
-        model = TextEmbedding(model_name=self.id)
-        embeddings = model.embed(text)
+        if self.model is None:
+            self.model = TextEmbedding(model_name=self.id)
+        embeddings = self.model.embed(text)
         embedding_list = list(embeddings)[0]
         if isinstance(embedding_list, np.ndarray):
             return embedding_list.tolist()

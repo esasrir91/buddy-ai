@@ -8,6 +8,10 @@ class DocumentChunking(ChunkingStrategy):
     """A chunking strategy that splits text based on document structure like paragraphs and sections"""
 
     def __init__(self, chunk_size: int = 5000, overlap: int = 0):
+        if chunk_size < 1:
+            raise ValueError("chunk_size must be greater than zero")
+        if overlap < 0:
+            raise ValueError("overlap cannot be negative")
         self.chunk_size = chunk_size
         self.overlap = overlap
 
@@ -17,7 +21,8 @@ class DocumentChunking(ChunkingStrategy):
             return [document]
 
         # Split on double newlines first (paragraphs)
-        paragraphs = self.clean_text(document.content).split("\n\n")
+        normalized_content = document.content.replace("\r\n", "\n").replace("\r", "\n")
+        paragraphs = normalized_content.split("\n\n")
         chunks: List[Document] = []
         current_chunk = []
         current_size = 0
@@ -46,6 +51,7 @@ class DocumentChunking(ChunkingStrategy):
                             id=chunk_id, name=document.name, meta_data=meta_data, content="\n\n".join(current_chunk)
                         )
                     )
+                    chunk_number += 1
                 current_chunk = [para]
                 current_size = para_size
 
@@ -65,15 +71,17 @@ class DocumentChunking(ChunkingStrategy):
         # Handle overlap if specified
         if self.overlap > 0:
             overlapped_chunks = []
-            for i in range(len(chunks)):
+            for i, chunk in enumerate(chunks):
                 if i > 0:
                     # Add overlap from previous chunk
                     prev_text = chunks[i - 1].content[-self.overlap :]
                     meta_data = chunk_meta_data.copy()
-                    meta_data["chunk"] = chunk_number
+                    meta_data["chunk"] = i + 1
                     chunk_id = None
                     if document.id:
-                        chunk_id = f"{document.id}_{chunk_number}"
+                        chunk_id = f"{document.id}_{i + 1}"
+                    elif document.name:
+                        chunk_id = f"{document.name}_{i + 1}"
                     meta_data["chunk_size"] = len(prev_text + chunks[i].content)
                     if prev_text:
                         overlapped_chunks.append(
@@ -81,7 +89,7 @@ class DocumentChunking(ChunkingStrategy):
                                 id=chunk_id,
                                 name=document.name,
                                 meta_data=meta_data,
-                                content=prev_text + chunks[i].content,
+                                content=prev_text + chunk.content,
                             )
                         )
                 else:

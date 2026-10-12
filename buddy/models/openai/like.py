@@ -7,7 +7,7 @@ from buddy.models.openai.chat import OpenAIChat
 @dataclass
 class OpenAILike(OpenAIChat):
     """
-    A class for to interact with any provider using the OpenAI API schema.
+    A class for interacting with any provider using the OpenAI API schema.
 
     Args:
         id (str): The id of the OpenAI model to use. Defaults to "not-provided".

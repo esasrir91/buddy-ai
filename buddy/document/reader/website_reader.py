@@ -30,6 +30,12 @@ class WebsiteReader(Reader):
     def __init__(
         self, max_depth: int = 3, max_links: int = 10, timeout: int = 10, proxy: Optional[str] = None, **kwargs
     ):
+        if max_depth < 0:
+            raise ValueError("max_depth cannot be negative")
+        if max_links < 1:
+            raise ValueError("max_links must be greater than zero")
+        if timeout <= 0:
+            raise ValueError("timeout must be greater than zero")
         super().__init__(**kwargs)
         self.max_depth = max_depth
         self.max_links = max_links
@@ -66,9 +72,15 @@ class WebsiteReader(Reader):
         :param url: The URL to extract the primary domain from.
         :return: The primary domain.
         """
-        domain_parts = urlparse(url).netloc.split(".")
+        hostname = urlparse(url).hostname or ""
+        domain_parts = hostname.split(".")
         # Return primary domain (excluding subdomains)
         return ".".join(domain_parts[-2:])
+
+    def _same_domain(self, url: str, primary_domain: str) -> bool:
+        hostname = (urlparse(url).hostname or "").lower()
+        primary_domain = primary_domain.lower()
+        return hostname == primary_domain or hostname.endswith(f".{primary_domain}")
 
     def _extract_main_content(self, soup: BeautifulSoup) -> str:
         """
@@ -126,8 +138,9 @@ class WebsiteReader(Reader):
         num_links = 0
         crawler_result: Dict[str, str] = {}
         primary_domain = self._get_primary_domain(url)
+        self._visited = set()
+        self._urls_to_crawl = [(url, starting_depth)]
         # Add starting URL with its depth to the global list
-        self._urls_to_crawl.append((url, starting_depth))
         while self._urls_to_crawl:
             # Unpack URL and depth from the global list
             current_url, current_depth = self._urls_to_crawl.pop(0)
@@ -139,7 +152,7 @@ class WebsiteReader(Reader):
             # - exceeds max links
             if (
                 current_url in self._visited
-                or not urlparse(current_url).netloc.endswith(primary_domain)
+                or not self._same_domain(current_url, primary_domain)
                 or current_depth > self.max_depth
                 or num_links >= self.max_links
             ):
@@ -177,7 +190,7 @@ class WebsiteReader(Reader):
                         continue
 
                     parsed_url = urlparse(full_url)
-                    if parsed_url.netloc.endswith(primary_domain) and not any(
+                    if self._same_domain(full_url, primary_domain) and not any(
                         parsed_url.path.endswith(ext) for ext in [".pdf", ".jpg", ".png"]
                     ):
                         full_url_str = str(full_url)
@@ -244,7 +257,7 @@ class WebsiteReader(Reader):
 
                 if (
                     current_url in self._visited
-                    or not urlparse(current_url).netloc.endswith(primary_domain)
+                    or not self._same_domain(current_url, primary_domain)
                     or current_depth > self.max_depth
                     or num_links >= self.max_links
                 ):
@@ -278,7 +291,7 @@ class WebsiteReader(Reader):
                             continue
 
                         parsed_url = urlparse(full_url)
-                        if parsed_url.netloc.endswith(primary_domain) and not any(
+                        if self._same_domain(full_url, primary_domain) and not any(
                             parsed_url.path.endswith(ext) for ext in [".pdf", ".jpg", ".png"]
                         ):
                             full_url_str = str(full_url)

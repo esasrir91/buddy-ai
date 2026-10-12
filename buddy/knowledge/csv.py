@@ -11,9 +11,9 @@ from buddy.utils.log import log_info, logger
 
 class CSVKnowledgeBase(AgentKnowledge):
     path: Optional[Union[str, Path, List[Dict[str, Union[str, Dict[str, Any]]]]]] = None
-    formats: List[str] = [".csv"]
+    formats: List[str] = Field(default_factory=lambda: [".csv"])
     exclude_files: List[str] = Field(default_factory=list)
-    reader: CSVReader = CSVReader()
+    reader: CSVReader = Field(default_factory=CSVReader)
 
     @property
     def document_lists(self) -> Iterator[List[Document]]:
@@ -39,15 +39,17 @@ class CSVKnowledgeBase(AgentKnowledge):
             # Handle single path
             _csv_path = Path(self.path)
             if _csv_path.is_dir():
-                for _csv in _csv_path.glob("**/*.csv"):
+                for _csv in _csv_path.glob("**/*"):
                     if _csv.name not in self.exclude_files:
-                        yield self.reader.read(file=_csv)
+                        if self._is_valid_csv(_csv):
+                            yield self.reader.read(file=_csv)
             elif self._is_valid_csv(_csv_path):
                 yield self.reader.read(file=_csv_path)
 
     def _is_valid_csv(self, path: Path) -> bool:
         """Helper to check if path is a valid CSV file."""
-        return path.exists() and path.is_file() and path.suffix == ".csv" and path.name not in self.exclude_files
+        formats = {extension.lower() for extension in self.formats}
+        return path.exists() and path.is_file() and path.suffix.lower() in formats and path.name not in self.exclude_files
 
     @property
     async def async_document_lists(self) -> AsyncIterator[List[Document]]:
@@ -73,9 +75,10 @@ class CSVKnowledgeBase(AgentKnowledge):
             # Handle single path
             _csv_path = Path(self.path)
             if _csv_path.is_dir():
-                for _csv in _csv_path.glob("**/*.csv"):
+                for _csv in _csv_path.glob("**/*"):
                     if _csv.name not in self.exclude_files:
-                        yield await self.reader.async_read(file=_csv)
+                        if self._is_valid_csv(_csv):
+                            yield await self.reader.async_read(file=_csv)
             elif self._is_valid_csv(_csv_path):
                 yield await self.reader.async_read(file=_csv_path)
 

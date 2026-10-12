@@ -1,5 +1,6 @@
 import asyncio
 from typing import List
+from urllib.parse import parse_qs, urlparse
 
 from buddy.document.base import Document
 from buddy.document.reader.base import Reader
@@ -16,10 +17,30 @@ except ImportError:
 class YouTubeReader(Reader):
     """Reader for YouTube video transcripts"""
 
+    @staticmethod
+    def _extract_video_id(video_url: str) -> str:
+        if not video_url:
+            raise ValueError("No YouTube URL or video ID provided")
+
+        parsed_url = urlparse(video_url)
+        if parsed_url.hostname in {"youtu.be", "www.youtu.be"}:
+            video_id = parsed_url.path.strip("/").split("/")[0]
+        elif parsed_url.hostname and parsed_url.hostname.endswith("youtube.com"):
+            video_id = parse_qs(parsed_url.query).get("v", [""])[0]
+            if not video_id:
+                path_parts = parsed_url.path.strip("/").split("/")
+                video_id = path_parts[1] if len(path_parts) > 1 and path_parts[0] in {"shorts", "embed"} else ""
+        else:
+            video_id = video_url.strip()
+
+        if not video_id:
+            raise ValueError(f"Could not extract a YouTube video ID from: {video_url}")
+        return video_id
+
     def read(self, video_url: str) -> List[Document]:
         try:
             # Extract video ID from URL
-            video_id = video_url.split("v=")[-1].split("&")[0]
+            video_id = self._extract_video_id(video_url)
             log_info(f"Reading transcript for video: {video_id}")
 
             # Get transcript

@@ -31,7 +31,7 @@ class ToolExecution:
     # If True, the agent will stop executing after this tool call.
     stop_after_tool_call: bool = False
 
-    created_at: int = int(time())
+    created_at: int = field(default_factory=lambda: int(time()))
 
     requires_confirmation: Optional[bool] = None
     confirmed: Optional[bool] = None
@@ -107,7 +107,7 @@ class ModelResponse:
 
     response_usage: Optional[Any] = None
 
-    created_at: int = int(time())
+    created_at: int = field(default_factory=lambda: int(time()))
 
     extra: Optional[Dict[str, Any]] = None
 

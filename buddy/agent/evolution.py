@@ -5,15 +5,14 @@ Extends agents with self-improvement capabilities through genetic algorithms,
 performance-based adaptation, and autonomous optimization.
 """
 
-import json
+import inspect
 import random
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional
 from uuid import uuid4
 
-import numpy as np
 from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
@@ -51,10 +50,26 @@ class FitnessMetrics:
     efficiency_score: float = 0.0
     adaptability_score: float = 0.0
     consistency_score: float = 0.0
+    recorded_at: datetime = field(default_factory=datetime.now, compare=False)
 
     @property
     def overall_fitness(self) -> float:
         """Calculate overall fitness score"""
+        if all(
+            value == 0.0
+            for value in (
+                self.accuracy_score,
+                self.response_time,
+                self.user_satisfaction,
+                self.task_completion_rate,
+                self.error_rate,
+                self.efficiency_score,
+                self.adaptability_score,
+                self.consistency_score,
+            )
+        ):
+            return 0.0
+
         weights = {
             "accuracy": 0.25,
             "response_time": 0.15,
@@ -74,7 +89,7 @@ class FitnessMetrics:
             + weights["response_time"] * normalized_response_time
             + weights["satisfaction"] * self.user_satisfaction
             + weights["completion"] * self.task_completion_rate
-            + weights["error"] * (1.0 - self.error_rate)
+            + weights["error"] * self.error_rate
             + weights["efficiency"] * self.efficiency_score
             + weights["adaptability"] * self.adaptability_score
             + weights["consistency"] * self.consistency_score
@@ -123,7 +138,12 @@ class AgentGenome(BaseModel):
 
     def mutate(self, mutation_rate: float = 0.1, mutation_strength: float = 0.2) -> "AgentGenome":
         """Create a mutated version of this genome"""
-        new_genome = self.model_copy()
+        if not 0.0 <= mutation_rate <= 1.0:
+            raise ValueError("mutation_rate must be between 0 and 1")
+        if mutation_strength < 0:
+            raise ValueError("mutation_strength must be non-negative")
+
+        new_genome = self.model_copy(deep=True)
         new_genome.genome_id = str(uuid4())
         new_genome.generation += 1
         new_genome.parent_genomes = [self.genome_id]
@@ -143,6 +163,10 @@ class AgentGenome(BaseModel):
         if random.random() < mutation_rate:
             new_genome.reasoning_depth = self._mutate_int(self.reasoning_depth, 1, 10, mutation_strength)
             mutations_applied.append({"type": "reasoning_depth", "value": new_genome.reasoning_depth})
+
+        if random.random() < mutation_rate:
+            new_genome.max_loops = self._mutate_int(self.max_loops, 1, 10, mutation_strength)
+            mutations_applied.append({"type": "max_loops", "value": new_genome.max_loops})
 
         # Mutate personality traits
         personality_traits = ["creativity", "analytical_thinking", "empathy", "assertiveness", "curiosity", "patience"]
@@ -172,6 +196,9 @@ class AgentGenome(BaseModel):
 
     def crossover(self, other: "AgentGenome", crossover_rate: float = 0.5) -> "AgentGenome":
         """Create offspring through crossover with another genome"""
+        if not 0.0 <= crossover_rate <= 1.0:
+            raise ValueError("crossover_rate must be between 0 and 1")
+
         child_genome = AgentGenome()
         child_genome.genome_id = str(uuid4())
         child_genome.generation = max(self.generation, other.generation) + 1
@@ -183,6 +210,7 @@ class AgentGenome(BaseModel):
         child_genome.reasoning_depth = (
             self.reasoning_depth if random.random() < crossover_rate else other.reasoning_depth
         )
+        child_genome.max_loops = self.max_loops if random.random() < crossover_rate else other.max_loops
 
         # Personality trait crossover (blend)
         child_genome.creativity = self._blend_trait(self.creativity, other.creativity)
@@ -196,7 +224,17 @@ class AgentGenome(BaseModel):
         child_genome.instructions = self._crossover_instructions(self.instructions, other.instructions)
 
         # Tool preference combination
-        child_genome.preferred_tools = list(set(self.preferred_tools + other.preferred_tools))
+        child_genome.preferred_tools = list(dict.fromkeys(self.preferred_tools + other.preferred_tools))
+        child_genome.tool_usage_strategy = (
+            self.tool_usage_strategy if random.random() < crossover_rate else other.tool_usage_strategy
+        )
+        child_genome.response_style = self.response_style if random.random() < crossover_rate else other.response_style
+        child_genome.error_handling_strategy = (
+            self.error_handling_strategy if random.random() < crossover_rate else other.error_handling_strategy
+        )
+        child_genome.interaction_style = (
+            self.interaction_style if random.random() < crossover_rate else other.interaction_style
+        )
 
         return child_genome
 
@@ -284,7 +322,7 @@ class AgentGenome(BaseModel):
 
         return ".".join(combined)
 
-    def _blend_trait(self, trait1: float, trait2: float, alpha: float = None) -> float:
+    def _blend_trait(self, trait1: float, trait2: float, alpha: Optional[float] = None) -> float:
         """Blend two trait values"""
         if alpha is None:
             alpha = random.random()
@@ -297,24 +335,34 @@ class EvolutionaryMixin:
     """Mixin class to add evolutionary capabilities to agents"""
 
     def __init__(self, *args, **kwargs):
+        supplied_genome = kwargs.pop("genome", None)
+        evolution_enabled = kwargs.pop("evolution_enabled", False)
+        auto_evolution = kwargs.pop("auto_evolution", False)
+        evolution_threshold = kwargs.pop("evolution_threshold", 0.1)
         super().__init__(*args, **kwargs)
-        self.genome: Optional[AgentGenome] = None
-        self.evolution_enabled: bool = kwargs.get("evolution_enabled", False)
+        self.genome: Optional[AgentGenome] = supplied_genome
+        self.evolution_enabled: bool = evolution_enabled
         self.fitness_evaluator: Optional[FitnessEvaluator] = None
         self.performance_tracker: Optional[PerformanceTracker] = None
-        self.auto_evolution: bool = kwargs.get("auto_evolution", False)
-        self.evolution_threshold: float = kwargs.get("evolution_threshold", 0.1)
-        self.generation: int = 0
+        self.auto_evolution: bool = auto_evolution
+        self.evolution_threshold: float = evolution_threshold
+        self.generation: int = self.genome.generation if self.genome else 0
 
         if self.evolution_enabled:
-            self._initialize_evolution()
+            if self.genome is None:
+                self._initialize_evolution()
+            else:
+                self.performance_tracker = PerformanceTracker()
+                self.fitness_evaluator = FitnessEvaluator()
 
     def _initialize_evolution(self):
         """Initialize evolutionary capabilities"""
+        instructions = getattr(self, "instructions", "")
+        model = getattr(self, "model", None)
         self.genome = AgentGenome(
-            instructions=getattr(self, "instructions", ""),
-            temperature=getattr(self.model, "temperature", 0.7) if hasattr(self, "model") else 0.7,
-            max_tokens=getattr(self.model, "max_tokens", 1000) if hasattr(self, "model") else 1000,
+            instructions=instructions if isinstance(instructions, str) else "",
+            temperature=getattr(model, "temperature", 0.7),
+            max_tokens=getattr(model, "max_tokens", 1000),
         )
         self.performance_tracker = PerformanceTracker()
         self.fitness_evaluator = FitnessEvaluator()
@@ -356,6 +404,11 @@ class EvolutionaryMixin:
             self.genome.fitness_score = fitness.overall_fitness
             self.genome.performance_history.append(fitness)
 
+        if self.performance_tracker:
+            for interaction in interactions:
+                self.performance_tracker.record_interaction(interaction)
+            self.performance_tracker.record_fitness(fitness)
+
         return fitness
 
     def should_evolve(self) -> bool:
@@ -364,18 +417,18 @@ class EvolutionaryMixin:
             return False
 
         # Check if performance has plateaued or declined
-        recent_fitness = self.genome.performance_history[-10:]  # Last 10 evaluations
-        if len(recent_fitness) < 5:
+        recent_fitness = self.genome.performance_history[-6:]
+        if len(recent_fitness) < 6:
             return False
 
         # Calculate performance trend
         fitness_scores = [f.overall_fitness for f in recent_fitness]
         if len(fitness_scores) >= 5:
             recent_avg = sum(fitness_scores[-3:]) / 3
-            older_avg = sum(fitness_scores[-5:-2]) / 3
+            older_avg = sum(fitness_scores[:3]) / 3
 
-            # Evolve if performance has declined or plateaued
-            if recent_avg < older_avg - self.evolution_threshold:
+            # Evolve if performance has declined or plateaued.
+            if recent_avg <= older_avg + self.evolution_threshold:
                 return True
 
         return False
@@ -388,18 +441,33 @@ class EvolutionaryMixin:
 
     def _create_evolved_agent(self, genome: AgentGenome) -> "Agent":
         """Create a new agent from evolved genome"""
-        # This would need to be implemented by the specific Agent class
-        # For now, return a conceptual evolved agent
-        evolved_agent_config = {
-            "name": f"{self.name}_gen_{genome.generation}",
-            "instructions": genome.instructions,
-            "evolution_enabled": True,
-            "genome": genome,
-        }
+        evolved_agent_config = {}
+        for base in type(self).__mro__:
+            try:
+                parameters = inspect.signature(base.__init__).parameters
+            except (TypeError, ValueError):
+                continue
+            for parameter_name, parameter in parameters.items():
+                if parameter_name in {"self", "args", "kwargs"} or parameter.kind in {
+                    inspect.Parameter.VAR_POSITIONAL,
+                    inspect.Parameter.VAR_KEYWORD,
+                }:
+                    continue
+                if hasattr(self, parameter_name):
+                    evolved_agent_config[parameter_name] = getattr(self, parameter_name)
 
-        if hasattr(self, "model"):
+        evolved_agent_config.update(
+            {
+                "name": f"{self.name}_gen_{genome.generation}",
+                "instructions": genome.instructions,
+                "evolution_enabled": True,
+                "genome": genome,
+            }
+        )
+
+        if getattr(self, "model", None) is not None:
             # Update model parameters
-            evolved_model = self.model.model_copy()
+            evolved_model = self.model.model_copy(deep=True)
             evolved_model.temperature = genome.temperature
             evolved_model.max_tokens = genome.max_tokens
             evolved_agent_config["model"] = evolved_model
@@ -455,7 +523,7 @@ class FitnessEvaluator:
 
     def _calculate_avg_response_time(self, interactions: List[Dict[str, Any]]) -> float:
         """Calculate average response time in seconds"""
-        response_times = [i.get("response_time", 0) for i in interactions if "response_time" in i]
+        response_times = [i["response_time"] for i in interactions if "response_time" in i]
         return sum(response_times) / len(response_times) if response_times else 0.0
 
     def _calculate_user_satisfaction(self, interactions: List[Dict[str, Any]]) -> float:
@@ -520,8 +588,9 @@ class PerformanceTracker:
 
     def record_interaction(self, interaction_data: Dict[str, Any]):
         """Record an interaction for performance tracking"""
-        interaction_data["timestamp"] = datetime.now()
-        self.interaction_log.append(interaction_data)
+        recorded_interaction = dict(interaction_data)
+        recorded_interaction["timestamp"] = datetime.now()
+        self.interaction_log.append(recorded_interaction)
 
         # Cleanup old interactions
         cutoff_time = datetime.now() - self.tracking_window
@@ -538,16 +607,15 @@ class PerformanceTracker:
     def get_recent_performance(self, days: int = 7) -> List[FitnessMetrics]:
         """Get recent performance metrics"""
         cutoff_time = datetime.now() - timedelta(days=days)
-        # Note: This would need timestamp in FitnessMetrics for proper filtering
-        return self.performance_history[-50:]  # Simplified for now
+        return [fitness for fitness in self.performance_history if fitness.recorded_at > cutoff_time]
 
     def analyze_performance_trends(self) -> Dict[str, Any]:
         """Analyze performance trends for evolution decisions"""
-        if len(self.performance_history) < 5:
+        if len(self.performance_history) < 10:
             return {"trend": "insufficient_data"}
 
-        recent_scores = [f.overall_fitness for f in self.performance_history[-10:]]
-        older_scores = [f.overall_fitness for f in self.performance_history[-20:-10]]
+        recent_scores = [f.overall_fitness for f in self.performance_history[-5:]]
+        older_scores = [f.overall_fitness for f in self.performance_history[-10:-5]]
 
         if not older_scores:
             return {"trend": "insufficient_data"}
@@ -555,7 +623,7 @@ class PerformanceTracker:
         recent_avg = sum(recent_scores) / len(recent_scores)
         older_avg = sum(older_scores) / len(older_scores)
 
-        trend_direction = "improving" if recent_avg > older_avg else "declining"
+        trend_direction = "improving" if recent_avg > older_avg else "declining" if recent_avg < older_avg else "stable"
         trend_magnitude = abs(recent_avg - older_avg)
 
         return {

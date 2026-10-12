@@ -1,15 +1,19 @@
+from __future__ import annotations
+
 from dataclasses import asdict, dataclass, field
 from enum import Enum
 from time import time
-from typing import Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel
 
 from buddy.media import AudioArtifact, AudioResponse, ImageArtifact, VideoArtifact
-from buddy.models.message import Citations, Message
-from buddy.models.response import ToolExecution
 from buddy.run.base import BaseRunResponseEvent, RunResponseExtraData, RunStatus
 from buddy.run.response import RunEvent, RunResponse, RunResponseEvent, run_response_event_from_dict
+
+if TYPE_CHECKING:
+    from buddy.models.message import Citations, Message
+    from buddy.models.response import ToolExecution
 
 
 class TeamRunEvent(str, Enum):
@@ -55,6 +59,7 @@ class BaseTeamRunResponseEvent(BaseRunResponseEvent):
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "BaseTeamRunResponseEvent":
+        data = data.copy()
         member_responses = data.pop("member_responses", None)
         event = super().from_dict(data)
 
@@ -299,6 +304,9 @@ class TeamRunResponse:
         return self.status == RunStatus.cancelled
 
     def to_dict(self) -> Dict[str, Any]:
+        from buddy.models.message import Citations
+        from buddy.models.response import ToolExecution
+
         _dict = {
             k: v
             for k, v in asdict(self).items()
@@ -372,6 +380,10 @@ class TeamRunResponse:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "TeamRunResponse":
+        from buddy.models.message import Citations, Message
+        from buddy.models.response import ToolExecution
+
+        data = data.copy()
         events = data.pop("events", None)
         final_events = []
         for event in events or []:

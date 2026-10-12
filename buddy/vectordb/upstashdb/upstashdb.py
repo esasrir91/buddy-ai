@@ -194,7 +194,10 @@ class UpstashVectorDb(VectorDb):
                 logger.error(f"Document ID must not be None. Skipping document: {document.content[:100]}...")
                 continue
 
-            document.meta_data["text"] = document.content
+            metadata = document.meta_data.copy() if document.meta_data else {}
+            metadata["text"] = document.content
+            if filters:
+                metadata.update(filters)
 
             if not self.use_upstash_embeddings:
                 if self.embedder is None:
@@ -207,10 +210,10 @@ class UpstashVectorDb(VectorDb):
                     continue
 
                 vector = Vector(
-                    id=document.id, vector=document.embedding, metadata=document.meta_data, data=document.content
+                    id=document.id, vector=document.embedding, metadata=metadata, data=document.content
                 )
             else:
-                vector = Vector(id=document.id, data=document.content, metadata=document.meta_data)
+                vector = Vector(id=document.id, data=document.content, metadata=metadata)
             vectors.append(vector)
 
         if not vectors:
@@ -255,7 +258,7 @@ class UpstashVectorDb(VectorDb):
         """
         _namespace = self.namespace if namespace is None else namespace
 
-        # filter_str = "" if filters is None else str(filters)
+        filter_str = "" if filters is None else str(filters)
 
         if not self.use_upstash_embeddings and self.embedder is not None:
             dense_embedding = self.embedder.get_embedding(query)
@@ -268,7 +271,7 @@ class UpstashVectorDb(VectorDb):
                 vector=dense_embedding,
                 namespace=_namespace,
                 top_k=limit,
-                # filter=filter_str,
+                filter=filter_str,
                 include_data=True,
                 include_metadata=True,
                 include_vectors=True,
@@ -278,7 +281,7 @@ class UpstashVectorDb(VectorDb):
                 data=query,
                 namespace=_namespace,
                 top_k=limit,
-                # filter=filter_str,
+                filter=filter_str,
                 include_data=True,
                 include_metadata=True,
                 include_vectors=True,

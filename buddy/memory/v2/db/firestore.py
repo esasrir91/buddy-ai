@@ -194,9 +194,17 @@ class FirestoreMemoryDb(MemoryDb):
                 created_at = data.get("created_at")
                 last_updated = None
                 if updated_at:
-                    last_updated = datetime.fromtimestamp(updated_at, tz=timezone.utc)
+                    last_updated = (
+                        updated_at
+                        if isinstance(updated_at, datetime)
+                        else datetime.fromtimestamp(updated_at, tz=timezone.utc)
+                    )
                 elif created_at:
-                    last_updated = datetime.fromtimestamp(created_at, tz=timezone.utc)
+                    last_updated = (
+                        created_at
+                        if isinstance(created_at, datetime)
+                        else datetime.fromtimestamp(created_at, tz=timezone.utc)
+                    )
 
                 memories.append(
                     MemoryRow(

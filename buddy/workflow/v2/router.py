@@ -66,7 +66,7 @@ class Router:
             else:
                 raise ValueError(f"Invalid step type: {type(step).__name__}")
 
-        self.steps = prepared_steps
+        self.choices = prepared_steps
 
     def _update_step_input_from_outputs(
         self,

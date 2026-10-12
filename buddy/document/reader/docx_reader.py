@@ -28,7 +28,7 @@ class DocxReader(Reader):
             else:
                 log_info(f"Reading uploaded file: {file.name}")
                 docx_document = DocxDocument(file)
-                doc_name = file.name.split(".")[0]
+                doc_name = Path(file.name).stem
 
             doc_content = "\n\n".join([para.text for para in docx_document.paragraphs])
 

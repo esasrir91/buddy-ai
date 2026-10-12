@@ -18,6 +18,7 @@ class TranslationTools(Toolkit):
         deepl_api_key: Optional[str] = None,
         azure_api_key: Optional[str] = None,
         azure_region: Optional[str] = None,
+        timeout: float = 30.0,
         **kwargs,
     ):
         """Initialize Translation Tools.
@@ -32,6 +33,7 @@ class TranslationTools(Toolkit):
         self.deepl_api_key = deepl_api_key or getenv("DEEPL_API_KEY")
         self.azure_api_key = azure_api_key or getenv("AZURE_TRANSLATOR_KEY")
         self.azure_region = azure_region or getenv("AZURE_TRANSLATOR_REGION")
+        self.timeout = timeout
 
         tools: List[Any] = [
             self.translate_text,
@@ -57,6 +59,10 @@ class TranslationTools(Toolkit):
             str: Translation result or error message
         """
         try:
+            if not text.strip():
+                return json.dumps({"error": "Text cannot be empty"})
+            if provider not in {"google", "deepl", "azure"}:
+                return json.dumps({"error": "Unsupported provider"})
             if provider == "google":
                 return self._translate_google(text, target_language, source_language)
             elif provider == "deepl":
@@ -81,7 +87,7 @@ class TranslationTools(Toolkit):
             if source_language:
                 data["source"] = source_language
 
-            response = requests.post(url, data=data)
+            response = requests.post(url, data=data, timeout=self.timeout)
             response.raise_for_status()
 
             result = response.json()
@@ -112,7 +118,7 @@ class TranslationTools(Toolkit):
             if source_language:
                 data["source_lang"] = source_language.upper()
 
-            response = requests.post(url, data=data)
+            response = requests.post(url, data=data, timeout=self.timeout)
             response.raise_for_status()
 
             result = response.json()
@@ -150,7 +156,7 @@ class TranslationTools(Toolkit):
 
             body = [{"text": text}]
 
-            response = requests.post(url, params=params, headers=headers, json=body)
+            response = requests.post(url, params=params, headers=headers, json=body, timeout=self.timeout)
             response.raise_for_status()
 
             result = response.json()
@@ -179,6 +185,8 @@ class TranslationTools(Toolkit):
             str: Language detection result or error message
         """
         try:
+            if not text.strip():
+                return json.dumps({"error": "Text cannot be empty"})
             if provider == "google":
                 return self._detect_language_google(text)
             elif provider == "azure":
@@ -198,7 +206,7 @@ class TranslationTools(Toolkit):
 
             data = {"q": text, "key": self.google_api_key}
 
-            response = requests.post(url, data=data)
+            response = requests.post(url, data=data, timeout=self.timeout)
             response.raise_for_status()
 
             result = response.json()
@@ -231,7 +239,7 @@ class TranslationTools(Toolkit):
 
             body = [{"text": text}]
 
-            response = requests.post(url, params=params, headers=headers, json=body)
+            response = requests.post(url, params=params, headers=headers, json=body, timeout=self.timeout)
             response.raise_for_status()
 
             result = response.json()
@@ -273,7 +281,7 @@ class TranslationTools(Toolkit):
             url = "https://translation.googleapis.com/language/translate/v2/languages"
             params = {"key": self.google_api_key}
 
-            response = requests.get(url, params=params)
+            response = requests.get(url, params=params, timeout=self.timeout)
             response.raise_for_status()
 
             result = response.json()
@@ -288,7 +296,7 @@ class TranslationTools(Toolkit):
             url = "https://api.cognitive.microsofttranslator.com/languages"
             params = {"api-version": "3.0"}
 
-            response = requests.get(url, params=params)
+            response = requests.get(url, params=params, timeout=self.timeout)
             response.raise_for_status()
 
             result = response.json()

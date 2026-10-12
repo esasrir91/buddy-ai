@@ -24,10 +24,11 @@ class VideoArtifact(Media):
             "content": (
                 self.content
                 if isinstance(self.content, str)
-                else self.content.decode("utf-8") if self.content else None
+                else self.content if self.content is not None else None
             ),
             "mime_type": self.mime_type,
             "eta": self.eta,
+            "length": self.length,
         }
         return {k: v for k, v in response_dict.items() if v is not None}
 
@@ -42,9 +43,7 @@ class ImageArtifact(Media):
         response_dict = {
             "id": self.id,
             "url": self.url,
-            "content": (
-                self.content.decode("utf-8") if self.content and isinstance(self.content, bytes) else self.content
-            ),
+            "content": self.content,
             "mime_type": self.mime_type,
             "alt_text": self.alt_text,
         }
@@ -62,6 +61,8 @@ class AudioArtifact(Media):
         """
         Ensure that either `url` or `base64_audio` is provided, but not both.
         """
+        if not isinstance(data, dict):
+            return data
         if data.get("url") and data.get("base64_audio"):
             raise ValueError("Provide either `url` or `base64_audio`, not both.")
         if not data.get("url") and not data.get("base64_audio"):
@@ -92,12 +93,15 @@ class Video(BaseModel):
         Also converts content to bytes if it's a string.
         """
         # Extract the values from the input data
+        if not isinstance(data, dict):
+            return data
+
         filepath = data.get("filepath")
         content = data.get("content")
         url = data.get("url")
 
         # Convert and decompress content to bytes if it's a string
-        if content and isinstance(content, str):
+        if content is not None and isinstance(content, str):
             import base64
 
             try:
@@ -106,7 +110,7 @@ class Video(BaseModel):
                 decoded_content = base64.b64decode(content)
                 content = zlib.decompress(decoded_content)
             except Exception:
-                content = base64.b64decode(content).decode("utf-8")
+                content = base64.b64decode(content)
         data["content"] = content
 
         # Count how many fields are set (not None)
@@ -128,7 +132,7 @@ class Video(BaseModel):
                 base64.b64encode(
                     zlib.compress(self.content) if isinstance(self.content, bytes) else self.content.encode("utf-8")
                 ).decode("utf-8")
-                if self.content
+                if self.content is not None
                 else None
             ),
             "filepath": self.filepath,
@@ -154,12 +158,15 @@ class Audio(BaseModel):
         Also converts content to bytes if it's a string.
         """
         # Extract the values from the input data
+        if not isinstance(data, dict):
+            return data
+
         filepath = data.get("filepath")
         content = data.get("content")
         url = data.get("url")
 
         # Convert and decompress content to bytes if it's a string
-        if content and isinstance(content, str):
+        if content is not None and isinstance(content, str):
             import base64
 
             try:
@@ -168,7 +175,7 @@ class Audio(BaseModel):
                 decoded_content = base64.b64decode(content)
                 content = zlib.decompress(decoded_content)
             except Exception:
-                content = base64.b64decode(content).decode("utf-8")
+                content = base64.b64decode(content)
         data["content"] = content
 
         # Count how many fields are set (not None)
@@ -199,7 +206,7 @@ class Audio(BaseModel):
                 base64.b64encode(
                     zlib.compress(self.content) if isinstance(self.content, bytes) else self.content.encode("utf-8")
                 ).decode("utf-8")
-                if self.content
+                if self.content is not None
                 else None
             ),
             "filepath": self.filepath,
@@ -215,7 +222,7 @@ class Audio(BaseModel):
 
 class AudioResponse(BaseModel):
     id: Optional[str] = None
-    content: Optional[str] = None  # Base64 encoded
+    content: Optional[Union[str, bytes]] = None  # Base64 encoded
     expires_at: Optional[int] = None
     transcript: Optional[str] = None
 
@@ -224,13 +231,9 @@ class AudioResponse(BaseModel):
     channels: Optional[int] = 1
 
     def to_dict(self) -> Dict[str, Any]:
-        import base64
-
         response_dict = {
             "id": self.id,
-            "content": (
-                base64.b64encode(self.content).decode("utf-8") if isinstance(self.content, bytes) else self.content
-            ),
+            "content": self.content,
             "expires_at": self.expires_at,
             "transcript": self.transcript,
             "mime_type": self.mime_type,

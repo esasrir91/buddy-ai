@@ -125,6 +125,7 @@ class Memory:
         self.memories = memories or {}
         self.summaries = summaries or {}
         self.runs = runs or {}
+        self.team_context = {}
 
         self.debug_mode = debug_mode
 
@@ -179,7 +180,10 @@ class Memory:
                 logger.error(
                     "Buddy uses `openai` as the default model provider. Please provide a `model` or install `openai`."
                 )
-                exit(1)
+                raise ImportError(
+                    "No model was provided and the default OpenAI provider is unavailable. "
+                    "Provide a model or install the `openai` package."
+                ) from e
             self.model = OpenAIChat(id="gpt-4o")
         return self.model
 
@@ -343,7 +347,7 @@ class Memory:
         if not memory.last_updated:
             memory.last_updated = datetime.now()
 
-        if memory_id not in self.memories[user_id]:  # type: ignore
+        if memory_id not in self.memories.get(user_id, {}):  # type: ignore
             log_warning(f"Memory {memory_id} not found for user {user_id}")
             return None
 
@@ -378,7 +382,7 @@ class Memory:
         if refresh_from_db:
             self.refresh_from_db(user_id=user_id)
 
-        if memory_id not in self.memories[user_id]:  # type: ignore
+        if memory_id not in self.memories.get(user_id, {}):  # type: ignore
             log_warning(f"Memory {memory_id} not found for user {user_id}")
             return None
 

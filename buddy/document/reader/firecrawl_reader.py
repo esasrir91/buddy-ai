@@ -28,6 +28,8 @@ class FirecrawlReader(Reader):
         chunk_size: int = 5000,
         chunking_strategy: Optional[ChunkingStrategy] = None,
     ) -> None:
+        if mode not in {"scrape", "crawl"}:
+            raise ValueError("mode must be either 'scrape' or 'crawl'")
         # Initialise base Reader (handles chunk_size / strategy)
         super().__init__(chunk=chunk, chunk_size=chunk_size, chunking_strategy=chunking_strategy)
 

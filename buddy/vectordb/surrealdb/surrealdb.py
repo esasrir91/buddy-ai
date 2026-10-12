@@ -224,6 +224,8 @@ class SurrealDb(VectorDb):
         for doc in documents:
             doc.embed(embedder=self.embedder)
             meta_data: Dict[str, Any] = doc.meta_data if isinstance(doc.meta_data, dict) else {}
+            meta_data = meta_data.copy()
+            meta_data["name"] = doc.name
             data: Dict[str, Any] = {"content": doc.content, "embedding": doc.embedding, "meta_data": meta_data}
             if filters:
                 data["meta_data"].update(filters)
@@ -240,6 +242,8 @@ class SurrealDb(VectorDb):
         for doc in documents:
             doc.embed(embedder=self.embedder)
             meta_data: Dict[str, Any] = doc.meta_data if isinstance(doc.meta_data, dict) else {}
+            meta_data = meta_data.copy()
+            meta_data["name"] = doc.name
             data: Dict[str, Any] = {"content": doc.content, "embedding": doc.embedding, "meta_data": meta_data}
             if filters:
                 data["meta_data"].update(filters)
@@ -283,6 +287,8 @@ class SurrealDb(VectorDb):
         for item in response:
             if isinstance(item, dict):
                 doc = Document(
+                    id=str(item.get("id", "")),
+                    name=item.get("meta_data", {}).get("name"),
                     content=item.get("content", ""),
                     embedding=item.get("embedding", []),
                     meta_data=item.get("meta_data", {}),
@@ -391,6 +397,8 @@ class SurrealDb(VectorDb):
         for doc in documents:
             doc.embed(embedder=self.embedder)
             meta_data: Dict[str, Any] = doc.meta_data if isinstance(doc.meta_data, dict) else {}
+            meta_data = meta_data.copy()
+            meta_data["name"] = doc.name
             data: Dict[str, Any] = {"content": doc.content, "embedding": doc.embedding, "meta_data": meta_data}
             if filters:
                 data["meta_data"].update(filters)
@@ -408,6 +416,8 @@ class SurrealDb(VectorDb):
         for doc in documents:
             doc.embed(embedder=self.embedder)
             meta_data: Dict[str, Any] = doc.meta_data if isinstance(doc.meta_data, dict) else {}
+            meta_data = meta_data.copy()
+            meta_data["name"] = doc.name
             data: Dict[str, Any] = {"content": doc.content, "embedding": doc.embedding, "meta_data": meta_data}
             if filters:
                 data["meta_data"].update(filters)
@@ -454,6 +464,8 @@ class SurrealDb(VectorDb):
         for item in response:
             if isinstance(item, dict):
                 doc = Document(
+                    id=str(item.get("id", "")),
+                    name=item.get("meta_data", {}).get("name"),
                     content=item.get("content", ""),
                     embedding=item.get("embedding", []),
                     meta_data=item.get("meta_data", {}),

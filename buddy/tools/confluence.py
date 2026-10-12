@@ -106,8 +106,8 @@ class ConfluenceTools(Toolkit):
             str: List of space details as a string.
         """
         log_info("Retrieving details for all Confluence spaces")
-        results = self.confluence.get_all_spaces()["results"]
-        return str(results)
+        results = self.confluence.get_all_spaces().get("results", [])
+        return json.dumps(results)
 
     def get_space_key(self, space_name: str):
         """Get the space key for a particular Confluence space.
@@ -140,11 +140,12 @@ class ConfluenceTools(Toolkit):
         """
         log_info(f"Retrieving all pages from space '{space_name}'")
         space_key = self.get_space_key(space_name)
+        if space_key == "No space found":
+            return json.dumps({"error": f"No space named {space_name} found"})
         page_details = self.confluence.get_all_pages_from_space(
             space_key, status=None, expand=None, content_type="page"
         )
-        page_details = str([{"id": page["id"], "title": page["title"]} for page in page_details])
-        return page_details
+        return json.dumps([{"id": page["id"], "title": page["title"]} for page in page_details])
 
     def create_page(self, space_name: str, title: str, body: str, parent_id: Optional[str] = None) -> str:
         """Create a new page in Confluence.

@@ -119,6 +119,7 @@ class SingleStoreStorage(Storage):
         elif self.mode == "workflow_v2":
             specific_columns = [
                 Column("workflow_id", mysql.TEXT),
+                Column("workflow_name", mysql.TEXT),
                 Column("workflow_data", mysql.JSON),
                 Column("runs", mysql.JSON),
             ]

@@ -1,6 +1,6 @@
 from dataclasses import asdict, dataclass, field
 from os import getenv
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Any, List, Optional
 from uuid import uuid4
 
 if TYPE_CHECKING:
@@ -63,6 +63,30 @@ class ReliabilityEval:
     # Log the results to the Buddy platform. On by default.
     monitoring: bool = getenv("BUDDY_MONITOR", "true").lower() == "true"
 
+    def _evaluate_tool_calls(self) -> tuple[List[str], List[str]]:
+        messages: List[Any] = []
+        if self.agent_response is not None:
+            messages.extend(self.agent_response.messages or [])
+        elif self.team_response is not None:
+            messages.extend(self.team_response.messages or [])
+            for member_response in self.team_response.member_responses or []:
+                messages.extend(member_response.messages or [])
+
+        actual_tool_calls: List[Any] = []
+        for message in messages:
+            actual_tool_calls.extend(getattr(message, "tool_calls", None) or [])
+
+        expected_tool_calls = self.expected_tool_calls or []
+        actual_tool_names = [
+            tool_call.get("function", {}).get("name")
+            for tool_call in actual_tool_calls
+            if tool_call.get("function", {}).get("name")
+        ]
+        passed_tool_calls = [name for name in actual_tool_names if name in expected_tool_calls]
+        failed_tool_calls = [name for name in actual_tool_names if name not in expected_tool_calls]
+        failed_tool_calls.extend(name for name in expected_tool_calls if name not in actual_tool_names)
+        return failed_tool_calls, passed_tool_calls
+
     def run(self, *, print_results: bool = False) -> Optional[ReliabilityResult]:
         if self.agent_response is None and self.team_response is None:
             raise ValueError("You need to provide 'agent_response' or 'team_response' to run the evaluation.")
@@ -82,33 +106,7 @@ class ReliabilityEval:
             status = Status("Running evaluation...", spinner="dots", speed=1.0, refresh_per_second=10)
             live_log.update(status)
 
-            actual_tool_calls = None
-            if self.agent_response is not None:
-                messages = self.agent_response.messages
-            elif self.team_response is not None:
-                messages = self.team_response.messages or []
-                for member_response in self.team_response.member_responses:
-                    if member_response.messages is not None:
-                        messages += member_response.messages
-
-            for message in reversed(messages):  # type: ignore
-                if message.tool_calls:
-                    if actual_tool_calls is None:
-                        actual_tool_calls = message.tool_calls
-                    else:
-                        actual_tool_calls.append(message.tool_calls[0])  # type: ignore
-
-            failed_tool_calls = []
-            passed_tool_calls = []
-            for tool_call in actual_tool_calls:  # type: ignore
-                tool_name = tool_call.get("function", {}).get("name")
-                if not tool_name:
-                    continue
-                else:
-                    if tool_name not in self.expected_tool_calls:  # type: ignore
-                        failed_tool_calls.append(tool_call.get("function", {}).get("name"))
-                    else:
-                        passed_tool_calls.append(tool_call.get("function", {}).get("name"))
+            failed_tool_calls, passed_tool_calls = self._evaluate_tool_calls()
 
             self.result = ReliabilityResult(
                 eval_status="PASSED" if len(failed_tool_calls) == 0 else "FAILED",
@@ -175,33 +173,7 @@ class ReliabilityEval:
             status = Status("Running evaluation...", spinner="dots", speed=1.0, refresh_per_second=10)
             live_log.update(status)
 
-            actual_tool_calls = None
-            if self.agent_response is not None:
-                messages = self.agent_response.messages
-            elif self.team_response is not None:
-                messages = self.team_response.messages or []
-                for member_response in self.team_response.member_responses:
-                    if member_response.messages is not None:
-                        messages += member_response.messages
-
-            for message in reversed(messages):  # type: ignore
-                if message.tool_calls:
-                    if actual_tool_calls is None:
-                        actual_tool_calls = message.tool_calls
-                    else:
-                        actual_tool_calls.append(message.tool_calls[0])  # type: ignore
-
-            failed_tool_calls = []
-            passed_tool_calls = []
-            for tool_call in actual_tool_calls:  # type: ignore
-                tool_name = tool_call.get("function", {}).get("name")
-                if not tool_name:
-                    continue
-                else:
-                    if tool_name not in self.expected_tool_calls:  # type: ignore
-                        failed_tool_calls.append(tool_call.get("function", {}).get("name"))
-                    else:
-                        passed_tool_calls.append(tool_call.get("function", {}).get("name"))
+            failed_tool_calls, passed_tool_calls = self._evaluate_tool_calls()
 
             self.result = ReliabilityResult(
                 eval_status="PASSED" if len(failed_tool_calls) == 0 else "FAILED",

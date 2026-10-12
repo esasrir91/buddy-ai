@@ -1,7 +1,7 @@
 import asyncio
 from typing import Any, AsyncIterator, Dict, Iterator, List, Optional
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 
 from buddy.document import Document
 from buddy.document.chunking.fixed import FixedSizeChunking
@@ -11,7 +11,7 @@ from buddy.utils.log import log_debug, log_info, logger
 
 
 class WebsiteKnowledgeBase(AgentKnowledge):
-    urls: List[str] = []
+    urls: List[str] = Field(default_factory=list)
     reader: Optional[WebsiteReader] = None
 
     # WebsiteReader parameters
@@ -82,17 +82,15 @@ class WebsiteKnowledgeBase(AgentKnowledge):
         # We check if the website url exists in the vector db if recreate is False
         urls_to_read = self.urls.copy()
         if not recreate:
+            urls_to_read = [url for url in urls_to_read if not self.vector_db.name_exists(name=url)]
             for url in urls_to_read:
                 log_debug(f"Checking if {url} exists in the vector db")
-                if self.vector_db.name_exists(name=url):
-                    log_debug(f"Skipping {url} as it exists in the vector db")
-                    urls_to_read.remove(url)
 
         num_documents = 0
         for url in urls_to_read:
             if document_list := self.reader.read(url=url):
                 # Filter out documents which already exist in the vector db
-                if not recreate:
+                if skip_existing and not recreate:
                     document_list = [document for document in document_list if not self.vector_db.doc_exists(document)]
                     if not document_list:
                         continue
@@ -141,7 +139,7 @@ class WebsiteKnowledgeBase(AgentKnowledge):
         if not recreate:
             for url in urls_to_read[:]:
                 log_debug(f"Checking if {url} exists in the vector db")
-                name_exists = vector_db.async_name_exists(name=url)
+                name_exists = await vector_db.async_name_exists(name=url)
                 if name_exists:
                     log_debug(f"Skipping {url} as it exists in the vector db")
                     urls_to_read.remove(url)
@@ -150,7 +148,7 @@ class WebsiteKnowledgeBase(AgentKnowledge):
             try:
                 document_list = await reader.async_read(url=url)
 
-                if not recreate:
+                if skip_existing and not recreate:
                     filtered_documents = []
                     for document in document_list:
                         if not await vector_db.async_doc_exists(document):

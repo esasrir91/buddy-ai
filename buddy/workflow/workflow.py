@@ -491,9 +491,8 @@ class Workflow:
         # Update the session_id for all Agent instances
         # use dataclasses.fields() to iterate through fields
         for f in fields(self):
-            field_type = f.type
-            if isinstance(field_type, Agent):
-                field_value = getattr(self, f.name)
+            field_value = getattr(self, f.name)
+            if isinstance(field_value, Agent):
                 field_value.session_id = self.session_id
 
     def get_workflow_data(self) -> Dict[str, Any]:

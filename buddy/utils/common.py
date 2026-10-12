@@ -1,8 +1,8 @@
 from dataclasses import asdict
-from typing import Any, List, Optional, Type
+from typing import Any
 
 
-def isinstanceany(obj: Any, class_list: List[Type]) -> bool:
+def isinstanceany(obj: Any, class_list: list[type]) -> bool:
     """Returns True if obj is an instance of the classes in class_list"""
     for cls in class_list:
         if isinstance(obj, cls):
@@ -10,7 +10,7 @@ def isinstanceany(obj: Any, class_list: List[Type]) -> bool:
     return False
 
 
-def str_to_int(inp: Optional[str]) -> Optional[int]:
+def str_to_int(inp: str | None) -> int | None:
     """
     Safely converts a string value to integer.
     Args:
@@ -24,26 +24,31 @@ def str_to_int(inp: Optional[str]) -> Optional[int]:
     try:
         val = int(inp)
         return val
-    except Exception:
+    except (TypeError, ValueError):
         return None
 
 
 def is_empty(val: Any) -> bool:
     """Returns True if val is None or empty"""
-    if val is None or len(val) == 0 or val == "":
+    if val is None or val == "":
         return True
-    return False
+    try:
+        return len(val) == 0
+    except TypeError:
+        return False
 
 
 def get_image_str(repo: str, tag: str) -> str:
     return f"{repo}:{tag}"
 
 
-def dataclass_to_dict(dataclass_object, exclude: Optional[set[str]] = None, exclude_none: bool = False) -> dict:
+def dataclass_to_dict(
+    dataclass_object, exclude: set[str] | None = None, exclude_none: bool = False
+) -> dict:
     final_dict = asdict(dataclass_object)
     if exclude:
         for key in exclude:
-            final_dict.pop(key)
+            final_dict.pop(key, None)
     if exclude_none:
         final_dict = {k: v for k, v in final_dict.items() if v is not None}
     return final_dict

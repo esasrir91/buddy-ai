@@ -119,6 +119,11 @@ class SLMTools(Toolkit):
             Dataset preparation summary
         """
         try:
+            if not 0.0 < train_split < 1.0:
+                return "Error: train_split must be between 0 and 1"
+            if max_samples is not None and max_samples <= 0:
+                return "Error: max_samples must be greater than 0"
+
             # Load dataset based on format
             if format == "json":
                 dataset = load_dataset("json", data_files=data_path)["train"]

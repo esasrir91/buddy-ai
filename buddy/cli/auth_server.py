@@ -1,7 +1,9 @@
+import html
 import json
+import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Optional
-from urllib.parse import parse_qs, quote, urlparse
+from urllib.parse import parse_qs, urlencode, urlparse
 
 from buddy.cli.settings import BUDDY_cli_settings
 
@@ -18,9 +20,11 @@ class CliAuthRequestHandler(BaseHTTPRequestHandler):
 
     def _redirect_with_status(self, theme: str, redirect_uri, result: str, error_type: str = ""):
         """Render a simple HTML page with 'Authenticating...' and redirect with a loader."""
-        redirect_url = f"{redirect_uri}?cli_auth={result}"
+        query = {"cli_auth": result}
         if result == "error" and error_type:
-            redirect_url += f"&type={quote(error_type)}"
+            query["type"] = error_type
+        redirect_url = f"{redirect_uri}{'&' if '?' in redirect_uri else '?'}{urlencode(query)}"
+        safe_redirect_url = html.escape(redirect_url, quote=True)
 
         if theme == "dark":
             background_color = "#111113"
@@ -39,7 +43,7 @@ class CliAuthRequestHandler(BaseHTTPRequestHandler):
         <html>
         <head>
             <title>Buddy Workspace</title>
-            <meta http-equiv="refresh" content="1;url={redirect_url}" />
+            <meta http-equiv="refresh" content="1;url={safe_redirect_url}" />
             <style>
                 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
                 body {{
@@ -111,7 +115,7 @@ class CliAuthRequestHandler(BaseHTTPRequestHandler):
                 <div class="message-large">Authenticating your workspace...</div>
                 <div class="message-small">You will be redirected shortly.</div>
             </div>
-            <img src={auth_svg_link} class="bottom-image" alt="Background Image" />
+            <img src="{html.escape(auth_svg_link, quote=True)}" class="bottom-image" alt="Background Image" />
         </body>
         </html>
         """
@@ -154,6 +158,9 @@ class CliAuthRequestHandler(BaseHTTPRequestHandler):
         if not redirect_uri:
             self._set_html_response("<h2>Missing redirect_uri</h2>", status_code=400)
             return
+        if not auth_token:
+            self._set_html_response("<h2>Missing token</h2>", status_code=400)
+            return
 
         self._store_token(auth_token)
         self._redirect_with_status(theme, redirect_uri, "success")
@@ -168,8 +175,19 @@ class CliAuthRequestHandler(BaseHTTPRequestHandler):
         # self.wfile.write("OPTIONS request for {}".format(self.path).encode('utf-8'))
 
     def do_POST(self):
-        content_length = int(self.headers["Content-Length"])  # <--- Gets the size of data
-        post_data = self.rfile.read(content_length)  # <--- Gets the data itself
+        content_length_header = self.headers.get("Content-Length")
+        if content_length_header is None:
+            self._set_html_response("<h2>Missing Content-Length</h2>", status_code=411)
+            return
+        try:
+            content_length = int(content_length_header)
+        except ValueError:
+            self._set_html_response("<h2>Invalid Content-Length</h2>", status_code=400)
+            return
+        if content_length < 0:
+            self._set_html_response("<h2>Invalid Content-Length</h2>", status_code=400)
+            return
+        post_data = self.rfile.read(content_length)
         decoded_post_data = post_data.decode("utf-8")
         # logger.debug(
         #     "POST request,\nPath: {}\nHeaders:\n{}\n\nBody:\n{}\n".format(
@@ -195,8 +213,6 @@ class CliAuthServer:
     """
 
     def __init__(self, port: int = 9191):
-        import threading
-
         self._server = HTTPServer(("", port), CliAuthRequestHandler)
         self._thread = threading.Thread(target=self.run)
         self._thread.daemon = True
@@ -211,7 +227,10 @@ class CliAuthServer:
         self._thread.start()
 
     def shut_down(self):
-        self._thread.close()  # type: ignore
+        self._server.running = False  # type: ignore
+        self._server.server_close()
+        if self._thread.is_alive():
+            self._thread.join(timeout=1)
 
 
 def check_port(port: int):

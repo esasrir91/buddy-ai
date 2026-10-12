@@ -105,7 +105,7 @@ class PgMemoryDb(MemoryDb):
                 rows = sess.execute(stmt).fetchall()
                 for row in rows:
                     if row is not None:
-                        memories.append(MemoryRow.model_validate(row))
+                        memories.append(MemoryRow.model_validate(row._mapping))
         except Exception as e:
             log_debug(f"Exception reading from table: {e}")
             log_debug(f"Table does not exist: {self.table.name}")

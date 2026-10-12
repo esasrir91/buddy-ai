@@ -25,10 +25,11 @@ class UserMemory:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "UserMemory":
-        last_updated = data.get("last_updated")
-        if last_updated:
-            data["last_updated"] = datetime.fromisoformat(last_updated)
-        return cls(**data)
+        values = data.copy()
+        last_updated = values.get("last_updated")
+        if isinstance(last_updated, str):
+            values["last_updated"] = datetime.fromisoformat(last_updated)
+        return cls(**values)
 
 
 @dataclass
@@ -49,7 +50,8 @@ class SessionSummary:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "SessionSummary":
-        last_updated = data.get("last_updated")
-        if last_updated:
-            data["last_updated"] = datetime.fromisoformat(last_updated)
-        return cls(**data)
+        values = data.copy()
+        last_updated = values.get("last_updated")
+        if isinstance(last_updated, str):
+            values["last_updated"] = datetime.fromisoformat(last_updated)
+        return cls(**values)

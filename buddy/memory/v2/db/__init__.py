@@ -1,1 +1,1 @@
-from buddy.memory.db.base import MemoryDb
+from buddy.memory.v2.db.base import MemoryDb

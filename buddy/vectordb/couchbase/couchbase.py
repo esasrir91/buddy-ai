@@ -178,7 +178,7 @@ class CouchbaseSearch(VectorDb):
                 )
                 collection_manager.drop_collection(collection_name=self.collection_name, scope_name=self.scope_name)
                 logger.info(f"Successfully dropped collection '{self.collection_name}'.")
-                time.sleep(1)  # Brief wait after drop, as in original code
+                time.sleep(1)
             except CollectionNotFoundException:
                 logger.info(
                     f"Collection '{self.collection_name}' not found in scope '{self.scope_name}'. No need to drop."
@@ -283,7 +283,8 @@ class CouchbaseSearch(VectorDb):
 
     def doc_exists(self, document: Document) -> bool:
         """Check if a document exists in the bucket based on its content."""
-        doc_id = md5(document.content.encode("utf-8")).hexdigest()
+        cleaned_content = document.content.replace("\x00", "\ufffd")
+        doc_id = md5(cleaned_content.encode("utf-8")).hexdigest()
         return self.id_exists(doc_id)
 
     def insert(self, documents: List[Document], filters: Optional[Dict[str, Any]] = None) -> None:
@@ -694,7 +695,7 @@ class CouchbaseSearch(VectorDb):
                     collection_name=self.collection_name, scope_name=self.scope_name
                 )
                 logger.info(f"Successfully dropped collection '{self.collection_name}'.")
-                time.sleep(1)  # Brief wait after drop, as in original code
+                await asyncio.sleep(1)
             except CollectionNotFoundException:
                 logger.info(
                     f"Collection '{self.collection_name}' not found in scope '{self.scope_name}'. No need to drop."
@@ -801,7 +802,8 @@ class CouchbaseSearch(VectorDb):
                 await asyncio.sleep(1)
 
     async def async_doc_exists(self, document: Document) -> bool:
-        doc_id = md5(document.content.encode("utf-8")).hexdigest()
+        cleaned_content = document.content.replace("\x00", "\ufffd")
+        doc_id = md5(cleaned_content.encode("utf-8")).hexdigest()
         return await self.async_id_exists(doc_id)
 
     async def async_id_exists(self, id: str) -> bool:

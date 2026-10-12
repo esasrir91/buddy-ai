@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from buddy.media import Image
 from buddy.utils.log import log_error, log_warning
@@ -15,7 +15,7 @@ except ImportError:
     raise ImportError("`google-genai` not installed. Please install it using `pip install google-genai`")
 
 
-def format_image_for_message(image: Image) -> Optional[Dict[str, Any]]:
+def format_image_for_message(image: Image) -> dict[str, Any] | None:
     # Case 1: Image is a URL
     # Download the image from the URL and add it as base64 encoded data
     if image.url is not None:
@@ -29,7 +29,7 @@ def format_image_for_message(image: Image) -> Optional[Dict[str, Any]]:
                     "data": base64.b64encode(content_bytes).decode("utf-8"),
                 }
                 return image_data
-            except Exception as e:
+            except (TypeError, ValueError) as e:
                 log_warning(f"Failed to download image from {image}: {e}")
                 return None
         else:
@@ -45,12 +45,12 @@ def format_image_for_message(image: Image) -> Optional[Dict[str, Any]]:
                     content_bytes = f.read()
             else:
                 log_error(f"Image file {image_path} does not exist.")
-                raise
+                raise FileNotFoundError(image_path)
             return {
                 "mime_type": "image/jpeg",
                 "data": content_bytes,
             }
-        except Exception as e:
+        except (OSError, TypeError, ValueError) as e:
             log_warning(f"Failed to load image from {image.filepath}: {e}")
             return None
 
@@ -66,7 +66,7 @@ def format_image_for_message(image: Image) -> Optional[Dict[str, Any]]:
         return None
 
 
-def convert_schema(schema_dict: Dict[str, Any], root_schema: Optional[Dict[str, Any]] = None) -> Optional[Schema]:
+def convert_schema(schema_dict: dict[str, Any], root_schema: dict[str, Any] | None = None) -> Schema | None:
     """
     Recursively convert a JSON-like schema dictionary to a types.Schema object.
 
@@ -213,7 +213,7 @@ def convert_schema(schema_dict: Dict[str, Any], root_schema: Optional[Dict[str, 
             return None
 
 
-def format_function_definitions(tools_list: List[Dict[str, Any]]) -> Optional[Tool]:
+def format_function_definitions(tools_list: list[dict[str, Any]]) -> Tool | None:
     function_declarations = []
 
     for tool in tools_list:

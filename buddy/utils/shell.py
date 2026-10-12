@@ -1,15 +1,13 @@
-from typing import List
-
 from buddy.utils.log import log_debug, log_info, logger
 
 
-def run_shell_command(args: List[str], tail: int = 100) -> str:
+def run_shell_command(args: list[str], tail: int = 100, timeout: float = 30.0) -> str:
     log_info(f"Running shell command: {args}")
 
     import subprocess
 
     try:
-        result = subprocess.run(args, capture_output=True, text=True)
+        result = subprocess.run(args, capture_output=True, text=True, check=False, timeout=timeout)
         log_debug(f"Result: {result}")
         log_debug(f"Return code: {result.returncode}")
         if result.returncode != 0:
@@ -17,6 +15,6 @@ def run_shell_command(args: List[str], tail: int = 100) -> str:
 
         # return only the last n lines of the output
         return "\n".join(result.stdout.split("\n")[-tail:])
-    except Exception as e:
+    except (OSError, subprocess.SubprocessError) as e:
         logger.warning(f"Failed to run shell command: {e}")
         return f"Error: {e}"

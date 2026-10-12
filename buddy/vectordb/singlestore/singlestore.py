@@ -177,6 +177,10 @@ class SingleStore(VectorDb):
                 _id = document.id or content_hash
 
                 meta_data_json = json.dumps(document.meta_data)
+                if filters:
+                    meta_data = document.meta_data.copy() if document.meta_data else {}
+                    meta_data.update(filters)
+                    meta_data_json = json.dumps(meta_data)
                 usage_json = json.dumps(document.usage)
 
                 # Convert embedding list to SingleStore VECTOR format
@@ -220,6 +224,10 @@ class SingleStore(VectorDb):
                 _id = document.id or content_hash
 
                 meta_data_json = json.dumps(document.meta_data)
+                if filters:
+                    meta_data = document.meta_data.copy() if document.meta_data else {}
+                    meta_data.update(filters)
+                    meta_data_json = json.dumps(meta_data)
                 usage_json = json.dumps(document.usage)
 
                 # Convert embedding list to SingleStore VECTOR format
@@ -278,10 +286,9 @@ class SingleStore(VectorDb):
 
         stmt = select(*columns)
 
-        # if filters is not None:
-        #     for key, value in filters.items():
-        #         if hasattr(self.table.c, key):
-        #             stmt = stmt.where(getattr(self.table.c, key) == value)
+        if filters:
+            for key, value in filters.items():
+                stmt = stmt.where(func.json_extract(self.table.c.meta_data, f"$.{key}") == json.dumps(value))
 
         if self.distance == Distance.l2:
             stmt = stmt.order_by(self.table.c.embedding.max_inner_product(query_embedding))

@@ -125,12 +125,9 @@ def deploy_archive(name: str, tar_path: Path) -> None:
     Raises:
         Exception: If the deployment process fails
     """
-    try:
-        logger.debug(f"Deploying playground archive: {tar_path.name}")
-        deploy_playground_archive(name=name, tar_path=tar_path)
-        logger.debug(f"Successfully deployed playground archive: {tar_path.name}")
-    except Exception:
-        raise
+    logger.debug(f"Deploying playground archive: {tar_path.name}")
+    deploy_playground_archive(name=name, tar_path=tar_path)
+    logger.debug(f"Successfully deployed playground archive: {tar_path.name}")
 
 
 def cleanup_archive(tar_path: Path) -> None:

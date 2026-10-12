@@ -1,4 +1,4 @@
-from typing import Optional, cast
+from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 
@@ -10,11 +10,14 @@ from buddy.utils.log import log_info
 
 
 def get_sync_router(agent: Optional[Agent] = None, team: Optional[Team] = None) -> APIRouter:
+    if (agent is None and team is None) or (agent is not None and team is not None):
+        raise ValueError("One of 'agent' or 'team' must be provided.")
+
     router = APIRouter()
 
     @router.post("/slack/events")
-    def slack_events(request: Request, background_tasks: BackgroundTasks):
-        body = cast(bytes, request.body())
+    async def slack_events(request: Request, background_tasks: BackgroundTasks):
+        body = await request.body()
         timestamp = request.headers.get("X-Slack-Request-Timestamp")
         slack_signature = request.headers.get("X-Slack-Signature", "")
 
@@ -24,7 +27,7 @@ def get_sync_router(agent: Optional[Agent] = None, team: Optional[Team] = None) 
         if not verify_slack_signature(body, timestamp, slack_signature):
             raise HTTPException(status_code=403, detail="Invalid signature")
 
-        data = cast(dict, request.json())
+        data = await request.json()
 
         # Handle URL verification
         if data.get("type") == "url_verification":
@@ -64,7 +67,7 @@ def get_sync_router(agent: Optional[Agent] = None, team: Optional[Team] = None) 
                 _send_slack_message(
                     channel=channel_id, message=f"Reasoning: \n{response.reasoning_content}", thread_ts=ts, italics=True
                 )
-            _send_slack_message(channel=channel_id, message=response.content or "", thread_ts=ts)
+            _send_slack_message(channel=channel_id, message=str(response.content or ""), thread_ts=ts)
 
     def _send_slack_message(channel: str, thread_ts: str, message: str, italics: bool = False):
         if len(message) <= 40000:
@@ -87,6 +90,6 @@ def get_sync_router(agent: Optional[Agent] = None, team: Optional[Team] = None) 
                 formatted_batch = "\n".join([f"_{line}_" for line in batch_message.split("\n")])
                 SlackTools().send_message_thread(channel=channel, text=formatted_batch or "", thread_ts=thread_ts)
             else:
-                SlackTools().send_message_thread(channel=channel, text=message or "", thread_ts=thread_ts)
+                SlackTools().send_message_thread(channel=channel, text=batch_message, thread_ts=thread_ts)
 
     return router

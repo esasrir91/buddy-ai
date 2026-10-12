@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Callable, Dict, List, Optional
 
 from buddy.document import Document
@@ -8,9 +10,8 @@ try:
     from llama_index.core.retrievers import BaseRetriever
     from llama_index.core.schema import NodeWithScore
 except ImportError:
-    raise ImportError(
-        "The `llama-index-core` package is not installed. Please install it via `pip install llama-index-core`."
-    )
+    BaseRetriever = None  # type: ignore[assignment,misc]
+    NodeWithScore = Any  # type: ignore[misc,assignment]
 
 
 class LlamaIndexKnowledgeBase(AgentKnowledge):
@@ -33,6 +34,10 @@ class LlamaIndexKnowledgeBase(AgentKnowledge):
         Raises:
             ValueError: If the retriever is not of type BaseRetriever.
         """
+        if BaseRetriever is None:
+            raise ImportError(
+                "The `llama-index-core` package is not installed. Please install it via `pip install llama-index-core`."
+            )
         if not isinstance(self.retriever, BaseRetriever):
             raise ValueError(f"Retriever is not of type BaseRetriever: {self.retriever}")
 

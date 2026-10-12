@@ -42,8 +42,14 @@ class PandasTools(Toolkit):
             if dataframe_name in self.dataframes:
                 return f"Dataframe already exists: {dataframe_name}"
 
+            if not create_using_function or create_using_function.startswith("_"):
+                return f"Error creating dataframe: unsupported function {create_using_function}"
+            creator = getattr(pd, create_using_function, None)
+            if not callable(creator):
+                return f"Error creating dataframe: unsupported function {create_using_function}"
+
             # Create the dataframe
-            dataframe = getattr(pd, create_using_function)(**function_parameters)
+            dataframe = creator(**function_parameters)
             if dataframe is None:
                 return f"Error creating dataframe: {dataframe_name}"
             if not isinstance(dataframe, pd.DataFrame):
@@ -77,9 +83,16 @@ class PandasTools(Toolkit):
 
             # Get the dataframe
             dataframe = self.dataframes.get(dataframe_name)
+            if dataframe is None:
+                return f"Error running operation: dataframe not found: {dataframe_name}"
+            if not operation or operation.startswith("_"):
+                return f"Error running operation: unsupported operation {operation}"
+            operation_callable = getattr(dataframe, operation, None)
+            if not callable(operation_callable):
+                return f"Error running operation: unsupported operation {operation}"
 
             # Run the operation
-            result = getattr(dataframe, operation)(**operation_parameters)
+            result = operation_callable(**operation_parameters)
 
             log_debug(f"Ran operation: {operation}")
             try:

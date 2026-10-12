@@ -6,13 +6,12 @@ from typing import Optional
 
 def is_development_mode() -> bool:
     """Check if the application is running in development mode."""
-    return os.getenv("APP_ENV", "development").lower() == "development"
+    return os.getenv("APP_ENV", "production").lower() == "development"
 
 
 def get_app_secret() -> str:
     """
     Get the WhatsApp app secret from environment variables.
-    In development mode, returns a dummy secret if WHATSAPP_APP_SECRET is not set.
     """
     app_secret = os.getenv("WHATSAPP_APP_SECRET")
 
@@ -25,7 +24,7 @@ def get_app_secret() -> str:
 def validate_webhook_signature(payload: bytes, signature_header: Optional[str]) -> bool:
     """
     Validate the webhook payload using SHA256 signature.
-    In development mode, signature validation can be bypassed.
+    Signature validation can only be bypassed when explicitly enabled.
 
     Args:
         payload: The raw request payload bytes
@@ -34,15 +33,16 @@ def validate_webhook_signature(payload: bytes, signature_header: Optional[str]) 
     Returns:
         bool: True if signature is valid or in development mode, False otherwise
     """
-    # In development mode, we can bypass signature validation
-    if is_development_mode():
-        print("WARNING: Bypassing signature validation in development mode")
+    if is_development_mode() and os.getenv("WHATSAPP_ALLOW_UNSIGNED_WEBHOOKS", "false").lower() == "true":
         return True
 
     if not signature_header or not signature_header.startswith("sha256="):
         return False
 
-    app_secret = get_app_secret()
+    try:
+        app_secret = get_app_secret()
+    except ValueError:
+        return False
     expected_signature = signature_header.split("sha256=")[1]
 
     # Calculate signature

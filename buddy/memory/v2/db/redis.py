@@ -47,7 +47,7 @@ class RedisMemoryDb(MemoryDb):
         )
         log_debug(f"Created RedisMemoryDb with prefix: '{self.prefix}'")
 
-    def __dict__(self) -> Dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             "name": "RedisMemoryDb",
             "prefix": self.prefix,
@@ -106,8 +106,8 @@ class RedisMemoryDb(MemoryDb):
                 memory_data.sort(key=lambda x: x.get("created_at", 0), reverse=True)
 
             # Apply limit if specified
-            if limit is not None and limit > 0:
-                memory_data = memory_data[:limit]
+            if limit is not None:
+                memory_data = memory_data[: max(limit, 0)]
 
             # Convert to MemoryRow objects
             for data in memory_data:

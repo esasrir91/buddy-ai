@@ -21,9 +21,10 @@ class TextReader(Reader):
                 file_contents = file.read_text("utf-8")
             else:
                 log_info(f"Reading uploaded file: {file.name}")
-                file_name = file.name.split(".")[0]
+                file_name = Path(file.name).stem
                 file.seek(0)
-                file_contents = file.read().decode("utf-8")
+                raw_contents = file.read()
+                file_contents = raw_contents.decode("utf-8") if isinstance(raw_contents, bytes) else raw_contents
 
             documents = [
                 Document(
@@ -61,9 +62,10 @@ class TextReader(Reader):
                     file_contents = file.read_text("utf-8")
             else:
                 log_info(f"Reading uploaded file asynchronously: {file.name}")
-                file_name = file.name.split(".")[0]
+                file_name = Path(file.name).stem
                 file.seek(0)
-                file_contents = file.read().decode("utf-8")
+                raw_contents = file.read()
+                file_contents = raw_contents.decode("utf-8") if isinstance(raw_contents, bytes) else raw_contents
 
             document = Document(
                 name=file_name,

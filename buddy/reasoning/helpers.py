@@ -53,9 +53,9 @@ def update_messages_with_reasoning(
             add_to_agent_memory=False,
         )
     )
-    for message in reasoning_messages:
-        message.add_to_agent_memory = False
-    run_messages.messages.extend(reasoning_messages)
+    run_messages.messages.extend(
+        message.model_copy(update={"add_to_agent_memory": False}) for message in reasoning_messages
+    )
     run_messages.messages.append(
         Message(
             role="assistant",

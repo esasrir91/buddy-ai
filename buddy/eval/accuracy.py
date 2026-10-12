@@ -19,7 +19,9 @@ if TYPE_CHECKING:
 
 
 class AccuracyAgentResponse(BaseModel):
-    accuracy_score: int = Field(..., description="Accuracy Score between 1 and 10 assigned to the Agent's answer.")
+    accuracy_score: int = Field(
+        ..., ge=1, le=10, description="Accuracy Score between 1 and 10 assigned to the Agent's answer."
+    )
     accuracy_reason: str = Field(..., description="Detailed reasoning for the accuracy score.")
 
 
@@ -59,11 +61,11 @@ class AccuracyEvaluation:
 @dataclass
 class AccuracyResult:
     results: List[AccuracyEvaluation] = field(default_factory=list)
-    avg_score: float = field(init=False)
-    mean_score: float = field(init=False)
-    min_score: float = field(init=False)
-    max_score: float = field(init=False)
-    std_dev_score: float = field(init=False)
+    avg_score: float = field(init=False, default=0.0)
+    mean_score: float = field(init=False, default=0.0)
+    min_score: float = field(init=False, default=0.0)
+    max_score: float = field(init=False, default=0.0)
+    std_dev_score: float = field(init=False, default=0.0)
 
     def __post_init__(self):
         self.compute_stats()
@@ -527,12 +529,15 @@ Remember: You must only compare the agent_output to the expected_output. The exp
                 run_data=asdict(self.result),
                 eval_type=EvalType.ACCURACY,
                 agent_id=self.agent.agent_id if self.agent is not None else None,
+                team_id=self.team.team_id if self.team is not None else None,
                 model_id=self.agent.model.id if self.agent is not None and self.agent.model is not None else None,
                 model_provider=(
                     self.agent.model.provider if self.agent is not None and self.agent.model is not None else None
                 ),
                 name=self.name if self.name is not None else None,
-                evaluated_entity_name=self.agent.name if self.agent is not None else None,
+                evaluated_entity_name=(
+                    self.agent.name if self.agent is not None else self.team.name if self.team is not None else None
+                ),
             )
 
         logger.debug(f"*********** Evaluation {self.eval_id} Finished ***********")

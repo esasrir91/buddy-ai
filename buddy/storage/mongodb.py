@@ -167,6 +167,10 @@ class MongoDbStorage(Storage):
                     _workflow_session = WorkflowSession.from_dict(doc)
                     if _workflow_session is not None:
                         sessions.append(_workflow_session)
+                elif self.mode == "workflow_v2":
+                    _workflow_session_v2 = WorkflowSessionV2.from_dict(doc)
+                    if _workflow_session_v2 is not None:
+                        sessions.append(_workflow_session_v2)
             return sessions
         except PyMongoError as e:
             logger.error(f"Error getting sessions: {e}")

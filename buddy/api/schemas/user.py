@@ -1,6 +1,6 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Literal, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr, model_validator
 
 
 class UserSchema(BaseModel):
@@ -10,16 +10,16 @@ class UserSchema(BaseModel):
     email: Optional[str] = None
     username: Optional[str] = None
     name: Optional[str] = None
-    email_verified: Optional[bool] = False
-    is_active: Optional[bool] = True
-    is_machine: Optional[bool] = False
+    email_verified: bool = False
+    is_active: bool = True
+    is_machine: bool = False
     user_data: Optional[Dict[str, Any]] = None
 
 
 class EmailPasswordAuthSchema(BaseModel):
-    email: str
+    email: EmailStr
     password: str
-    auth_source: str = "cli"
+    auth_source: Literal["cli"] = "cli"
 
 
 class TeamSchema(BaseModel):
@@ -33,3 +33,9 @@ class TeamSchema(BaseModel):
 class TeamIdentifier(BaseModel):
     id_team: Optional[str] = None
     team_url: Optional[str] = None
+
+    @model_validator(mode="after")
+    def validate_identifier(self) -> "TeamIdentifier":
+        if not self.id_team and not self.team_url:
+            raise ValueError("At least one of id_team or team_url is required")
+        return self

@@ -1,12 +1,11 @@
 import json
-from typing import Type, Union
 
 from pydantic import BaseModel
 
 from buddy.utils.log import log_warning
 
 
-def get_json_output_prompt(response_model: Union[str, list, BaseModel]) -> str:
+def get_json_output_prompt(response_model: str | list | BaseModel) -> str:
     """Return the JSON output prompt for the Agent.
 
     This is added to the system prompt when the response_model is set and structured_outputs is False.
@@ -77,7 +76,7 @@ def get_json_output_prompt(response_model: Union[str, list, BaseModel]) -> str:
                 if len(response_model_properties) > 0:
                     json_output_prompt += "\n<json_fields>"
                     json_output_prompt += (
-                        f"\n{json.dumps([key for key in response_model_properties.keys() if key != '$defs'])}"
+                        f"\n{json.dumps([key for key in response_model_properties if key != '$defs'])}"
                     )
                     json_output_prompt += "\n</json_fields>"
                     json_output_prompt += "\n\nHere are the properties for each field:"
@@ -95,7 +94,7 @@ def get_json_output_prompt(response_model: Union[str, list, BaseModel]) -> str:
     return json_output_prompt
 
 
-def get_response_model_format_prompt(response_model: Type[BaseModel]) -> str:
+def get_response_model_format_prompt(response_model: type[BaseModel]) -> str:
     """Return the format prompt for the response model."""
 
     message = "Make sure your response is a valid string (NOT JSON) that mentions the following topics:"

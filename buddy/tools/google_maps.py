@@ -22,7 +22,7 @@ try:
     import googlemaps
     from google.maps import places_v1
 except ImportError:
-    print("Error importing googlemaps. Please install the package using `pip install googlemaps google-maps-places`.")
+    raise ImportError("`googlemaps` and `google-maps-places` are required. Install with `pip install googlemaps google-maps-places`.")
 
 
 class GoogleMapTools(Toolkit):
@@ -103,7 +103,7 @@ class GoogleMapTools(Toolkit):
 
         except Exception as e:
             print(f"Error searching Google Maps: {str(e)}")
-            return str([])
+            return json.dumps([])
 
     def get_directions(
         self,
@@ -128,10 +128,10 @@ class GoogleMapTools(Toolkit):
         """
         try:
             result = self.client.directions(origin, destination, mode=mode, departure_time=departure_time, avoid=avoid)
-            return str(result)
+            return json.dumps(result, default=str)
         except Exception as e:
             print(f"Error getting directions: {str(e)}")
-            return str([])
+            return json.dumps([])
 
     def validate_address(
         self, address: str, region_code: str = "US", locality: Optional[str] = None, enable_usps_cass: bool = False
@@ -152,10 +152,10 @@ class GoogleMapTools(Toolkit):
             result = self.client.addressvalidation(
                 [address], regionCode=region_code, locality=locality, enableUspsCass=enable_usps_cass
             )
-            return str(result)
+            return json.dumps(result, default=str)
         except Exception as e:
             print(f"Error validating address: {str(e)}")
-            return str({})
+            return json.dumps({})
 
     def geocode_address(self, address: str, region: Optional[str] = None) -> str:
         """
@@ -170,10 +170,10 @@ class GoogleMapTools(Toolkit):
         """
         try:
             result = self.client.geocode(address, region=region)
-            return str(result)
+            return json.dumps(result, default=str)
         except Exception as e:
             print(f"Error geocoding address: {str(e)}")
-            return str([])
+            return json.dumps([])
 
     def reverse_geocode(
         self, lat: float, lng: float, result_type: Optional[List[str]] = None, location_type: Optional[List[str]] = None
@@ -192,10 +192,10 @@ class GoogleMapTools(Toolkit):
         """
         try:
             result = self.client.reverse_geocode((lat, lng), result_type=result_type, location_type=location_type)
-            return str(result)
+            return json.dumps(result, default=str)
         except Exception as e:
             print(f"Error reverse geocoding: {str(e)}")
-            return str([])
+            return json.dumps([])
 
     def get_distance_matrix(
         self,
@@ -222,10 +222,10 @@ class GoogleMapTools(Toolkit):
             result = self.client.distance_matrix(
                 origins, destinations, mode=mode, departure_time=departure_time, avoid=avoid
             )
-            return str(result)
+            return json.dumps(result, default=str)
         except Exception as e:
             print(f"Error getting distance matrix: {str(e)}")
-            return str({})
+            return json.dumps({})
 
     def get_elevation(self, lat: float, lng: float) -> str:
         """
@@ -240,10 +240,10 @@ class GoogleMapTools(Toolkit):
         """
         try:
             result = self.client.elevation((lat, lng))
-            return str(result)
+            return json.dumps(result, default=str)
         except Exception as e:
             print(f"Error getting elevation: {str(e)}")
-            return str([])
+            return json.dumps([])
 
     def get_timezone(self, lat: float, lng: float, timestamp: Optional[datetime] = None) -> str:
         """
@@ -262,7 +262,7 @@ class GoogleMapTools(Toolkit):
                 timestamp = datetime.now()
 
             result = self.client.timezone(location=(lat, lng), timestamp=timestamp)
-            return str(result)
+            return json.dumps(result, default=str)
         except Exception as e:
             print(f"Error getting timezone: {str(e)}")
-            return str({})
+            return json.dumps({})

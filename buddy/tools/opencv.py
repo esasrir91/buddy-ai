@@ -111,7 +111,7 @@ class OpenCVTools(Toolkit):
                 agent.add_image(
                     ImageArtifact(
                         id=media_id,
-                        content=base64_encoded_image,
+                        content=image_bytes,
                         original_prompt=prompt,
                         mime_type="image/png",
                     )
@@ -275,13 +275,11 @@ class OpenCVTools(Toolkit):
                 # Clean up temporary file
                 os.unlink(temp_filepath)
 
-                base64_encoded_video = base64.b64encode(video_bytes)
-
                 media_id = str(uuid4())
                 agent.add_video(
                     VideoArtifact(
                         id=media_id,
-                        content=base64_encoded_video,
+                        content=video_bytes,
                         original_prompt=prompt,
                         mime_type="video/mp4",
                     )

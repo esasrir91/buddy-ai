@@ -34,7 +34,7 @@ def get_entrypoint_for_tool(tool: MCPTool, session: ClientSession):
 
             # Return an error if the tool call failed
             if result.isError:
-                raise Exception(f"Error from MCP tool '{tool_name}': {result.content}")
+                raise RuntimeError(f"Error from MCP tool '{tool_name}': {result.content}")
 
             # Process the result content
             response_str = ""
@@ -59,7 +59,7 @@ def get_entrypoint_for_tool(tool: MCPTool, session: ClientSession):
                     response_str += f"[Unsupported content type: {content_item.type}]\n"
 
             return response_str.strip()
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - MCP failures are returned to the agent
             log_exception(f"Failed to call MCP tool '{tool_name}': {e}")
             return f"Error: {e}"
 

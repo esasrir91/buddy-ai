@@ -20,14 +20,6 @@ without LangChain installed and only raises when an adapter is actually used.
 
 from __future__ import annotations
 
-from buddy.integrations.langchain.chat_model import BuddyChatModel
-from buddy.integrations.langchain.messages import from_buddy_message, to_buddy_messages
-from buddy.integrations.langchain.tools import (
-    BuddyAgentTool,
-    from_langchain_tool,
-    to_langchain_tool,
-)
-
 __all__ = [
     "BuddyChatModel",
     "BuddyAgentTool",
@@ -36,3 +28,24 @@ __all__ = [
     "to_buddy_messages",
     "from_buddy_message",
 ]
+
+
+def __getattr__(name: str):  # pragma: no cover - thin lazy import shim
+    if name == "BuddyChatModel":
+        from buddy.integrations.langchain.chat_model import BuddyChatModel
+
+        globals()[name] = BuddyChatModel
+        return BuddyChatModel
+    if name in {"from_buddy_message", "to_buddy_messages"}:
+        from buddy.integrations.langchain import messages
+
+        value = getattr(messages, name)
+        globals()[name] = value
+        return value
+    if name in {"BuddyAgentTool", "from_langchain_tool", "to_langchain_tool"}:
+        from buddy.integrations.langchain import tools
+
+        value = getattr(tools, name)
+        globals()[name] = value
+        return value
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

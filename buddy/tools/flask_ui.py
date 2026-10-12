@@ -281,6 +281,10 @@ def {function_name}():
             str: API endpoint code or error message
         """
         try:
+            method = method.upper()
+            if method not in {"GET", "POST", "PUT", "DELETE"}:
+                return json.dumps({"error": f"Unsupported HTTP method: {method}"})
+
             function_name = endpoint_path.replace("/", "_").replace("-", "_").strip("_")
             if not function_name:
                 function_name = "api_endpoint"

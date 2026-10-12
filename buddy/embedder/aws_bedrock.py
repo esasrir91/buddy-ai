@@ -4,7 +4,7 @@ from os import getenv
 from typing import Any, Dict, List, Optional, Tuple
 
 from buddy.embedder.base import Embedder
-from buddy.exceptions import BuddyError, ModelProviderError
+from buddy.exceptions import ModelProviderError
 from buddy.utils.log import log_error, logger
 
 try:
@@ -79,17 +79,9 @@ class AwsBedrockEmbedder(Embedder):
         self.aws_secret_access_key = self.aws_secret_access_key or getenv("AWS_SECRET_ACCESS_KEY")
         self.aws_region = self.aws_region or getenv("AWS_REGION")
 
-        if not self.aws_access_key_id or not self.aws_secret_access_key:
-            raise BuddyError(
-                message="AWS credentials not found. Please set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables or provide a boto3 session.",
-                status_code=400,
-            )
-
         self.client = AwsClient(
             service_name="bedrock-runtime",
             region_name=self.aws_region,
-            aws_access_key_id=self.aws_access_key_id,
-            aws_secret_access_key=self.aws_secret_access_key,
             **(self.client_params or {}),
         )
         return self.client

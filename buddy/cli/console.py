@@ -1,3 +1,5 @@
+from typing import Optional
+
 from rich.console import Console
 from rich.style import Style
 
@@ -32,15 +34,15 @@ warn_style = Style(color="magenta")
 
 
 def print_heading(msg: str) -> None:
-    console.print(msg, style=heading_style)
+    console.print(msg, style=heading_style, markup=False)
 
 
 def print_subheading(msg: str) -> None:
-    console.print(msg, style=subheading_style)
+    console.print(msg, style=subheading_style, markup=False)
 
 
 def print_info(msg: str) -> None:
-    console.print(msg, style=info_style)
+    console.print(msg, style=info_style, markup=False)
 
 
 def log_config_not_available_msg() -> None:
@@ -58,7 +60,7 @@ def print_available_workspaces(avl_ws_list) -> None:
     print_info("Available Workspaces:\n  - {}".format("\n  - ".join(avl_ws_names)))
 
 
-def confirm_yes_no(question, default: str = "yes") -> bool:
+def confirm_yes_no(question: str, default: Optional[str] = "yes") -> bool:
     """Ask a yes/no question via raw_input().
 
     "question" is a string that is presented to the user.
@@ -69,6 +71,8 @@ def confirm_yes_no(question, default: str = "yes") -> bool:
     The "answer" return value is True for "yes" or False for "no".
     """
     inp_to_result_map = {"yes": True, "y": True, "ye": True, "no": False, "n": False}
+    if default is not None:
+        default = default.lower()
     if default is None:
         prompt = " [y/n]: "
     elif default == "yes":
@@ -78,7 +82,7 @@ def confirm_yes_no(question, default: str = "yes") -> bool:
     else:
         raise ValueError(f"Invalid default answer: {default}")
 
-    choice = console.input(prompt=(question + prompt)).lower()
+    choice = console.input(prompt=(question + prompt)).strip().lower()
     if default is not None and choice == "":
         return inp_to_result_map[default]
     elif choice in inp_to_result_map:

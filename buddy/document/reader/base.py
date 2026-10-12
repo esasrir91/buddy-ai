@@ -16,6 +16,10 @@ class Reader:
     separators: List[str] = field(default_factory=lambda: ["\n", "\n\n", "\r", "\r\n", "\n\r", "\t", " ", "  "])
     chunking_strategy: Optional[ChunkingStrategy] = None
 
+    def __post_init__(self) -> None:
+        if self.chunk_size < 1:
+            raise ValueError("chunk_size must be greater than zero")
+
     def read(self, obj: Any) -> List[Document]:
         raise NotImplementedError
 

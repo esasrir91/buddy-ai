@@ -15,6 +15,8 @@ class SemanticChunking(ChunkingStrategy):
     """Chunking strategy that splits text into semantic chunks using chonkie"""
 
     def __init__(self, embedder: Optional[Embedder] = None, chunk_size: int = 5000, similarity_threshold: float = 0.5):
+        if chunk_size < 1:
+            raise ValueError("chunk_size must be greater than zero")
         self.embedder = embedder or OpenAIEmbedder(id="text-embedding-3-small")  # type: ignore
         self.chunk_size = chunk_size
         self.similarity_threshold = similarity_threshold
@@ -38,6 +40,8 @@ class SemanticChunking(ChunkingStrategy):
             meta_data = document.meta_data.copy()
             meta_data["chunk"] = i
             chunk_id = f"{document.id}_{i}" if document.id else None
+            if chunk_id is None and document.name:
+                chunk_id = f"{document.name}_{i}"
             meta_data["chunk_size"] = len(chunk.text)
 
             chunked_documents.append(Document(id=chunk_id, name=document.name, meta_data=meta_data, content=chunk.text))

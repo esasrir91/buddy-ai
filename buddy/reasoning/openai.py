@@ -8,7 +8,32 @@ from buddy.models.openai.like import OpenAILike
 from buddy.utils.log import logger
 
 
+def _prepare_messages(messages: List[Message]) -> List[Message]:
+    return [
+        message.model_copy(update={"role": "system"}) if message.role == "developer" else message
+        for message in messages
+    ]
+
+
+def _extract_reasoning_content(content: Optional[str]) -> str:
+    if content is None:
+        return ""
+
+    start_tag = "<think>"
+    end_tag = "</think>"
+    start_idx = content.find(start_tag)
+    if start_idx == -1:
+        return content
+
+    end_idx = content.find(end_tag, start_idx + len(start_tag))
+    if end_idx == -1:
+        return content
+
+    return content[start_idx + len(start_tag) : end_idx].strip()
+
+
 def is_openai_reasoning_model(reasoning_model: Model) -> bool:
+    model_id = reasoning_model.id.lower()
     return (
         (
             reasoning_model.__class__.__name__ == "OpenAIChat"
@@ -16,11 +41,11 @@ def is_openai_reasoning_model(reasoning_model: Model) -> bool:
             or reasoning_model.__class__.__name__ == "AzureOpenAI"
         )
         and (
-            ("o4" in reasoning_model.id)
-            or ("o3" in reasoning_model.id)
-            or ("o1" in reasoning_model.id)
-            or ("4.1" in reasoning_model.id)
-            or ("4.5" in reasoning_model.id)
+            ("o4" in model_id)
+            or ("o3" in model_id)
+            or ("o1" in model_id)
+            or ("4.1" in model_id)
+            or ("4.5" in model_id)
         )
     ) or (isinstance(reasoning_model, OpenAILike) and "deepseek-r1" in reasoning_model.id.lower())
 
@@ -29,22 +54,12 @@ def get_openai_reasoning(reasoning_agent: "Agent", messages: List[Message]) -> O
     from buddy.run.response import RunResponse
 
     try:
-        reasoning_agent_response: RunResponse = reasoning_agent.run(messages=messages)
+        reasoning_agent_response: RunResponse = reasoning_agent.run(messages=_prepare_messages(messages))
     except Exception as e:
         logger.warning(f"Reasoning error: {e}")
         return None
 
-    reasoning_content: str = ""
-    # We use the normal content as no reasoning content is returned
-    if reasoning_agent_response.content is not None:
-        # Extract content between <think> tags if present
-        content = reasoning_agent_response.content
-        if "<think>" in content and "</think>" in content:
-            start_idx = content.find("<think>") + len("<think>")
-            end_idx = content.find("</think>")
-            reasoning_content = content[start_idx:end_idx].strip()
-        else:
-            reasoning_content = content
+    reasoning_content = _extract_reasoning_content(reasoning_agent_response.content)
 
     return Message(
         role="assistant", content=f"<thinking>\n{reasoning_content}\n</thinking>", reasoning_content=reasoning_content
@@ -54,27 +69,13 @@ def get_openai_reasoning(reasoning_agent: "Agent", messages: List[Message]) -> O
 async def aget_openai_reasoning(reasoning_agent: "Agent", messages: List[Message]) -> Optional[Message]:  # type: ignore  # noqa: F821
     from buddy.run.response import RunResponse
 
-    # Update system message role to "system"
-    for message in messages:
-        if message.role == "developer":
-            message.role = "system"
-
     try:
-        reasoning_agent_response: RunResponse = await reasoning_agent.arun(messages=messages)
+        reasoning_agent_response: RunResponse = await reasoning_agent.arun(messages=_prepare_messages(messages))
     except Exception as e:
         logger.warning(f"Reasoning error: {e}")
         return None
 
-    reasoning_content: str = ""
-    if reasoning_agent_response.content is not None:
-        # Extract content between <think> tags if present
-        content = reasoning_agent_response.content
-        if "<think>" in content and "</think>" in content:
-            start_idx = content.find("<think>") + len("<think>")
-            end_idx = content.find("</think>")
-            reasoning_content = content[start_idx:end_idx].strip()
-        else:
-            reasoning_content = content
+    reasoning_content = _extract_reasoning_content(reasoning_agent_response.content)
 
     return Message(
         role="assistant", content=f"<thinking>\n{reasoning_content}\n</thinking>", reasoning_content=reasoning_content

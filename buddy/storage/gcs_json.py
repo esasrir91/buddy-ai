@@ -116,7 +116,22 @@ class GCSJsonStorage(JsonStorage):
         session_ids = []
         for blob in self.client.list_blobs(self.bucket, prefix=self.prefix):
             if blob.name.endswith(".json"):
-                session_ids.append(blob.name.replace(".json", ""))
+                try:
+                    data = self.deserialize(blob.download_as_bytes().decode("utf-8"))
+                    if user_id and data.get("user_id") != user_id:
+                        continue
+                    if entity_id:
+                        entity_key = {
+                            "agent": "agent_id",
+                            "team": "team_id",
+                            "workflow": "workflow_id",
+                            "workflow_v2": "workflow_id",
+                        }.get(self.mode)
+                        if entity_key is None or data.get(entity_key) != entity_id:
+                            continue
+                    session_ids.append(blob.name[len(self.prefix) : -len(".json")])
+                except Exception as e:
+                    logger.error(f"Error reading session from blob {blob.name}: {e}")
         return session_ids
 
     def get_all_sessions(self, user_id: Optional[str] = None, entity_id: Optional[str] = None) -> List[Session]:
@@ -132,6 +147,15 @@ class GCSJsonStorage(JsonStorage):
 
                     if user_id and data.get("user_id") != user_id:
                         continue
+                    if entity_id:
+                        entity_key = {
+                            "agent": "agent_id",
+                            "team": "team_id",
+                            "workflow": "workflow_id",
+                            "workflow_v2": "workflow_id",
+                        }.get(self.mode)
+                        if entity_key is None or data.get(entity_key) != entity_id:
+                            continue
                     session: Optional[Session] = None
                     if self.mode == "agent":
                         session = AgentSession.from_dict(data)
@@ -181,6 +205,15 @@ class GCSJsonStorage(JsonStorage):
                     # Apply filters
                     if user_id and data.get("user_id") != user_id:
                         continue
+                    if entity_id:
+                        entity_key = {
+                            "agent": "agent_id",
+                            "team": "team_id",
+                            "workflow": "workflow_id",
+                            "workflow_v2": "workflow_id",
+                        }.get(self.mode)
+                        if entity_key is None or data.get(entity_key) != entity_id:
+                            continue
 
                     # Store with created_at for sorting
                     created_at = data.get("created_at", 0)
@@ -247,10 +280,10 @@ class GCSJsonStorage(JsonStorage):
         """
         Deletes all session JSON blobs from the bucket.
         """
-        prefix = ""
-        for blob in self.client.list_blobs(self.bucket, prefix=prefix):
+        for blob in self.client.list_blobs(self.bucket, prefix=self.prefix):
             try:
-                blob.delete()
+                if blob.name.endswith(".json"):
+                    blob.delete()
             except Exception as e:
                 logger.error(f"Error deleting blob {blob.name}: {e}")
 

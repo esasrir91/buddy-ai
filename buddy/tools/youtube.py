@@ -18,6 +18,7 @@ class YouTubeTools(Toolkit):
         client_id: Optional[str] = None,
         client_secret: Optional[str] = None,
         refresh_token: Optional[str] = None,
+        timeout: float = 30.0,
         **kwargs,
     ):
         """Initialize YouTube Tools.
@@ -34,6 +35,7 @@ class YouTubeTools(Toolkit):
         self.refresh_token = refresh_token or getenv("YOUTUBE_REFRESH_TOKEN")
         self.base_url = "https://www.googleapis.com/youtube/v3"
         self.access_token = None
+        self.timeout = timeout
 
         tools: List[Any] = [
             self.search_videos,
@@ -59,7 +61,7 @@ class YouTubeTools(Toolkit):
                 "grant_type": "refresh_token",
             }
 
-            response = requests.post("https://oauth2.googleapis.com/token", data=data)
+            response = requests.post("https://oauth2.googleapis.com/token", data=data, timeout=self.timeout)
             response.raise_for_status()
 
             token_data = response.json()
@@ -82,6 +84,8 @@ class YouTubeTools(Toolkit):
         """
         if not self.api_key:
             return json.dumps({"error": "API key not provided"})
+        if not query.strip() or max_results <= 0:
+            return json.dumps({"error": "query must be nonempty and max_results must be greater than 0"})
 
         try:
             params = {
@@ -93,7 +97,7 @@ class YouTubeTools(Toolkit):
                 "key": self.api_key,
             }
 
-            response = requests.get(f"{self.base_url}/search", params=params)
+            response = requests.get(f"{self.base_url}/search", params=params, timeout=self.timeout)
             response.raise_for_status()
 
             return json.dumps(response.json())
@@ -115,7 +119,7 @@ class YouTubeTools(Toolkit):
         try:
             params = {"part": "snippet,statistics,contentDetails", "id": video_id, "key": self.api_key}
 
-            response = requests.get(f"{self.base_url}/videos", params=params)
+            response = requests.get(f"{self.base_url}/videos", params=params, timeout=self.timeout)
             response.raise_for_status()
 
             return json.dumps(response.json())
@@ -137,7 +141,7 @@ class YouTubeTools(Toolkit):
         try:
             params = {"part": "snippet,statistics", "id": channel_id, "key": self.api_key}
 
-            response = requests.get(f"{self.base_url}/channels", params=params)
+            response = requests.get(f"{self.base_url}/channels", params=params, timeout=self.timeout)
             response.raise_for_status()
 
             return json.dumps(response.json())
@@ -172,7 +176,9 @@ class YouTubeTools(Toolkit):
             # which is more complex and would need additional libraries
             params = {"part": "snippet,status"}
 
-            response = requests.post(f"{self.base_url}/videos", headers=headers, params=params, json=metadata)
+            response = requests.post(
+                f"{self.base_url}/videos", headers=headers, params=params, json=metadata, timeout=self.timeout
+            )
             response.raise_for_status()
 
             return json.dumps(response.json())
@@ -191,11 +197,13 @@ class YouTubeTools(Toolkit):
         """
         if not self.api_key:
             return json.dumps({"error": "API key not provided"})
+        if max_results <= 0:
+            return json.dumps({"error": "max_results must be greater than 0"})
 
         try:
             params = {"part": "snippet", "playlistId": playlist_id, "maxResults": max_results, "key": self.api_key}
 
-            response = requests.get(f"{self.base_url}/playlistItems", params=params)
+            response = requests.get(f"{self.base_url}/playlistItems", params=params, timeout=self.timeout)
             response.raise_for_status()
 
             return json.dumps(response.json())
@@ -214,6 +222,8 @@ class YouTubeTools(Toolkit):
         """
         if not self.api_key:
             return json.dumps({"error": "API key not provided"})
+        if max_results <= 0:
+            return json.dumps({"error": "max_results must be greater than 0"})
 
         try:
             params = {
@@ -224,7 +234,7 @@ class YouTubeTools(Toolkit):
                 "key": self.api_key,
             }
 
-            response = requests.get(f"{self.base_url}/commentThreads", params=params)
+            response = requests.get(f"{self.base_url}/commentThreads", params=params, timeout=self.timeout)
             response.raise_for_status()
 
             return json.dumps(response.json())

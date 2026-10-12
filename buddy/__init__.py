@@ -16,7 +16,7 @@ Author: Sriram Sangeeth Mantha
 License: MIT
 """
 
-__version__ = "2.2.1"
+__version__ = "3.0.0"
 __author__ = "Sriram Sangeeth Mantha"
 __email__ = "sriram.sangeet@gmail.com"
 __license__ = "MIT"

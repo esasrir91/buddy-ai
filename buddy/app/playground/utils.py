@@ -19,29 +19,36 @@ def process_audio(file: UploadFile) -> Audio:
     content = file.file.read()
     if not content:
         raise HTTPException(status_code=400, detail="Empty file")
-    format = None
+    media_format = None
     if file.filename and "." in file.filename:
-        format = file.filename.split(".")[-1].lower()
+        media_format = file.filename.rsplit(".", 1)[-1].lower()
     elif file.content_type:
-        format = file.content_type.split("/")[-1]
+        media_format = file.content_type.split("/", 1)[-1].lower()
 
-    return Audio(content=content, format=format)
+    return Audio(content=content, format=media_format)
 
 
 def process_video(file: UploadFile) -> Video:
     content = file.file.read()
     if not content:
         raise HTTPException(status_code=400, detail="Empty file")
-    return Video(content=content, format=file.content_type)
+    media_format = None
+    if file.filename and "." in file.filename:
+        media_format = file.filename.rsplit(".", 1)[-1].lower()
+    elif file.content_type:
+        media_format = file.content_type.split("/", 1)[-1].lower()
+    return Video(content=content, format=media_format)
 
 
-def process_document(file: UploadFile) -> Optional[FileMedia]:
+def process_document(file: UploadFile) -> FileMedia:
     try:
         content = file.file.read()
         if not content:
             raise HTTPException(status_code=400, detail="Empty file")
 
         return FileMedia(content=content)
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error processing document {file.filename}: {e}")
-        return None
+        raise HTTPException(status_code=400, detail=f"Could not process document {file.filename}") from e

@@ -34,19 +34,23 @@ def authenticate_and_get_user(auth_token: str, existing_user: Optional[UserSchem
 
     from buddy.cli.credentials import read_auth_token
 
+    if not auth_token or not auth_token.strip():
+        logger.debug("Could not authenticate user: empty auth token")
+        return None
+
     logger.debug("--**-- Getting user")
     auth_header = {BUDDY_cli_settings.auth_token_header: auth_token}
-    anon_user = None
-    if existing_user is not None:
-        if existing_user.email == "anon":
-            logger.debug(f"Claiming anonymous user: {existing_user.id_user}")
-            anon_user = {
-                "email": existing_user.email,
-                "id_user": existing_user.id_user,
-                "auth_token": read_auth_token() or "",
-            }
     with api.Client() as api_client:
         try:
+            anon_user = None
+            if existing_user is not None and existing_user.email == "anon":
+                logger.debug(f"Claiming anonymous user: {existing_user.id_user}")
+                anon_user = {
+                    "email": existing_user.email,
+                    "id_user": existing_user.id_user,
+                    "auth_token": read_auth_token() or "",
+                }
+
             r: Response = api_client.post(ApiRoutes.USER_CLI_AUTH, headers=auth_header, json=anon_user)
             if invalid_response(r):
                 return None

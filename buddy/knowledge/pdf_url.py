@@ -1,4 +1,7 @@
 from typing import Any, AsyncIterator, Dict, Iterator, List, Optional, Union
+from urllib.parse import urlparse
+
+from pydantic import Field
 
 from buddy.document import Document
 from buddy.document.reader.pdf_reader import PDFUrlImageReader, PDFUrlReader
@@ -8,8 +11,8 @@ from buddy.utils.log import log_info, logger
 
 class PDFUrlKnowledgeBase(AgentKnowledge):
     urls: Optional[Union[List[str], List[Dict[str, Union[str, Dict[str, Any]]]]]] = None
-    formats: List[str] = [".pdf"]
-    reader: Union[PDFUrlReader, PDFUrlImageReader] = PDFUrlReader()
+    formats: List[str] = Field(default_factory=lambda: [".pdf"])
+    reader: Union[PDFUrlReader, PDFUrlImageReader] = Field(default_factory=PDFUrlReader)
 
     @property
     def document_lists(self) -> Iterator[List[Document]]:
@@ -40,7 +43,12 @@ class PDFUrlKnowledgeBase(AgentKnowledge):
 
     def _is_valid_url(self, url: str) -> bool:
         """Helper to check if URL is valid."""
-        if not url.endswith(".pdf"):
+        if not isinstance(url, str):
+            logger.error(f"Unsupported URL: {url}")
+            return False
+        path = urlparse(url).path.lower()
+        formats = {extension.lower() for extension in self.formats}
+        if not any(path.endswith(extension) for extension in formats):
             logger.error(f"Unsupported URL: {url}")
             return False
         return True
@@ -89,7 +97,7 @@ class PDFUrlKnowledgeBase(AgentKnowledge):
             upsert (bool): If True, upserts documents (insert or update). Requires vector_db support. Defaults to False.
             skip_existing (bool): If True and not upserting, skips documents that already exist based on content hash. Defaults to True.
         """
-        if not url.endswith(".pdf"):
+        if not self._is_valid_url(url):
             logger.error(f"Unsupported URL provided to load_url: {url}")
             return
 
@@ -122,7 +130,7 @@ class PDFUrlKnowledgeBase(AgentKnowledge):
         upsert: bool = False,
         skip_existing: bool = True,
     ) -> None:
-        if not url.endswith(".pdf"):
+        if not self._is_valid_url(url):
             logger.error(f"Unsupported URL provided to load_url: {url}")
             return
 

@@ -18,6 +18,7 @@ class PushNotificationTools(Toolkit):
         onesignal_app_id: Optional[str] = None,
         onesignal_api_key: Optional[str] = None,
         expo_access_token: Optional[str] = None,
+        timeout: float = 30.0,
         **kwargs,
     ):
         """Initialize Push Notification Tools.
@@ -32,6 +33,7 @@ class PushNotificationTools(Toolkit):
         self.onesignal_app_id = onesignal_app_id or getenv("ONESIGNAL_APP_ID")
         self.onesignal_api_key = onesignal_api_key or getenv("ONESIGNAL_API_KEY")
         self.expo_access_token = expo_access_token or getenv("EXPO_ACCESS_TOKEN")
+        self.timeout = timeout
 
         tools: List[Any] = [
             self.send_firebase_notification,
@@ -59,6 +61,8 @@ class PushNotificationTools(Toolkit):
         """
         if not self.firebase_server_key:
             return json.dumps({"error": "Firebase server key not provided"})
+        if not tokens:
+            return json.dumps({"error": "At least one Firebase token is required"})
 
         try:
             headers = {"Authorization": f"key={self.firebase_server_key}", "Content-Type": "application/json"}
@@ -73,7 +77,9 @@ class PushNotificationTools(Toolkit):
             if data:
                 payload["data"] = data
 
-            response = requests.post("https://fcm.googleapis.com/fcm/send", headers=headers, json=payload)
+            response = requests.post(
+                "https://fcm.googleapis.com/fcm/send", headers=headers, json=payload, timeout=self.timeout
+            )
             response.raise_for_status()
 
             return json.dumps(response.json())
@@ -102,6 +108,8 @@ class PushNotificationTools(Toolkit):
         """
         if not all([self.onesignal_app_id, self.onesignal_api_key]):
             return json.dumps({"error": "OneSignal credentials not provided"})
+        if not player_ids:
+            return json.dumps({"error": "At least one OneSignal player ID is required"})
 
         try:
             headers = {"Authorization": f"Basic {self.onesignal_api_key}", "Content-Type": "application/json"}
@@ -119,7 +127,9 @@ class PushNotificationTools(Toolkit):
             if image_url:
                 payload["large_icon"] = image_url
 
-            response = requests.post("https://onesignal.com/api/v1/notifications", headers=headers, json=payload)
+            response = requests.post(
+                "https://onesignal.com/api/v1/notifications", headers=headers, json=payload, timeout=self.timeout
+            )
             response.raise_for_status()
 
             return json.dumps(response.json())
@@ -142,6 +152,9 @@ class PushNotificationTools(Toolkit):
             str: Notification result or error message
         """
         try:
+            if not expo_tokens:
+                return json.dumps({"error": "At least one Expo token is required"})
+
             headers = {
                 "Accept": "application/json",
                 "Accept-encoding": "gzip, deflate",
@@ -158,7 +171,9 @@ class PushNotificationTools(Toolkit):
                     message["data"] = data
                 messages.append(message)
 
-            response = requests.post("https://exp.host/--/api/v2/push/send", headers=headers, json=messages)
+            response = requests.post(
+                "https://exp.host/--/api/v2/push/send", headers=headers, json=messages, timeout=self.timeout
+            )
             response.raise_for_status()
 
             return json.dumps(response.json())
@@ -199,7 +214,7 @@ class PushNotificationTools(Toolkit):
 
             headers = {"Content-Type": "application/json"}
 
-            response = requests.post(endpoint, headers=headers, json=payload)
+            response = requests.post(endpoint, headers=headers, json=payload, timeout=self.timeout)
             response.raise_for_status()
 
             return json.dumps({"success": "Web push sent successfully"})

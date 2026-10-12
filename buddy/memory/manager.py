@@ -37,7 +37,10 @@ class MemoryManager(BaseModel):
                 logger.error(
                     "Buddy uses `openai` as the default model provider. Please provide a `model` or install `openai`."
                 )
-                exit(1)
+                raise ImportError(
+                    "No model was provided and the default OpenAI provider is unavailable. "
+                    "Provide a model or install the `openai` package."
+                ) from e
             self.model = OpenAIChat(id="gpt-4o")
 
     def determine_tools_for_model(self) -> None:
@@ -198,6 +201,7 @@ class MemoryManager(BaseModel):
 
         # Update the Model (set defaults, add logit etc.)
         self.update_model()
+        self.determine_tools_for_model()
 
         # Prepare the List of messages to send to the Model
         messages_for_model: List[Message] = [self.get_system_message()]

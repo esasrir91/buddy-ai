@@ -28,7 +28,7 @@ class VectorDb(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def async_name_exists(self, name: str) -> bool:
+    async def async_name_exists(self, name: str) -> bool:
         raise NotImplementedError
 
     def id_exists(self, id: str) -> bool:

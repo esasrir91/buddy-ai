@@ -148,6 +148,8 @@ class Weaviate(VectorDb):
     async def async_create(self) -> None:
         client = await self.get_async_client()
         try:
+            if await client.collections.exists(self.collection):
+                return
             await client.collections.create(
                 name=self.collection,
                 properties=[
@@ -357,7 +359,10 @@ class Weaviate(VectorDb):
                     doc_uuid, cleaned_content = self._get_doc_uuid(document)
 
                     # Serialize meta_data to JSON string
-                    meta_data_str = json.dumps(document.meta_data) if document.meta_data else None
+                    meta_data = document.meta_data.copy() if document.meta_data else {}
+                    if filters:
+                        meta_data.update(filters)
+                    meta_data_str = json.dumps(meta_data) if meta_data else None
 
                     # Insert properties and vector separately
                     properties = {
@@ -406,7 +411,7 @@ class Weaviate(VectorDb):
                     log_debug(f"Document skipped, content is unchanged: {document.name}")
             else:
                 _docs_to_insert.append(document)
-        self.insert(_docs_to_insert)
+        self.insert(_docs_to_insert, filters=filters)
 
     async def async_upsert(self, documents: List[Document], filters: Optional[Dict[str, Any]] = None) -> None:
         """
@@ -436,7 +441,10 @@ class Weaviate(VectorDb):
                 doc_uuid, cleaned_content = self._get_doc_uuid(document)
 
                 # Serialize meta_data to JSON string
-                meta_data_str = json.dumps(document.meta_data) if document.meta_data else None
+                meta_data = document.meta_data.copy() if document.meta_data else {}
+                if filters:
+                    meta_data.update(filters)
+                meta_data_str = json.dumps(meta_data) if meta_data else None
 
                 properties = {
                     "name": document.name,
@@ -768,8 +776,11 @@ class Weaviate(VectorDb):
 
     def delete(self) -> bool:
         """Delete all records from the database."""
-        self.drop()
-        return True
+        if not self.exists():
+            return False
+        collection = self.get_client().collections.get(self.collection)
+        result = collection.data.delete_many()
+        return result.failed == 0
 
     def get_vector_index_config(self, index_type: VectorIndex, distance_metric: Distance):
         """
@@ -812,6 +823,7 @@ class Weaviate(VectorDb):
 
             search_results.append(
                 Document(
+                    id=str(obj.uuid),
                     name=properties["name"],
                     meta_data=meta_data if meta_data else {},
                     content=properties["content"],

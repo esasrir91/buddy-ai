@@ -383,6 +383,11 @@ class Team:
         show_members_responses: bool = False,
         monitoring: bool = False,
         telemetry: bool = True,
+        parent_team_id: Optional[str] = None,
+        workflow_id: Optional[str] = None,
+        workflow_session_id: Optional[str] = None,
+        app_id: Optional[str] = None,
+        team_session_id: Optional[str] = None,
     ):
         self.members = members
 
@@ -392,10 +397,15 @@ class Team:
 
         self.name = name
         self.team_id = team_id
+        self.parent_team_id = parent_team_id
+        self.workflow_id = workflow_id
+        self.workflow_session_id = workflow_session_id
+        self.app_id = app_id
         self.role = role
 
         self.user_id = user_id
         self.session_id = session_id
+        self.team_session_id = team_session_id
         self.session_name = session_name
         self.session_state = session_state
         self.team_session_state = team_session_state
@@ -505,6 +515,8 @@ class Team:
         self.audio: Optional[List[AudioArtifact]] = None
         # Videos generated during this session
         self.videos: Optional[List[VideoArtifact]] = None
+        # Files attached during this session
+        self.files: Optional[List[File]] = None
 
         # Team session
         self.team_session: Optional[TeamSession] = None
@@ -512,6 +524,7 @@ class Team:
         self._tool_instructions: Optional[List[str]] = None
         self._functions_for_model: Optional[Dict[str, Function]] = None
         self._tools_for_model: Optional[List[Dict[str, Any]]] = None
+        self._rebuild_tools: bool = True
 
         # True if we should parse a member response model
         self._member_response_model: Optional[Type[BaseModel]] = None
@@ -697,7 +710,7 @@ class Team:
             if self.team_session_state is not None:
                 self.team_session_state["current_session_id"] = session_id
             if self.workflow_session_state is not None:
-                self.workflow_session_state["current_user_id"] = user_id
+                self.workflow_session_state["current_session_id"] = session_id
 
     def _initialize_session(
         self,
@@ -884,7 +897,7 @@ class Team:
         self.run_response = run_response
         self.run_id = run_id
 
-        retries = retries or 3
+        retries = retries if retries is not None else 3
 
         # Run the team
         last_exception = None
@@ -1306,7 +1319,7 @@ class Team:
         self.run_response = run_response
         self.run_id = run_id
 
-        retries = retries or 3
+        retries = retries if retries is not None else 3
 
         # Run the team
         last_exception = None
@@ -8061,7 +8074,7 @@ class Team:
         if self.workflow_session_state is not None and len(self.workflow_session_state) > 0:
             session_data["workflow_session_state"] = self.workflow_session_state
         if self.session_metrics is not None:
-            session_data["session_metrics"] = asdict(self.session_metrics) if self.session_metrics is not None else None
+            session_data["session_metrics"] = self.session_metrics.to_dict()
         if self.images is not None:
             session_data["images"] = [img.to_dict() for img in self.images]  # type: ignore
         if self.videos is not None:
@@ -8143,6 +8156,8 @@ class Team:
                 run=TeamRunCreate(
                     run_id=self.run_id,
                     run_data=run_data,
+                    team_session_id=team_session.team_session_id,
+                    workflow_session_id=self.workflow_session_id,
                     session_id=team_session.session_id,
                     team_data=team_session.to_dict() if self.monitoring else team_session.telemetry_data(),
                 ),

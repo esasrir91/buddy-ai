@@ -46,7 +46,7 @@ class AgentGetResponse(BaseModel):
                         provider=agent.memory.model.provider,
                     )
                 if agent.memory.db is not None:
-                    memory_dict["db"] = agent.memory.db.__dict__()  # type: ignore
+                    memory_dict["db"] = vars(agent.memory.db)
 
             else:
                 memory_dict = None
@@ -101,6 +101,7 @@ class MemoryResponse(BaseModel):
 
 class WorkflowRenameRequest(BaseModel):
     name: str
+    user_id: str
 
 
 class WorkflowRunRequest(BaseModel):
@@ -167,7 +168,7 @@ class TeamGetResponse(BaseModel):
                     provider=team.memory.model.provider,
                 )
             if team.memory.db is not None:
-                memory_dict["db"] = team.memory.db.__dict__()  # type: ignore
+                memory_dict["db"] = vars(team.memory.db)
         elif isinstance(team.memory, TeamMemory):
             memory_dict = {"name": team.memory.db.__class__.__name__}
         else:

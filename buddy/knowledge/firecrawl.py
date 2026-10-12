@@ -1,13 +1,15 @@
 from typing import AsyncIterator, Iterator, List
 
+from pydantic import Field
+
 from buddy.document import Document
 from buddy.document.reader.firecrawl_reader import FirecrawlReader
 from buddy.knowledge.agent import AgentKnowledge
 
 
 class FireCrawlKnowledgeBase(AgentKnowledge):
-    urls: List[str] = []
-    reader: FirecrawlReader = FirecrawlReader()
+    urls: List[str] = Field(default_factory=list)
+    reader: FirecrawlReader = Field(default_factory=FirecrawlReader)
 
     @property
     def document_lists(self) -> Iterator[List[Document]]:

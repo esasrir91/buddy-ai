@@ -60,5 +60,6 @@ class VoyageAIEmbedder(Embedder):
         response: EmbeddingsObject = self._response(text=text)
 
         embedding = response.embeddings[0]
-        usage = {"total_tokens": response.total_tokens}
+        total_tokens = getattr(response, "total_tokens", None)
+        usage = {"total_tokens": total_tokens} if total_tokens is not None else None
         return embedding, usage

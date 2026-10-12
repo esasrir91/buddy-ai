@@ -60,7 +60,7 @@ class SqliteStorage(Storage):
             # Ensure the directory exists
             db_path.parent.mkdir(parents=True, exist_ok=True)
             _engine = create_engine(f"sqlite:///{db_path}")
-        else:
+        elif _engine is None:
             _engine = create_engine("sqlite://")
 
         if _engine is None:

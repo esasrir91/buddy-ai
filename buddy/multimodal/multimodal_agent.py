@@ -382,6 +382,8 @@ class MultiModalAgent(Agent):
 
         # Process each modality
         for modality, data in inputs.items():
+            if not isinstance(modality, ModalityType):
+                raise ValueError(f"Unsupported modality: {modality!r}")
             if modality == ModalityType.IMAGE:
                 modality_analyses[modality] = self.process_image(data, prompt)
             elif modality == ModalityType.AUDIO:
@@ -668,7 +670,9 @@ class MultiModalAgent(Agent):
 
         # Summarize each modality
         for modality, analysis in modality_analyses.items():
-            if modality == ModalityType.IMAGE and hasattr(analysis, "description"):
+            if modality == ModalityType.TEXT and isinstance(analysis, dict):
+                response_parts.append(f"Text: {analysis.get('text', '')}")
+            elif modality == ModalityType.IMAGE and hasattr(analysis, "description"):
                 response_parts.append(f"Image: {analysis.description}")
             elif modality == ModalityType.AUDIO and hasattr(analysis, "transcription"):
                 response_parts.append(f"Audio: {analysis.transcription}")
@@ -682,8 +686,8 @@ class MultiModalAgent(Agent):
         # Use main model for final reasoning
         context = "; ".join(response_parts)
         final_response = self.run(f"{prompt}\n\nContext: {context}")
-
-        return final_response
+        content = getattr(final_response, "content", final_response)
+        return str(content) if content is not None else ""
 
     def _calculate_multimodal_confidence(self, modality_analyses: Dict[ModalityType, Any]) -> float:
         """Calculate overall confidence score"""

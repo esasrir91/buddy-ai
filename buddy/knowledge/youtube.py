@@ -1,14 +1,16 @@
 import asyncio
 from typing import AsyncIterator, Iterator, List
 
+from pydantic import Field
+
 from buddy.document import Document
 from buddy.document.reader.youtube_reader import YouTubeReader
 from buddy.knowledge.agent import AgentKnowledge
 
 
 class YouTubeKnowledgeBase(AgentKnowledge):
-    urls: List[str] = []
-    reader: YouTubeReader = YouTubeReader()
+    urls: List[str] = Field(default_factory=list)
+    reader: YouTubeReader = Field(default_factory=YouTubeReader)
 
     @property
     def document_lists(self) -> Iterator[List[Document]]:

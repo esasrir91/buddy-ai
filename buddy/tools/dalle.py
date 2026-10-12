@@ -1,3 +1,4 @@
+from base64 import b64decode
 from os import getenv
 from typing import Any, List, Literal, Optional, Union
 from uuid import uuid4
@@ -96,6 +97,17 @@ class DalleTools(Toolkit):
                             )
                         )
                         response_str += f"Image has been generated at the URL {img.url}\n"
+                    elif img.b64_json:
+                        agent.add_image(
+                            ImageArtifact(
+                                id=str(uuid4()),
+                                content=b64decode(img.b64_json),
+                                mime_type="image/png",
+                                original_prompt=prompt,
+                                revised_prompt=img.revised_prompt,
+                            )
+                        )
+                        response_str += "Image has been generated as inline image data\n"
             return response_str or "No images were generated"
         except Exception as e:
             logger.error(f"Failed to generate image: {e}")

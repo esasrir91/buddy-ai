@@ -789,7 +789,7 @@ class FunctionCall(BaseModel):
 
     async def aexecute(self) -> FunctionExecutionResult:
         """Runs the function call asynchronously."""
-        from inspect import isasyncgen, isasyncgenfunction, iscoroutinefunction, isgenerator, isgeneratorfunction
+        from inspect import isasyncgen, isasyncgenfunction, isawaitable, iscoroutinefunction, isgenerator, isgeneratorfunction
 
         if self.function.entrypoint is None:
             return FunctionExecutionResult(status="failure", error="Entrypoint is not set")
@@ -830,8 +830,10 @@ class FunctionCall(BaseModel):
 
                 if isasyncgenfunction(self.function.entrypoint):
                     self.result = result  # Store async generator directly
-                else:
+                elif isawaitable(result):
                     self.result = await result
+                else:
+                    self.result = result
 
             # Only cache if not a generator
             if self.function.cache_results and not (isgenerator(self.result) or isasyncgen(self.result)):

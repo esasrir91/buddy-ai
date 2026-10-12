@@ -49,8 +49,7 @@ def get_session_title(session: Union[AgentSession, TeamSession]) -> str:
     memory = session.memory
     if memory is not None:
         # Proxy for knowing it is legacy memory implementation
-        runs = memory.get("runs")
-        runs = cast(List[Any], runs)
+        runs = cast(List[Any], memory.get("runs") or [])
 
         for _run in runs:
             try:
@@ -95,8 +94,7 @@ def get_session_title_from_workflow_session(workflow_session: WorkflowSession) -
     if hasattr(workflow_session, "memory"):
         memory = workflow_session.memory
         if memory is not None:
-            runs = memory.get("runs")
-            runs = cast(List[Any], runs)
+            runs = cast(List[Any], memory.get("runs") or [])
             for _run in runs:
                 try:
                     # Try to get content directly from the run first (workflow structure)
@@ -153,8 +151,7 @@ def get_session_title_from_team_session(team_session: TeamSession) -> str:
         return session_name
     memory = team_session.memory
     if memory is not None:
-        runs = memory.get("runs")
-        runs = cast(List[Any], runs)
+        runs = cast(List[Any], memory.get("runs") or [])
 
         for _run in runs:
             try:

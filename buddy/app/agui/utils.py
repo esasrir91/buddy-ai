@@ -106,7 +106,8 @@ def extract_team_response_chunk_content(response: TeamRunResponseContentEvent) -
                     members_content.append(f"Team member: {member_content}")
     members_response = "\n".join(members_content) if members_content else ""
 
-    return str(response.content) + members_response
+    direct_content = str(response.content) if response.content else ""
+    return direct_content + members_response
 
 
 def extract_response_chunk_content(response: RunResponseContentEvent) -> str:
@@ -161,7 +162,7 @@ def _create_events_from_chunk(
             events_to_emit.append(content_event)
 
     # Handle starting a new tool call
-    elif chunk.event == RunEvent.tool_call_started:
+    elif chunk.event in (RunEvent.tool_call_started, TeamRunEvent.tool_call_started):
         if chunk.tool is not None:  # type: ignore
             tool_call = chunk.tool  # type: ignore
             start_event = ToolCallStartEvent(
@@ -180,7 +181,7 @@ def _create_events_from_chunk(
             events_to_emit.append(args_event)
 
     # Handle tool call completion
-    elif chunk.event == RunEvent.tool_call_completed:
+    elif chunk.event in (RunEvent.tool_call_completed, TeamRunEvent.tool_call_completed):
         if chunk.tool is not None:  # type: ignore
             tool_call = chunk.tool  # type: ignore
             if tool_call.tool_call_id not in event_buffer.ended_tool_call_ids:
@@ -201,10 +202,10 @@ def _create_events_from_chunk(
                     events_to_emit.append(result_event)
 
     # Handle reasoning
-    elif chunk.event == RunEvent.reasoning_started:
+    elif chunk.event in (RunEvent.reasoning_started, TeamRunEvent.reasoning_started):
         step_event = StepStartedEvent(type=EventType.STEP_STARTED, step_name="reasoning")
         events_to_emit.append(step_event)
-    elif chunk.event == RunEvent.reasoning_completed:
+    elif chunk.event in (RunEvent.reasoning_completed, TeamRunEvent.reasoning_completed):
         step_event = StepFinishedEvent(type=EventType.STEP_FINISHED, step_name="reasoning")
         events_to_emit.append(step_event)
 

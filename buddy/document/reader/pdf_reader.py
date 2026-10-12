@@ -2,6 +2,7 @@ import asyncio
 import re
 from pathlib import Path
 from typing import IO, Any, List, Optional, Tuple, Union
+from urllib.parse import urlparse
 from uuid import uuid4
 
 from buddy.document.base import Document
@@ -19,6 +20,11 @@ except ImportError:
 PAGE_START_NUMBERING_FORMAT_DEFAULT = "<start page {page_nr}>"
 PAGE_END_NUMBERING_FORMAT_DEFAULT = "<end page {page_nr}>"
 PAGE_NUMBERING_CORRECTNESS_RATIO_FOR_REMOVAL = 0.4
+
+
+def _pdf_name(value: Union[str, Path, IO[Any]]) -> str:
+    source = urlparse(value).path if isinstance(value, str) else getattr(value, "name", "pdf")
+    return Path(source).stem.replace(" ", "_") or "pdf"
 
 
 def _ocr_reader(page: Any) -> str:
@@ -73,7 +79,7 @@ async def _async_ocr_reader(page: Any) -> str:
 
 def _clean_page_numbers(
     page_content_list: List[str],
-    extra_content: List[str] = [],
+    extra_content: Optional[List[str]] = None,
     page_start_numbering_format: str = PAGE_START_NUMBERING_FORMAT_DEFAULT,
     page_end_numbering_format: str = PAGE_END_NUMBERING_FORMAT_DEFAULT,
 ) -> Tuple[List[str], Optional[int]]:
@@ -100,6 +106,7 @@ def _clean_page_numbers(
         - If page numbers are found, the function will add formatted page numbers to each page's content if `page_start_numbering_format` or 
           `page_end_numbering_format` is provided.
     """
+    extra_content = extra_content or []
     assert len(extra_content) == 0 or len(extra_content) == len(
         page_content_list
     ), "Please provide an equally sized list of extra content if provided."
@@ -258,7 +265,7 @@ class BasePDFReader(Reader):
         pdf_content = []
         pdf_images_text = []
         for page in doc_reader.pages:
-            pdf_content.append(page.extract_text())
+            pdf_content.append(page.extract_text() or "")
             if read_images:
                 pdf_images_text.append(_ocr_reader(page))
 
@@ -279,7 +286,7 @@ class BasePDFReader(Reader):
     ):
         async def _read_pdf_page(page, read_images) -> Tuple[str, str]:
             # We tried "asyncio.to_thread(page.extract_text)", but it maintains state internally, which leads to issues.
-            page_text = page.extract_text()
+            page_text = page.extract_text() or ""
 
             if read_images:
                 pdf_images_text = await _async_ocr_reader(page)
@@ -308,10 +315,7 @@ class PDFReader(BasePDFReader):
 
     def read(self, pdf: Union[str, Path, IO[Any]], password: Optional[str] = None) -> List[Document]:
         try:
-            if isinstance(pdf, str):
-                doc_name = pdf.split("/")[-1].split(".")[0].replace(" ", "_")
-            else:
-                doc_name = pdf.name.split(".")[0]
+            doc_name = _pdf_name(pdf)
         except Exception:
             doc_name = "pdf"
 
@@ -332,10 +336,7 @@ class PDFReader(BasePDFReader):
 
     async def async_read(self, pdf: Union[str, Path, IO[Any]], password: Optional[str] = None) -> List[Document]:
         try:
-            if isinstance(pdf, str):
-                doc_name = pdf.split("/")[-1].split(".")[0].replace(" ", "_")
-            else:
-                doc_name = pdf.name.split(".")[0]
+            doc_name = _pdf_name(pdf)
         except Exception:
             doc_name = "pdf"
 
@@ -373,7 +374,7 @@ class PDFUrlReader(BasePDFReader):
         # Retry the request up to 3 times with exponential backoff
         response = fetch_with_retry(url, proxy=self.proxy)
 
-        doc_name = url.split("/")[-1].split(".")[0].replace("/", "_").replace(" ", "_")
+        doc_name = _pdf_name(url)
         pdf_reader = DocumentReader(BytesIO(response.content))
 
         # Handle PDF decryption
@@ -397,7 +398,7 @@ class PDFUrlReader(BasePDFReader):
         async with httpx.AsyncClient(**client_args) as client:  # type: ignore
             response = await async_fetch_with_retry(url, client=client)
 
-        doc_name = url.split("/")[-1].split(".")[0].replace("/", "_").replace(" ", "_")
+        doc_name = _pdf_name(url)
         pdf_reader = DocumentReader(BytesIO(response.content))
 
         # Handle PDF decryption
@@ -416,10 +417,7 @@ class PDFImageReader(BasePDFReader):
             raise ValueError("No pdf provided")
 
         try:
-            if isinstance(pdf, str):
-                doc_name = pdf.split("/")[-1].split(".")[0].replace(" ", "_")
-            else:
-                doc_name = pdf.name.split(".")[0]
+            doc_name = _pdf_name(pdf)
         except Exception:
             doc_name = "pdf"
 
@@ -438,10 +436,7 @@ class PDFImageReader(BasePDFReader):
             raise ValueError("No pdf provided")
 
         try:
-            if isinstance(pdf, str):
-                doc_name = pdf.split("/")[-1].split(".")[0].replace(" ", "_")
-            else:
-                doc_name = pdf.name.split(".")[0]
+            doc_name = _pdf_name(pdf)
         except Exception:
             doc_name = "pdf"
 
@@ -475,7 +470,7 @@ class PDFUrlImageReader(BasePDFReader):
         log_info(f"Reading: {url}")
         response = httpx.get(url, proxy=self.proxy) if self.proxy else httpx.get(url)
 
-        doc_name = url.split("/")[-1].split(".")[0].replace(" ", "_")
+        doc_name = _pdf_name(url)
         pdf_reader = DocumentReader(BytesIO(response.content))
 
         # Handle PDF decryption
@@ -500,7 +495,7 @@ class PDFUrlImageReader(BasePDFReader):
             response = await client.get(url)
             response.raise_for_status()
 
-        doc_name = url.split("/")[-1].split(".")[0].replace(" ", "_")
+        doc_name = _pdf_name(url)
         pdf_reader = DocumentReader(BytesIO(response.content))
 
         # Handle PDF decryption

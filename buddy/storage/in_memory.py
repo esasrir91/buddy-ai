@@ -58,6 +58,8 @@ class InMemoryStorage(Storage):
                         session_ids.append(data["session_id"])
                     elif self.mode == "workflow" and data["workflow_id"] == entity_id and data["user_id"] == user_id:
                         session_ids.append(data["session_id"])
+                    elif self.mode == "workflow_v2" and data["workflow_id"] == entity_id and data["user_id"] == user_id:
+                        session_ids.append(data["session_id"])
 
                 elif user_id and data["user_id"] == user_id:
                     session_ids.append(data["session_id"])
@@ -92,6 +94,8 @@ class InMemoryStorage(Storage):
                         _session = TeamSession.from_dict(data)
                     elif self.mode == "workflow" and data["workflow_id"] == entity_id and data["user_id"] == user_id:
                         _session = WorkflowSession.from_dict(data)
+                    elif self.mode == "workflow_v2" and data["workflow_id"] == entity_id and data["user_id"] == user_id:
+                        _session = WorkflowSessionV2.from_dict(data)
 
                 elif user_id and data["user_id"] == user_id:
                     if self.mode == "agent":

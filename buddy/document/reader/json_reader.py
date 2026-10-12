@@ -1,6 +1,5 @@
 import asyncio
 import json
-from io import BytesIO
 from pathlib import Path
 from typing import IO, Any, List, Union
 from uuid import uuid4
@@ -13,7 +12,10 @@ from buddy.utils.log import log_info
 class JSONReader(Reader):
     """Reader for JSON files"""
 
-    chunk: bool = False
+    def __init__(
+        self, chunk: bool = False, chunk_size: int = 5000, chunking_strategy=None
+    ) -> None:
+        super().__init__(chunk=chunk, chunk_size=chunk_size, chunking_strategy=chunking_strategy)
 
     def read(self, path: Union[Path, IO[Any]]) -> List[Document]:
         try:
@@ -21,19 +23,24 @@ class JSONReader(Reader):
                 if not path.exists():
                     raise FileNotFoundError(f"Could not find file: {path}")
                 log_info(f"Reading: {path}")
-                json_name = path.name.split(".")[0]
+                json_name = path.stem
                 json_contents = json.loads(path.read_text("utf-8"))
 
-            elif isinstance(path, BytesIO):
+            elif hasattr(path, "read"):
                 log_info(f"Reading uploaded file: {path.name}")
-                json_name = path.name.split(".")[0]
+                json_name = Path(path.name).stem
                 path.seek(0)
-                json_contents = json.load(path)
+                raw_contents = path.read()
+                if isinstance(raw_contents, bytes):
+                    raw_contents = raw_contents.decode("utf-8")
+                json_contents = json.loads(raw_contents)
 
             else:
                 raise ValueError("Unsupported file type. Must be Path or BytesIO.")
 
             if isinstance(json_contents, dict):
+                json_contents = [json_contents]
+            elif not isinstance(json_contents, list):
                 json_contents = [json_contents]
 
             documents = [

@@ -263,6 +263,7 @@ class Model(ABC):
     #   from buddy.models.token_budget import TokenBudgetConfig
     #   model = OpenAIChat(token_budget=TokenBudgetConfig(max_input_tokens=100_000))
     token_budget: Optional[Any] = None  # type: Optional[TokenBudgetConfig]
+    parallel_tool_calls: Optional[bool] = None
 
     # System prompt from the model added to the Agent.
     system_prompt: Optional[str] = None
@@ -1319,6 +1320,45 @@ class Model(ABC):
         if additional_messages is None:
             additional_messages = []
 
+        can_parallelize = (
+            self.parallel_tool_calls
+            and len(function_calls) > 1
+            and (
+                function_call_limit is None or current_function_call_count + len(function_calls) <= function_call_limit
+            )
+            and all(
+                not (
+                    fc.function.requires_confirmation
+                    or fc.function.requires_user_input
+                    or fc.function.external_execution
+                    or fc.function.name == "get_user_input"
+                )
+                for fc in function_calls
+            )
+        )
+        if can_parallelize:
+            from concurrent.futures import ThreadPoolExecutor
+
+            def execute_call(function_call: FunctionCall):
+                local_results: List[Message] = []
+                local_additional_messages: List[Message] = []
+                events = list(
+                    self.run_function_call(
+                        function_call=function_call,
+                        function_call_results=local_results,
+                        additional_messages=local_additional_messages,
+                    )
+                )
+                return events, local_results, local_additional_messages
+
+            with ThreadPoolExecutor(max_workers=min(len(function_calls), 8)) as executor:
+                results = list(executor.map(execute_call, function_calls))
+            for events, call_results, call_additional_messages in results:
+                function_call_results.extend(call_results)
+                function_call_results.extend(call_additional_messages)
+                yield from events
+            return
+
         for fc in function_calls:
             if function_call_limit is not None:
                 current_function_call_count += 1
@@ -1581,9 +1621,17 @@ class Model(ABC):
                 )
             ]
 
-        results = await asyncio.gather(
-            *(self.arun_function_call(fc) for fc in function_calls_to_run), return_exceptions=True
-        )
+        if self.parallel_tool_calls is False:
+            results = []
+            for function_call in function_calls_to_run:
+                try:
+                    results.append(await self.arun_function_call(function_call))
+                except BaseException as error:
+                    results.append(error)
+        else:
+            results = await asyncio.gather(
+                *(self.arun_function_call(fc) for fc in function_calls_to_run), return_exceptions=True
+            )
 
         # Process results
         for result in results:
@@ -1744,6 +1792,7 @@ class Model(ABC):
                     "Full result was longer.]"
                 )
             from copy import copy as _copy
+
             msg_copy = _copy(msg)
             msg_copy.content = content
             trimmed.append(msg_copy)
@@ -1784,4 +1833,3 @@ class Model(ABC):
                     setattr(new_model, k, v)
 
         return new_model
-

@@ -69,13 +69,12 @@ class OpenAITools(Toolkit):
         """
         log_debug(f"Transcribing audio from {audio_path}")
         try:
-            audio_file = open(audio_path, "rb")
-
-            transcript = OpenAIClient(api_key=self.api_key).audio.transcriptions.create(
-                model=self.transcription_model,
-                file=audio_file,
-                response_format="text",
-            )
+            with open(audio_path, "rb") as audio_file:
+                transcript = OpenAIClient(api_key=self.api_key).audio.transcriptions.create(
+                    model=self.transcription_model,
+                    file=audio_file,
+                    response_format="text",
+                )
         except Exception as e:  # type: ignore[return]
             log_error(f"Failed to transcribe audio: {str(e)}")
             return f"Failed to transcribe audio: {str(e)}"
@@ -128,7 +127,7 @@ class OpenAITools(Toolkit):
                 agent.add_image(
                     ImageArtifact(
                         id=media_id,
-                        content=image_base64.encode("utf-8"),
+                        content=__import__("base64").b64decode(image_base64),
                         mime_type="image/png",
                     )
                 )

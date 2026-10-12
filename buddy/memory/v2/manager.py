@@ -397,7 +397,7 @@ class MemoryManager:
                 log_debug("Memory updated")
                 return "Memory updated successfully"
             except Exception as e:
-                log_warning("Error storing memory in db: {e}")
+                log_warning(f"Error storing memory in db: {e}")
                 return f"Error adding memory: {e}"
 
         def delete_memory(memory_id: str) -> str:

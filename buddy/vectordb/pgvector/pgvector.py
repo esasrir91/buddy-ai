@@ -322,7 +322,7 @@ class PgVector(VectorDb):
                                 record = {
                                     "id": _id,
                                     "name": doc.name,
-                                    "meta_data": doc.meta_data,
+                                    "meta_data": meta_data,
                                     "filters": filters,
                                     "content": cleaned_content,
                                     "embedding": doc.embedding,
@@ -394,7 +394,7 @@ class PgVector(VectorDb):
                                 record = {
                                     "id": content_hash,  # use content_hash as a reproducible id to avoid duplicates while upsert
                                     "name": doc.name,
-                                    "meta_data": doc.meta_data,
+                                    "meta_data": meta_data,
                                     "filters": filters,
                                     "content": cleaned_content,
                                     "embedding": doc.embedding,

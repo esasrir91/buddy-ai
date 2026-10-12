@@ -13,7 +13,7 @@ class PDFBytesKnowledgeBase(AgentKnowledge):
 
     exclude_files: List[str] = Field(default_factory=list)
 
-    reader: Union[PDFReader, PDFImageReader] = PDFReader()
+    reader: Union[PDFReader, PDFImageReader] = Field(default_factory=PDFReader)
 
     @property
     def document_lists(self) -> Iterator[List[Document]]:

@@ -25,7 +25,10 @@ class MemoryClassifier(BaseModel):
                 logger.error(
                     "Buddy uses `openai` as the default model provider. Please provide a `model` or install `openai`."
                 )
-                exit(1)
+                raise ImportError(
+                    "No model was provided and the default OpenAI provider is unavailable. "
+                    "Provide a model or install the `openai` package."
+                ) from e
             self.model = OpenAIChat(id="gpt-4o")
 
     def get_system_message(self) -> Message:

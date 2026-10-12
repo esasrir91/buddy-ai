@@ -14,6 +14,7 @@ import os
 import sys
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urlparse
 
 import typer
 from rich.console import Console
@@ -111,7 +112,8 @@ def create(
     console.print_json(json.dumps(config, indent=2))
 
     if output:
-        output.write_text(json.dumps(config, indent=2))
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(json.dumps(config, indent=2), encoding="utf-8")
         console.print(f"\n[dim]Saved to {output}[/dim]")
     else:
         console.print("\n[dim]Pass --output <file.json> to save this configuration.[/dim]")
@@ -124,6 +126,7 @@ def create(
 
 def _build_model(model_id: str):
     """Return the right Model instance based on the model name prefix."""
+    model_id = model_id.lower()
     if model_id.startswith("claude"):
         from buddy.models.anthropic import Claude
         return Claude(id=model_id)
@@ -162,7 +165,7 @@ def run_kt(
     )
 
     # Detect source type
-    source_type = KTSourceType.URL if source.startswith("http") else KTSourceType.DOCUMENT
+    source_type = KTSourceType.URL if urlparse(source).scheme in {"http", "https"} else KTSourceType.DOCUMENT
 
     with console.status("[blue]Processing KT...[/blue]"):
         summary = emp.take_kt(
@@ -173,23 +176,18 @@ def run_kt(
         )
 
     console.print("\n[bold green]✅ KT Complete[/bold green]")
-    console.print(
-        Panel(
-            (
-                f"[bold]Confidence:[/bold] {summary.confidence_score:.0%}\n\n"
-                f"[bold]Mental Model:[/bold]\n{summary.mental_model}\n\n"
-                f"[bold]Key Concepts:[/bold] {', '.join(summary.key_concepts[:5])}\n\n"
-                f"[bold]Open Questions:[/bold]\n" + "\n".join(f"  • {q}" for q in summary.open_questions[:3])
-                if summary.open_questions
-                else "[dim]None[/dim]"
-            ),
-            title=f"KT Summary — {summary.session_name}",
-            border_style="green",
-        )
+    open_questions = "\n".join(f"  • {question}" for question in summary.open_questions[:3]) or "[dim]None[/dim]"
+    panel_content = (
+        f"[bold]Confidence:[/bold] {summary.confidence_score:.0%}\n\n"
+        f"[bold]Mental Model:[/bold]\n{summary.mental_model}\n\n"
+        f"[bold]Key Concepts:[/bold] {', '.join(summary.key_concepts[:5])}\n\n"
+        f"[bold]Open Questions:[/bold]\n{open_questions}"
     )
+    console.print(Panel(panel_content, title=f"KT Summary — {summary.session_name}", border_style="green"))
 
     if output:
-        output.write_text(json.dumps(summary.model_dump(), indent=2, default=str))
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(json.dumps(summary.model_dump(), indent=2, default=str), encoding="utf-8")
         console.print(f"\n[dim]Summary saved to {output}[/dim]")
 
 

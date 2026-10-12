@@ -1,12 +1,14 @@
 from typing import AsyncIterator, Iterator, List
 
+from pydantic import Field
+
 from buddy.document import Document
 from buddy.knowledge.agent import AgentKnowledge
 from buddy.utils.log import log_debug
 
 
 class CombinedKnowledgeBase(AgentKnowledge):
-    sources: List[AgentKnowledge] = []
+    sources: List[AgentKnowledge] = Field(default_factory=list)
 
     @property
     def document_lists(self) -> Iterator[List[Document]]:

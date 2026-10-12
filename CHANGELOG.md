@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [3.0.0] — 2026-10-13
+
+### Added
+- **Agent advisor and judge** — Agents can request pre-response guidance and evaluate completed responses, with optional model and instruction/criteria configuration.
+- **Model-assisted planning** — Hierarchical plans can be decomposed through any Buddy model provider, with dependency-aware execution, tool dispatch, retries, monitoring, optimization, and replanning.
+- **Portable shell commands** — Shell tools accept native command strings on Windows/Linux while retaining direct argument-list execution.
+- **Custom token counting** — TokenManager accepts a provider-specific token counter and extracts usage from common Buddy and provider response formats.
+- **Agent subagents** — Agents can delegate to subagents through the existing team transfer tools.
+- **Parallel tool calls** — Safe synchronous tool batches can execute concurrently; async runs can opt into sequential execution, and OpenAI Chat receives the provider setting.
+- **Prompt-cache propagation** — `cache_prompt=True` reaches the agent's default, auxiliary, reviewer, and subagent models.
+
+### Fixed
+- Corrected tokenizer initialization, zero-token limits, context-window checks, and request usage accounting.
+- Improved planner validation and dependency handling for nested steps, optimization, and replanning.
+
+---
+
 ## [2.2.1] — 2026-06-17
 
 ### Fixed

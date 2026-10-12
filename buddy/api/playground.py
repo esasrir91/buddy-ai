@@ -15,6 +15,9 @@ from buddy.utils.log import logger
 
 
 def create_playground_endpoint(playground: PlaygroundEndpointCreate) -> bool:
+    if not BUDDY_cli_settings.api_enabled:
+        return False
+
     logger.debug("--**-- Creating Playground Endpoint")
     with api.AuthenticatedClient() as api_client:
         try:
@@ -50,6 +53,9 @@ def deploy_playground_archive(name: str, tar_path: Path) -> bool:
         ValueError: If tar_path is invalid or file is too large
         RuntimeError: If deployment fails
     """
+    if not BUDDY_cli_settings.api_enabled:
+        return False
+
     logger.debug("--**-- Deploying Playground App")
 
     # Validate input
@@ -62,14 +68,15 @@ def deploy_playground_archive(name: str, tar_path: Path) -> bool:
         raise ValueError(f"Tar file too large: {tar_path.stat().st_size} bytes (max {max_size} bytes)")
 
     # Build headers
-    headers = {}
-    token = read_auth_token()
-    if token := read_auth_token():
-        headers[BUDDY_cli_settings.auth_token_header] = token
-    if BUDDY_api_key := getenv(BUDDY_API_KEY_ENV_VAR):
-        headers["Authorization"] = f"Bearer {BUDDY_api_key}"
-
     try:
+        headers = {}
+        token = read_auth_token()
+        if token:
+            headers[BUDDY_cli_settings.auth_token_header] = token
+        api_key = getenv(BUDDY_API_KEY_ENV_VAR)
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+
         with (
             HttpxClient(base_url=BUDDY_cli_settings.api_url, headers=headers) as api_client,
             open(tar_path, "rb") as file,

@@ -54,10 +54,14 @@ class CompetencyTracker:
     ) -> None:
         if not 0.0 < alpha <= 1.0:
             raise ValueError("alpha must be in (0, 1].")
+        if base <= 0.0:
+            raise ValueError("base must be greater than 0.")
         self.base = base
         self.alpha = alpha
-        self.default = default if default is not None else base * 0.5
-        self._scores: Dict[str, float] = dict(seed or {})
+        self.default = max(0.0, min(base, float(default if default is not None else base * 0.5)))
+        self._scores: Dict[str, float] = {
+            domain: max(0.0, min(base, float(value))) for domain, value in (seed or {}).items()
+        }
         self._counts: Dict[str, int] = {}
         self._lock = threading.Lock()
 
@@ -236,6 +240,9 @@ class CompetencyRouter:
     ) -> None:
         if not members:
             raise ValueError("CompetencyRouter requires at least one MemberProfile.")
+        member_names = [m.name for m in members]
+        if len(member_names) != len(set(member_names)):
+            raise ValueError("CompetencyRouter member names must be unique.")
         self.members = members
         self.base = base
         self.review_threshold = review_threshold
@@ -317,14 +324,15 @@ class CompetencyRouter:
 
         agent = member.agent
         original_model = None
-        if decision.model_tier == "strong" and self.strong_model is not None:
+        model_overridden = decision.model_tier == "strong" and self.strong_model is not None
+        if model_overridden:
             original_model = getattr(agent, "model", None)
             agent.model = self.strong_model  # type: ignore[attr-defined]
 
         try:
             response = agent.run(task, **run_kwargs)
         finally:
-            if original_model is not None:
+            if model_overridden:
                 agent.model = original_model  # type: ignore[attr-defined]
 
         if record and success_evaluator is not None:

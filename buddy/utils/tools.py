@@ -1,13 +1,17 @@
-from typing import Any, Dict, Optional
+from __future__ import annotations
 
-from buddy.models.response import ToolExecution
-from buddy.tools.function import Function, FunctionCall
+from typing import TYPE_CHECKING, Any
+
 from buddy.utils.functions import get_function_call
+
+if TYPE_CHECKING:
+    from buddy.models.response import ToolExecution
+    from buddy.tools.function import Function, FunctionCall
 
 
 def get_function_call_for_tool_call(
-    tool_call: Dict[str, Any], functions: Optional[Dict[str, Function]] = None
-) -> Optional[FunctionCall]:
+    tool_call: dict[str, Any], functions: dict[str, Function] | None = None
+) -> FunctionCall | None:
     if tool_call.get("type") == "function":
         _tool_call_id = tool_call.get("id")
         _tool_call_function = tool_call.get("function")
@@ -42,15 +46,20 @@ def remove_tool_calls_from_string(text: str, start_tag: str = "<tool_call>", end
 
 
 def extract_tool_from_xml(xml_str):
+    if "<tool_name>" not in xml_str or "</tool_name>" not in xml_str:
+        return {"tool_name": "", "parameters": {}}
+
     # Find tool_name
     tool_name_start = xml_str.find("<tool_name>") + len("<tool_name>")
     tool_name_end = xml_str.find("</tool_name>")
     tool_name = xml_str[tool_name_start:tool_name_end].strip()
 
     # Find and process parameters block
-    params_start = xml_str.find("<parameters>") + len("<parameters>")
+    params_start = xml_str.find("<parameters>")
     params_end = xml_str.find("</parameters>")
-    parameters_block = xml_str[params_start:params_end].strip()
+    if params_start == -1 or params_end == -1 or params_end < params_start:
+        return {"tool_name": tool_name, "parameters": {}}
+    parameters_block = xml_str[params_start + len("<parameters>") : params_end].strip()
 
     # Extract individual parameters
     arguments = {}
@@ -87,8 +96,8 @@ def remove_function_calls_from_string(
 
 def get_function_call_for_tool_execution(
     tool_execution: ToolExecution,
-    functions: Optional[Dict[str, Function]] = None,
-) -> Optional[FunctionCall]:
+    functions: dict[str, Function] | None = None,
+) -> FunctionCall | None:
     import json
 
     _tool_call_id = tool_execution.tool_call_id

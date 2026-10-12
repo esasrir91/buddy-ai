@@ -3,7 +3,9 @@ from pathlib import Path
 import requests
 
 
-def download_cert(cert_url: str, filename: str = "cert.pem"):
+def download_cert(
+    cert_url: str, filename: str = "cert.pem", timeout: float = 30.0
+) -> str:
     """
     Downloads a CA certificate bundle if it doesn't exist locally.
 
@@ -18,7 +20,7 @@ def download_cert(cert_url: str, filename: str = "cert.pem"):
 
     # Download the certificate if it doesn't exist
     if not cert_path.exists():
-        response = requests.get(cert_url)
+        response = requests.get(cert_url, timeout=timeout)
         response.raise_for_status()
 
         with open(cert_path, "wb") as f:

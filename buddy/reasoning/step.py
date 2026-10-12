@@ -24,8 +24,10 @@ class ReasoningStep(BaseModel):
         None,
         description="Indicates whether to continue reasoning, validate the provided result, or confirm that the result is the final answer",
     )
-    confidence: Optional[float] = Field(None, description="Confidence score for this step (0.0 to 1.0)")
+    confidence: Optional[float] = Field(
+        None, ge=0.0, le=1.0, description="Confidence score for this step (0.0 to 1.0)"
+    )
 
 
 class ReasoningSteps(BaseModel):
-    reasoning_steps: List[ReasoningStep] = Field(..., description="A list of reasoning steps")
+    reasoning_steps: List[ReasoningStep] = Field(..., min_length=1, description="A list of reasoning steps")

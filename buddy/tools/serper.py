@@ -16,6 +16,7 @@ class SerperTools(Toolkit):
         language: str = "en",
         num_results: int = 10,
         date_range: Optional[str] = None,
+        timeout: float = 30.0,
         **kwargs,
     ):
         """
@@ -34,7 +35,10 @@ class SerperTools(Toolkit):
 
         self.location = location
         self.language = language
+        if num_results <= 0:
+            raise ValueError("num_results must be greater than 0")
         self.num_results = num_results
+        self.timeout = timeout
         self.date_range = date_range
 
         tools: List[Any] = []
@@ -79,7 +83,7 @@ class SerperTools(Toolkit):
             payload = json.dumps(params)
 
             log_debug(f"Making request to {url} with params: {params}")
-            response = requests.request("POST", url, headers=headers, data=payload)
+            response = requests.request("POST", url, headers=headers, data=payload, timeout=self.timeout)
             response.raise_for_status()
 
             log_debug(f"Successfully received response from {endpoint} endpoint")
@@ -109,9 +113,12 @@ class SerperTools(Toolkit):
 
             log_debug(f"Searching Google for: {query}")
 
+            effective_num_results = self.num_results if num_results is None else num_results
+            if effective_num_results <= 0:
+                return json.dumps({"error": "num_results must be greater than 0"}, indent=2)
             params = {
                 "q": query,
-                "num": num_results or self.num_results,
+                "num": effective_num_results,
             }
 
             result = self._make_request("search", params)
@@ -148,15 +155,18 @@ class SerperTools(Toolkit):
 
             log_debug(f"Searching news for: {query}")
 
+            effective_num_results = self.num_results if num_results is None else num_results
+            if effective_num_results <= 0:
+                return json.dumps({"error": "num_results must be greater than 0"}, indent=2)
             params = {
                 "q": query,
-                "num": num_results or self.num_results,
+                "num": effective_num_results,
             }
 
             result = self._make_request("news", params)
 
             if result["success"]:
-                log_debug(f"Successfully found {num_results or self.num_results} news articles for query: {query}")
+                log_debug(f"Successfully found {effective_num_results} news articles for query: {query}")
                 return result["raw_response"]
             else:
                 log_error(f"Error searching news for query {query}: {result['error']}")
@@ -187,9 +197,12 @@ class SerperTools(Toolkit):
 
             log_debug(f"Searching scholar for: {query}")
 
+            effective_num_results = self.num_results if num_results is None else num_results
+            if effective_num_results <= 0:
+                return json.dumps({"error": "num_results must be greater than 0"}, indent=2)
             params = {
                 "q": query,
-                "num": num_results or self.num_results,
+                "num": effective_num_results,
             }
 
             result = self._make_request("scholar", params)

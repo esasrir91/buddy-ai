@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from buddy.run.response import RunResponse
 from buddy.utils.log import log_debug
@@ -14,7 +14,7 @@ class WorkflowRun(BaseModel):
 
 
 class WorkflowMemory(BaseModel):
-    runs: List[WorkflowRun] = []
+    runs: List[WorkflowRun] = Field(default_factory=list)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 

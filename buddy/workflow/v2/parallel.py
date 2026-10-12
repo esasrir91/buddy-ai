@@ -219,6 +219,9 @@ class Parallel:
 
         self._prepare_steps()
 
+        if not self.steps:
+            return self._aggregate_results([])
+
         def execute_step_with_index(step_with_index):
             """Execute a single step and preserve its original index"""
             index, step = step_with_index
@@ -444,6 +447,9 @@ class Parallel:
         log_debug(f"Parallel Start: {self.name} ({len(self.steps)} steps)", center=True, symbol="=")
 
         self._prepare_steps()
+
+        if not self.steps:
+            return self._aggregate_results([])
 
         async def execute_step_async_with_index(step_with_index):
             """Execute a single step asynchronously and preserve its original index"""

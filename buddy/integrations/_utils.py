@@ -22,7 +22,9 @@ def require(package: str, extra: str) -> Any:
 
     try:
         return importlib.import_module(package)
-    except ImportError as exc:  # pragma: no cover - exercised only without dep
+    except ModuleNotFoundError as exc:  # pragma: no cover - exercised only without dep
+        if exc.name != package and not package.startswith(f"{exc.name}."):
+            raise
         raise ImportError(
             f"The '{package}' package is required for this Buddy integration. "
             f"Install it with: pip install 'buddy-ai[{extra}]'"

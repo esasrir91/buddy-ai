@@ -1,4 +1,4 @@
-from typing import Any, List, Optional
+from typing import Any
 
 from buddy.media import AudioResponse, ImageArtifact
 from buddy.models.message import Citations
@@ -27,10 +27,18 @@ from buddy.run.response import (
 )
 from buddy.run.team import MemoryUpdateCompletedEvent as TeamMemoryUpdateCompletedEvent
 from buddy.run.team import MemoryUpdateStartedEvent as TeamMemoryUpdateStartedEvent
-from buddy.run.team import OutputModelResponseCompletedEvent as TeamOutputModelResponseCompletedEvent
-from buddy.run.team import OutputModelResponseStartedEvent as TeamOutputModelResponseStartedEvent
-from buddy.run.team import ParserModelResponseCompletedEvent as TeamParserModelResponseCompletedEvent
-from buddy.run.team import ParserModelResponseStartedEvent as TeamParserModelResponseStartedEvent
+from buddy.run.team import (
+    OutputModelResponseCompletedEvent as TeamOutputModelResponseCompletedEvent,
+)
+from buddy.run.team import (
+    OutputModelResponseStartedEvent as TeamOutputModelResponseStartedEvent,
+)
+from buddy.run.team import (
+    ParserModelResponseCompletedEvent as TeamParserModelResponseCompletedEvent,
+)
+from buddy.run.team import (
+    ParserModelResponseStartedEvent as TeamParserModelResponseStartedEvent,
+)
 from buddy.run.team import ReasoningCompletedEvent as TeamReasoningCompletedEvent
 from buddy.run.team import ReasoningStartedEvent as TeamReasoningStartedEvent
 from buddy.run.team import ReasoningStepEvent as TeamReasoningStepEvent
@@ -110,7 +118,7 @@ def create_run_response_completed_event(from_run_response: RunResponse) -> RunRe
 
 
 def create_run_response_paused_event(
-    from_run_response: RunResponse, tools: Optional[List[ToolExecution]] = None
+    from_run_response: RunResponse, tools: list[ToolExecution] | None = None
 ) -> RunResponsePausedEvent:
     return RunResponsePausedEvent(
         session_id=from_run_response.session_id,
@@ -270,7 +278,7 @@ def create_team_reasoning_step_event(
 
 
 def create_reasoning_completed_event(
-    from_run_response: RunResponse, content: Optional[Any] = None, content_type: Optional[str] = None
+    from_run_response: RunResponse, content: Any | None = None, content_type: str | None = None
 ) -> ReasoningCompletedEvent:
     return ReasoningCompletedEvent(
         session_id=from_run_response.session_id,
@@ -284,7 +292,7 @@ def create_reasoning_completed_event(
 
 
 def create_team_reasoning_completed_event(
-    from_run_response: TeamRunResponse, content: Optional[Any] = None, content_type: Optional[str] = None
+    from_run_response: TeamRunResponse, content: Any | None = None, content_type: str | None = None
 ) -> TeamReasoningCompletedEvent:
     return TeamReasoningCompletedEvent(
         session_id=from_run_response.session_id,
@@ -322,7 +330,7 @@ def create_team_tool_call_started_event(
 
 
 def create_tool_call_completed_event(
-    from_run_response: RunResponse, tool: ToolExecution, content: Optional[Any] = None
+    from_run_response: RunResponse, tool: ToolExecution, content: Any | None = None
 ) -> ToolCallCompletedEvent:
     return ToolCallCompletedEvent(
         session_id=from_run_response.session_id,
@@ -339,7 +347,7 @@ def create_tool_call_completed_event(
 
 
 def create_team_tool_call_completed_event(
-    from_run_response: TeamRunResponse, tool: ToolExecution, content: Optional[Any] = None
+    from_run_response: TeamRunResponse, tool: ToolExecution, content: Any | None = None
 ) -> TeamToolCallCompletedEvent:
     return TeamToolCallCompletedEvent(
         session_id=from_run_response.session_id,
@@ -357,14 +365,14 @@ def create_team_tool_call_completed_event(
 
 def create_run_response_content_event(
     from_run_response: RunResponse,
-    content: Optional[Any] = None,
-    content_type: Optional[str] = None,
-    thinking: Optional[str] = None,
-    reasoning_content: Optional[str] = None,
-    redacted_thinking: Optional[str] = None,
-    citations: Optional[Citations] = None,
-    response_audio: Optional[AudioResponse] = None,
-    image: Optional[ImageArtifact] = None,
+    content: Any | None = None,
+    content_type: str | None = None,
+    thinking: str | None = None,
+    reasoning_content: str | None = None,
+    redacted_thinking: str | None = None,
+    citations: Citations | None = None,
+    response_audio: AudioResponse | None = None,
+    image: ImageArtifact | None = None,
 ) -> RunResponseContentEvent:
     thinking_combined = (thinking or "") + (redacted_thinking or "")
 
@@ -387,13 +395,13 @@ def create_run_response_content_event(
 
 def create_team_run_response_content_event(
     from_run_response: TeamRunResponse,
-    content: Optional[Any] = None,
-    content_type: Optional[str] = None,
-    thinking: Optional[str] = None,
-    redacted_thinking: Optional[str] = None,
-    citations: Optional[Citations] = None,
-    response_audio: Optional[AudioResponse] = None,
-    image: Optional[ImageArtifact] = None,
+    content: Any | None = None,
+    content_type: str | None = None,
+    thinking: str | None = None,
+    redacted_thinking: str | None = None,
+    citations: Citations | None = None,
+    response_audio: AudioResponse | None = None,
+    image: ImageArtifact | None = None,
 ) -> TeamRunResponseContentEvent:
     thinking_combined = (thinking or "") + (redacted_thinking or "")
     return TeamRunResponseContentEvent(

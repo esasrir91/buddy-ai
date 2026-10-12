@@ -1,6 +1,8 @@
 import asyncio
 from typing import AsyncIterator, Iterator, List
 
+from pydantic import Field
+
 from buddy.document import Document
 from buddy.document.reader.url_reader import URLReader
 from buddy.knowledge.agent import AgentKnowledge
@@ -8,8 +10,8 @@ from buddy.utils.log import logger
 
 
 class UrlKnowledge(AgentKnowledge):
-    urls: List[str] = []
-    reader: URLReader = URLReader()
+    urls: List[str] = Field(default_factory=list)
+    reader: URLReader = Field(default_factory=URLReader)
 
     @property
     def document_lists(self) -> Iterator[List[Document]]:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from typing import Any, Dict, List, Mapping, Optional
 
@@ -96,6 +97,12 @@ class WorkflowSession:
         # Deserialize runs from dictionaries back to WorkflowRunResponse objects
         runs_data = data.get("runs")
         runs: Optional[List[WorkflowRunResponse]] = None
+        if isinstance(runs_data, str):
+            try:
+                runs_data = json.loads(runs_data)
+            except json.JSONDecodeError:
+                logger.warning("WorkflowSession has invalid serialized runs")
+                runs_data = None
         if runs_data is not None:
             runs = [WorkflowRunResponse.from_dict(run_dict) for run_dict in runs_data]
 

@@ -105,6 +105,12 @@ class PersonalityTrait:
     context_modifiers: Dict[str, float] = field(default_factory=dict)
     development_history: List[Tuple[datetime, float]] = field(default_factory=list)
 
+    def __post_init__(self):
+        for field_name in ("base_value", "current_value", "stability"):
+            value = getattr(self, field_name)
+            if not 0.0 <= value <= 1.0:
+                raise ValueError(f"{field_name} must be between 0.0 and 1.0")
+
 
 class PersonalityProfile(BaseModel):
     """Complete personality profile for an agent"""
@@ -119,27 +125,27 @@ class PersonalityProfile(BaseModel):
     # Emotional system
     current_emotions: Dict[EmotionalState, float] = Field(default_factory=dict)
     emotional_baseline: Dict[EmotionalState, float] = Field(default_factory=dict)
-    emotional_volatility: float = 0.5
-    emotional_recovery_rate: float = 0.1
+    emotional_volatility: float = Field(default=0.5, ge=0.0, le=1.0)
+    emotional_recovery_rate: float = Field(default=0.1, ge=0.0, le=1.0)
 
     # Communication preferences
     preferred_communication_style: CommunicationStyle = CommunicationStyle.CASUAL
-    style_adaptability: float = 0.7
-    communication_context_sensitivity: float = 0.8
+    style_adaptability: float = Field(default=0.7, ge=0.0, le=1.0)
+    communication_context_sensitivity: float = Field(default=0.8, ge=0.0, le=1.0)
 
     # Behavioral patterns
     dominant_behaviors: List[BehavioralTrait] = Field(default_factory=list)
-    behavioral_flexibility: float = 0.6
+    behavioral_flexibility: float = Field(default=0.6, ge=0.0, le=1.0)
 
     # Social aspects
-    social_energy_level: float = 0.5
-    trust_level: float = 0.5
-    social_context_awareness: float = 0.7
+    social_energy_level: float = Field(default=0.5, ge=0.0, le=1.0)
+    trust_level: float = Field(default=0.5, ge=0.0, le=1.0)
+    social_context_awareness: float = Field(default=0.7, ge=0.0, le=1.0)
 
     # Learning and adaptation
-    learning_rate: float = 0.1
-    adaptation_threshold: float = 0.3
-    memory_influence: float = 0.4
+    learning_rate: float = Field(default=0.1, ge=0.0, le=1.0)
+    adaptation_threshold: float = Field(default=0.3, ge=0.0, le=1.0)
+    memory_influence: float = Field(default=0.4, ge=0.0, le=1.0)
 
     # Metadata
     created_at: datetime = Field(default_factory=datetime.now)
@@ -231,6 +237,7 @@ class EmotionalIntelligence:
         # Calculate emotional distance
         compatibility_score = 0.0
         total_weight = 0.0
+        scored_weight = 0.0
 
         for emotion in set(agent_emotions.keys()) | set(user_emotions.keys()):
             agent_intensity = agent_emotions.get(emotion, 0.0)
@@ -239,16 +246,20 @@ class EmotionalIntelligence:
             # Positive emotions increase compatibility
             if emotion in [EmotionalState.JOY, EmotionalState.TRUST, EmotionalState.EXCITEMENT]:
                 compatibility_score += min(agent_intensity, user_intensity)
+                scored_weight += max(agent_intensity, user_intensity)
             # Negative emotions decrease compatibility if not aligned
             elif emotion in [EmotionalState.ANGER, EmotionalState.SADNESS, EmotionalState.FEAR]:
                 if abs(agent_intensity - user_intensity) < 0.3:
                     compatibility_score += 0.5 * min(agent_intensity, user_intensity)
                 else:
                     compatibility_score -= abs(agent_intensity - user_intensity) * 0.3
+                scored_weight += max(agent_intensity, user_intensity)
 
             total_weight += max(agent_intensity, user_intensity)
 
         if total_weight == 0:
+            return 0.5
+        if scored_weight == 0:
             return 0.5
 
         return max(0.0, min(1.0, compatibility_score / total_weight))
@@ -477,6 +488,26 @@ class CommunicationStyleAdapter:
                 "suffix": " I'm here to support you through this.",
                 "modifiers": ["gently", "carefully", "compassionately"],
             },
+            CommunicationStyle.DIRECT: {
+                "prefix": "In short, ",
+                "suffix": "",
+                "modifiers": [],
+            },
+            CommunicationStyle.DIPLOMATIC: {
+                "prefix": "A balanced approach would be to ",
+                "suffix": " I hope this addresses the situation constructively.",
+                "modifiers": ["thoughtfully", "carefully"],
+            },
+            CommunicationStyle.HUMOROUS: {
+                "prefix": "With a little levity, ",
+                "suffix": " Hope that brings a smile.",
+                "modifiers": ["playfully", "lightly"],
+            },
+            CommunicationStyle.INSPIRATIONAL: {
+                "prefix": "You can move forward by ",
+                "suffix": " Keep going; you've got this.",
+                "modifiers": ["confidently", "boldly"],
+            },
         }
 
     def _transform_message(self, message: str, template: Dict[str, Any]) -> str:
@@ -489,7 +520,7 @@ class CommunicationStyleAdapter:
         modifiers = template.get("modifiers", [])
         if modifiers and random.random() < 0.3:  # 30% chance to add modifier
             modifier = random.choice(modifiers)
-            transformed = f"{modifier.capitalize()}, {transformed.lower()}"
+            transformed = f"{modifier.capitalize()}, {transformed}"
 
         return transformed.strip()
 
@@ -518,20 +549,26 @@ class PersonalityEngine:
         self.interaction_history = deque(maxlen=1000)
         self.adaptation_engine = PersonalityAdaptationEngine()
 
-    def process_interaction(self, user_input: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
+    def process_interaction(
+        self,
+        user_input: str,
+        context: Dict[str, Any] = None,
+        emotional_awareness: bool = True,
+        adapt_personality: bool = True,
+    ) -> Dict[str, Any]:
         """Process user interaction and update personality state"""
 
         context = context or {}
 
-        # Emotional processing
-        emotional_response = self.emotional_intelligence.process_emotional_stimulus(
-            user_input, context, self.profile.current_emotions
-        )
-
-        # Update emotional state
-        self.profile.current_emotions = self.emotional_intelligence.update_emotional_state(
-            self.profile.current_emotions, emotional_response, self.profile.emotional_recovery_rate
-        )
+        if emotional_awareness:
+            emotional_response = self.emotional_intelligence.process_emotional_stimulus(
+                user_input, context, self.profile.current_emotions
+            )
+            self.profile.current_emotions = self.emotional_intelligence.update_emotional_state(
+                self.profile.current_emotions, emotional_response, self.profile.emotional_recovery_rate
+            )
+        else:
+            emotional_response = EmotionalResponse(EmotionalState.NEUTRAL, 0.0)
 
         # Determine communication style
         communication_style = self._determine_communication_style(user_input, context)
@@ -550,7 +587,8 @@ class PersonalityEngine:
         self.interaction_history.append(interaction)
 
         # Adapt personality based on interaction
-        self.adaptation_engine.adapt_personality(self.profile, interaction)
+        if adapt_personality:
+            self.adaptation_engine.adapt_personality(self.profile, interaction)
 
         # Update metadata
         self.profile.interaction_count += 1
@@ -558,7 +596,9 @@ class PersonalityEngine:
 
         return response_data
 
-    def generate_personality_driven_response(self, base_response: str, context: Dict[str, Any] = None) -> str:
+    def generate_personality_driven_response(
+        self, base_response: str, context: Dict[str, Any] = None, emotional_awareness: bool = True
+    ) -> str:
         """Generate response that reflects agent's personality"""
 
         # Determine current communication style
@@ -571,7 +611,9 @@ class PersonalityEngine:
         personality_response = self._add_personality_elements(adapted_response)
 
         # Add emotional coloring
-        emotional_response = self._add_emotional_coloring(personality_response)
+        emotional_response = (
+            self._add_emotional_coloring(personality_response) if emotional_awareness else personality_response
+        )
 
         return emotional_response
 
@@ -662,6 +704,9 @@ class PersonalityEngine:
             "primary_emotion": emotional_response.primary_emotion.value,
             "emotional_intensity": emotional_response.intensity,
             "communication_style": communication_style.value,
+            "empathetic_response": self.emotional_intelligence.empathy_model.generate_empathetic_response(
+                emotional_response.primary_emotion, emotional_response.intensity, user_input
+            ),
             "personality_traits_active": self._get_active_traits(),
             "empathy_level": self._calculate_empathy_level(),
             "confidence_level": self._calculate_confidence_level(),
@@ -941,7 +986,7 @@ class PersonalityMixin:
         super().__init__(*args, **kwargs)
 
         # Initialize personality system
-        personality_config = kwargs.get("personality_config", {})
+        personality_config = kwargs.get("personality_config") or {}
         self.personality_engine = PersonalityEngine(personality_profile=personality_config.get("profile"))
 
         self.personality_enabled: bool = kwargs.get("personality_enabled", True)
@@ -955,7 +1000,12 @@ class PersonalityMixin:
             return {"response": user_input, "personality_data": None}
 
         # Process interaction through personality engine
-        personality_data = self.personality_engine.process_interaction(user_input, context)
+        personality_data = self.personality_engine.process_interaction(
+            user_input,
+            context,
+            emotional_awareness=self.emotional_awareness,
+            adapt_personality=self.adaptive_personality,
+        )
 
         return {
             "personality_data": personality_data,
@@ -971,7 +1021,9 @@ class PersonalityMixin:
         if not self.personality_enabled:
             return base_response
 
-        return self.personality_engine.generate_personality_driven_response(base_response, context)
+        return self.personality_engine.generate_personality_driven_response(
+            base_response, context, emotional_awareness=self.emotional_awareness
+        )
 
     def get_personality_state(self) -> Dict[str, Any]:
         """Get current personality state"""

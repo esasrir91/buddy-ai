@@ -1,14 +1,14 @@
 from enum import Enum
-from typing import Any, List, Optional
+from typing import Any
 
 
 class ExtendedEnum(Enum):
     @classmethod
-    def values_list(cls: Any) -> List[Any]:
-        return list(map(lambda c: c.value, cls))
+    def values_list(cls: Any) -> list[Any]:
+        return [member.value for member in cls]
 
     @classmethod
-    def from_str(cls: Any, str_to_convert_to_enum: Optional[str]) -> Optional[Any]:
+    def from_str(cls: Any, str_to_convert_to_enum: str | None) -> Any | None:
         """Convert a string value to an enum object. Case Sensitive"""
 
         if str_to_convert_to_enum is None:
@@ -18,5 +18,5 @@ class ExtendedEnum(Enum):
             return cls._value2member_map_.get(str_to_convert_to_enum)
         else:
             raise NotImplementedError(
-                "{} is not a member of {}: {}".format(str_to_convert_to_enum, cls, cls._value2member_map_.keys())
+                f"{str_to_convert_to_enum} is not a member of {cls}: {cls._value2member_map_.keys()}"
             )

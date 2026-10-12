@@ -248,12 +248,15 @@ class SQLTools(Toolkit):
         """
         log_debug(f"Running sql |\n{sql}")
 
+        if limit is not None and limit < 0:
+            raise ValueError("limit must be greater than or equal to 0")
+
         with self.Session() as sess, sess.begin():
             result = sess.execute(text(sql))
 
             # Check if the operation has returned rows.
             try:
-                if limit:
+                if limit is not None:
                     rows = result.fetchmany(limit)
                 else:
                     rows = result.fetchall()

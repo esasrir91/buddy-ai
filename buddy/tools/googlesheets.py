@@ -272,13 +272,18 @@ class GoogleSheetsTools(Toolkit):
             return "Not authenticated. Call auth() first."
 
         try:
+            sheet_id = self.spreadsheet_id or spreadsheet_id
+            sheet_range = self.spreadsheet_range or range_name
+            if not sheet_id or not sheet_range:
+                return "Spreadsheet ID and range must be provided either in constructor or method call"
+
             # Define the request body
             body = {"values": data}
 
             # Update the sheet
             self.service.spreadsheets().values().update(  # type: ignore
-                spreadsheetId=spreadsheet_id,
-                range=range_name,
+                spreadsheetId=sheet_id,
+                range=sheet_range,
                 valueInputOption="RAW",
                 body=body,
             ).execute()

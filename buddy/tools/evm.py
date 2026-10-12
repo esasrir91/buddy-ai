@@ -89,6 +89,9 @@ class EvmTools(Toolkit):
             str: The transaction hash of the transaction or error message
         """
         try:
+            if amount_in_wei < 0:
+                return "error: amount_in_wei must be greater than or equal to 0"
+
             max_priority_fee_per_gas = self.get_max_priority_fee_per_gas()
             max_fee_per_gas = self.get_max_fee_per_gas(max_priority_fee_per_gas)
 
@@ -107,7 +110,10 @@ class EvmTools(Toolkit):
             signed_transaction: "SignedTransaction" = self.web3_client.eth.account.sign_transaction(
                 transaction_params, self.private_key
             )
-            transaction_hash: "HexBytes" = self.web3_client.eth.send_raw_transaction(signed_transaction.raw_transaction)
+            raw_transaction = getattr(signed_transaction, "raw_transaction", None)
+            if raw_transaction is None:
+                raw_transaction = signed_transaction.rawTransaction
+            transaction_hash: "HexBytes" = self.web3_client.eth.send_raw_transaction(raw_transaction)
             log_debug(f"Ongoing Transaction hash: 0x{transaction_hash.hex()}")
 
             transaction_receipt: "TxReceipt" = self.web3_client.eth.wait_for_transaction_receipt(transaction_hash)

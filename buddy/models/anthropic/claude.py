@@ -145,13 +145,13 @@ class Claude(Model):
             _request_params["max_tokens"] = self.max_tokens
         if self.thinking:
             _request_params["thinking"] = self.thinking
-        if self.temperature:
+        if self.temperature is not None:
             _request_params["temperature"] = self.temperature
         if self.stop_sequences:
             _request_params["stop_sequences"] = self.stop_sequences
-        if self.top_p:
+        if self.top_p is not None:
             _request_params["top_p"] = self.top_p
-        if self.top_k:
+        if self.top_k is not None:
             _request_params["top_k"] = self.top_k
         if self.mcp_servers:
             _request_params["mcp_servers"] = [
@@ -279,7 +279,7 @@ class Claude(Model):
                 return self.get_client().beta.messages.create(
                     model=self.id,
                     messages=chat_messages,  # type: ignore
-                    **self.get_request_params(),
+                    **request_kwargs,
                 )
             else:
                 return self.get_client().messages.create(
@@ -382,7 +382,7 @@ class Claude(Model):
                 return await self.get_async_client().beta.messages.create(
                     model=self.id,
                     messages=chat_messages,  # type: ignore
-                    **self.get_request_params(),
+                    **request_kwargs,
                 )
             else:
                 return await self.get_async_client().messages.create(
@@ -429,6 +429,7 @@ class Claude(Model):
         try:
             chat_messages, system_message = format_messages(messages)
             request_kwargs = self._prepare_request_kwargs(system_message, tools)
+            chat_messages = self._apply_history_cache(chat_messages)
 
             if self.mcp_servers is not None:
                 async with self.get_async_client().beta.messages.stream(

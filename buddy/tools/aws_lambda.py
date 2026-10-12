@@ -1,3 +1,4 @@
+import json
 from typing import Any, List
 
 from buddy.tools import Toolkit
@@ -45,7 +46,13 @@ class AWSLambdaTools(Toolkit):
             payload (str): The JSON payload to send to the function. Defaults to "{}".
         """
         try:
-            response = self.client.invoke(FunctionName=function_name, Payload=payload)
+            payload_data = json.loads(payload)
+            response = self.client.invoke(
+                FunctionName=function_name,
+                Payload=json.dumps(payload_data).encode("utf-8"),
+            )
             return f"Function invoked successfully. Status code: {response['StatusCode']}, Payload: {response['Payload'].read().decode('utf-8')}"
+        except json.JSONDecodeError as e:
+            return f"Error invoking function: Invalid JSON payload: {str(e)}"
         except Exception as e:
             return f"Error invoking function: {str(e)}"

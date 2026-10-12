@@ -183,6 +183,11 @@ class GithubTools(Toolkit):
         """
         log_debug(f"Searching repositories with query: '{query}', page: {page}, per_page: {per_page}")
         try:
+            if page < 1:
+                return json.dumps({"error": "Page must be greater than or equal to 1"})
+            if per_page < 1:
+                return json.dumps({"error": "per_page must be greater than 0"})
+
             # Ensure per_page doesn't exceed GitHub's max of 100
             per_page = min(per_page, 100)
 

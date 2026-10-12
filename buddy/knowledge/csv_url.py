@@ -1,4 +1,7 @@
 from typing import Any, AsyncIterator, Dict, Iterator, List, Optional, Union
+from urllib.parse import urlparse
+
+from pydantic import Field
 
 from buddy.document import Document
 from buddy.document.reader.csv_reader import CSVUrlReader
@@ -8,8 +11,8 @@ from buddy.utils.log import log_info, logger
 
 class CSVUrlKnowledgeBase(AgentKnowledge):
     urls: Optional[Union[List[str], List[Dict[str, Union[str, Dict[str, Any]]]]]] = None
-    formats: List[str] = [".csv"]
-    reader: CSVUrlReader = CSVUrlReader()
+    formats: List[str] = Field(default_factory=lambda: [".csv"])
+    reader: CSVUrlReader = Field(default_factory=CSVUrlReader)
 
     @property
     def document_lists(self) -> Iterator[List[Document]]:
@@ -37,7 +40,9 @@ class CSVUrlKnowledgeBase(AgentKnowledge):
 
     def _is_valid_csv_url(self, url: str) -> bool:
         """Helper to check if URL is a valid CSV URL."""
-        return url.endswith(".csv")
+        path = urlparse(url).path
+        formats = {extension.lower() for extension in self.formats}
+        return any(path.lower().endswith(extension) for extension in formats)
 
     @property
     async def async_document_lists(self) -> AsyncIterator[List[Document]]:

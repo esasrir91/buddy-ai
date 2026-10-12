@@ -367,8 +367,14 @@ class Milvus(VectorDb):
         )
         log_debug(f"Inserted hybrid document: {document.name} ({document.meta_data})")
 
-    async def _async_insert_hybrid_document(self, document: Document) -> None:
+    async def _async_insert_hybrid_document(
+        self, document: Document, filters: Optional[Dict[str, Any]] = None
+    ) -> None:
         """Insert a document with both dense and sparse vectors asynchronously."""
+        if filters:
+            meta_data = document.meta_data.copy() if document.meta_data else {}
+            meta_data.update(filters)
+            document.meta_data = meta_data
         data = self._prepare_document_data(document, include_vectors=True)
 
         await self.async_client.insert(
@@ -383,6 +389,10 @@ class Milvus(VectorDb):
 
         if self.search_type == SearchType.hybrid:
             for document in documents:
+                if filters:
+                    meta_data = document.meta_data.copy() if document.meta_data else {}
+                    meta_data.update(filters)
+                    document.meta_data = meta_data
                 self._insert_hybrid_document(document)
         else:
             for document in documents:
@@ -415,7 +425,7 @@ class Milvus(VectorDb):
         log_debug(f"Inserting {len(documents)} documents asynchronously")
 
         if self.search_type == SearchType.hybrid:
-            await asyncio.gather(*[self._async_insert_hybrid_document(doc) for doc in documents])
+            await asyncio.gather(*[self._async_insert_hybrid_document(doc, filters) for doc in documents])
         else:
 
             async def process_document(document):
@@ -489,11 +499,14 @@ class Milvus(VectorDb):
             document.embed(embedder=self.embedder)
             cleaned_content = document.content.replace("\x00", "\ufffd")
             doc_id = md5(cleaned_content.encode()).hexdigest()
+            meta_data = document.meta_data.copy() if document.meta_data else {}
+            if filters:
+                meta_data.update(filters)
             data = {
                 "id": doc_id,
                 "vector": document.embedding,
                 "name": document.name,
-                "meta_data": document.meta_data,
+                "meta_data": meta_data,
                 "content": cleaned_content,
                 "usage": document.usage,
             }
@@ -810,7 +823,7 @@ class Milvus(VectorDb):
         return self.client.has_collection(self.collection)
 
     def get_count(self) -> int:
-        return self.client.get_collection_stats(collection_name="test_collection")["row_count"]
+        return self.client.get_collection_stats(collection_name=self.collection)["row_count"]
 
     def delete(self) -> bool:
         if self.client:
@@ -851,5 +864,13 @@ class Milvus(VectorDb):
             return " and ".join(expressions)
         return None
 
-    def async_name_exists(self, name: str) -> bool:
-        raise NotImplementedError(f"Async not supported on {self.__class__.__name__}.")
+    async def async_name_exists(self, name: str) -> bool:
+        if self.client:
+            expr = f"name == '{name}'"
+            results = await self.async_client.query(
+                collection_name=self.collection,
+                filter=expr,
+                limit=1,
+            )
+            return len(results) > 0
+        return False

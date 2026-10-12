@@ -1,6 +1,7 @@
 import json
 from os import getenv
 from typing import Any, List, Optional
+from urllib.parse import urlparse
 
 from buddy.tools import Toolkit
 from buddy.utils.log import log_debug, log_error, log_warning
@@ -27,6 +28,12 @@ class ValyuTools(Toolkit):
         tool_call_mode: bool = False,
         **kwargs,
     ):
+        if text_length <= 0 or max_results <= 0:
+            raise ValueError("text_length and max_results must be greater than 0")
+        if not 0.0 <= relevance_threshold <= 1.0:
+            raise ValueError("relevance_threshold must be between 0.0 and 1.0")
+        if max_price < 0:
+            raise ValueError("max_price must be nonnegative")
         self.api_key = api_key or getenv("VALYU_API_KEY")
         if not self.api_key:
             raise ValueError("VALYU_API_KEY not set. Please set the VALYU_API_KEY environment variable.")
@@ -89,6 +96,8 @@ class ValyuTools(Toolkit):
         end_date: Optional[str] = None,
     ) -> str:
         try:
+            if not query.strip():
+                return "Error: query cannot be empty"
             search_params = {
                 "query": query,
                 "search_type": search_type,
@@ -188,7 +197,8 @@ class ValyuTools(Toolkit):
             JSON array of relevant sections from the paper
         """
         # Validate ArXiv URL
-        if not paper_url.startswith("https:/"):
+        parsed_url = urlparse(paper_url)
+        if parsed_url.scheme != "https" or not parsed_url.netloc:
             log_warning(f"Invalid paper URL: {paper_url}")
             return "Error: Invalid paper URL format"
 

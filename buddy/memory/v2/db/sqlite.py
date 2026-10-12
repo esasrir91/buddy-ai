@@ -1,3 +1,5 @@
+import ast
+import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -76,7 +78,7 @@ class SqliteMemoryDb(MemoryDb):
         # Database table for memories
         self.table: Table = self.get_table()
 
-    def __dict__(self) -> Dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             "name": "SqliteMemoryDb",
             "table_name": self.table_name,
@@ -132,11 +134,15 @@ class SqliteMemoryDb(MemoryDb):
 
                 result = session.execute(stmt)
                 for row in result:
+                    try:
+                        memory_data = json.loads(row.memory)
+                    except json.JSONDecodeError:
+                        memory_data = ast.literal_eval(row.memory)
                     memories.append(
                         MemoryRow(
                             id=row.id,
                             user_id=row.user_id,
-                            memory=eval(row.memory),
+                            memory=memory_data,
                             last_updated=row.updated_at or row.created_at,
                         )
                     )
@@ -158,11 +164,19 @@ class SqliteMemoryDb(MemoryDb):
                     stmt = (
                         self.table.update()
                         .where(self.table.c.id == memory.id)
-                        .values(user_id=memory.user_id, memory=str(memory.memory), updated_at=text("CURRENT_TIMESTAMP"))
+                        .values(
+                            user_id=memory.user_id,
+                            memory=json.dumps(memory.memory),
+                            updated_at=text("CURRENT_TIMESTAMP"),
+                        )
                     )
                 else:
                     # Insert new memory
-                    stmt = self.table.insert().values(id=memory.id, user_id=memory.user_id, memory=str(memory.memory))  # type: ignore
+                    stmt = self.table.insert().values(
+                        id=memory.id,
+                        user_id=memory.user_id,
+                        memory=json.dumps(memory.memory),
+                    )  # type: ignore
 
                 session.execute(stmt)
                 session.commit()

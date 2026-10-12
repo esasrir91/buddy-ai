@@ -16,6 +16,7 @@ class GiphyTools(Toolkit):
         self,
         api_key: Optional[str] = None,
         limit: int = 1,
+        timeout: float = 30.0,
         **kwargs,
     ):
         """Initialize Giphy tools.
@@ -30,6 +31,7 @@ class GiphyTools(Toolkit):
             logger.error("No Giphy API key provided")
 
         self.limit: int = limit
+        self.timeout = timeout
 
         tools: List[Any] = []
         tools.append(self.search_gifs)
@@ -54,7 +56,10 @@ class GiphyTools(Toolkit):
         }
 
         try:
-            response = httpx.get(base_url, params=params)
+            if self.limit <= 0:
+                return "No gifs found"
+
+            response = httpx.get(base_url, params=params, timeout=self.timeout)
             response.raise_for_status()
 
             # Extract the GIF URLs
@@ -62,11 +67,13 @@ class GiphyTools(Toolkit):
             gif_urls = []
             for gif in data.get("data", []):
                 images = gif.get("images", {})
-                original_image = images["original"]
+                original_image = images.get("original")
+                if not original_image or not original_image.get("url"):
+                    continue
 
                 media_id = str(uuid.uuid4())
                 gif_url = original_image["url"]
-                alt_text = gif["alt_text"]
+                alt_text = gif.get("alt_text")
                 gif_urls.append(gif_url)
 
                 agent.add_image(ImageArtifact(id=media_id, url=gif_url, alt_text=alt_text, revised_prompt=query))

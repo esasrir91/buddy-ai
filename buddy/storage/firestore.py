@@ -258,6 +258,9 @@ class FirestoreStorage(Storage):
             # Add created_at for new documents
             if not doc.exists:
                 session_dict["created_at"] = timestamp
+            else:
+                existing_data = doc.to_dict() or {}
+                session_dict["created_at"] = existing_data.get("created_at", timestamp)
 
             # Save to Firestore
             doc_ref.set(session_dict)

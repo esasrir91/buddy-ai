@@ -152,6 +152,9 @@ class GoogleCalendarTools(Toolkit):
         Returns:
             str: JSON string containing the Google Calendar events or error message
         """
+        if limit <= 0:
+            return json.dumps({"error": "Limit must be greater than 0"})
+
         if start_date is None:
             start_date = datetime.datetime.now(datetime.timezone.utc).isoformat()
             log_debug(f"No start date provided, using current datetime: {start_date}")
@@ -366,6 +369,9 @@ class GoogleCalendarTools(Toolkit):
             str: JSON string containing all Google Calendar events or error message
         """
         try:
+            if max_results <= 0:
+                return json.dumps({"error": "max_results must be greater than 0"})
+
             params = {
                 "calendarId": self.calendar_id,
                 "maxResults": min(max_results, 100),

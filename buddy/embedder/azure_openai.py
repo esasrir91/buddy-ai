@@ -59,7 +59,8 @@ class AzureOpenAIEmbedder(Embedder):
         if self.client_params:
             _client_params.update(self.client_params)
 
-        return AzureOpenAIClient(**_client_params)
+        self.openai_client = AzureOpenAIClient(**_client_params)
+        return self.openai_client
 
     def _response(self, text: str) -> CreateEmbeddingResponse:
         _request_params: Dict[str, Any] = {
@@ -88,5 +89,5 @@ class AzureOpenAIEmbedder(Embedder):
         response: CreateEmbeddingResponse = self._response(text=text)
 
         embedding = response.data[0].embedding
-        usage = response.usage
-        return embedding, usage.model_dump()
+        usage = response.usage.model_dump() if response.usage is not None else None
+        return embedding, usage

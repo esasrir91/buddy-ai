@@ -30,7 +30,7 @@ class MemoryRow(BaseModel):
     @model_validator(mode="after")
     def generate_id(self) -> "MemoryRow":
         if self.id is None:
-            memory_str = json.dumps(self.memory, sort_keys=True)
+            memory_str = json.dumps({"memory": self.memory, "user_id": self.user_id}, sort_keys=True)
             cleaned_memory = memory_str.replace(" ", "").replace("\n", "").replace("\t", "")
-            self.id = md5(cleaned_memory.encode()).hexdigest()
+            self.id = md5(cleaned_memory.encode(), usedforsecurity=False).hexdigest()
         return self

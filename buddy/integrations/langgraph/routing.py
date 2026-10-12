@@ -57,6 +57,8 @@ def make_competency_edge(
                 task = getattr(last, "content", None) or (
                     last[1] if isinstance(last, (tuple, list)) and len(last) == 2 else str(last)
                 )
+                if isinstance(last, dict):
+                    task = last.get("content", last)
         task = task if isinstance(task, str) else str(task or "")
 
         domain = state.get(domain_key) if domain_key else None

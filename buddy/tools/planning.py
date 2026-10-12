@@ -26,6 +26,8 @@ class PlanningTools(Toolkit):
     ):
         """A toolkit that provides advanced planning capabilities for complex task decomposition."""
 
+        self.todo_enabled = todo
+
         # Add instructions for using this toolkit
         if instructions is None:
             self.instructions = dedent("""\
@@ -77,9 +79,9 @@ class PlanningTools(Toolkit):
             tools.append(self.replan)
         if optimize_plan:
             tools.append(self.optimize_plan)
-        if create_todo:
+        if todo and create_todo:
             tools.append(self.create_todo)
-        if manage_todos:
+        if todo and manage_todos:
             tools.append(self.manage_todos)
 
         super().__init__(
@@ -140,7 +142,7 @@ class PlanningTools(Toolkit):
             agent.session_state["execution_plans"][plan.plan_id] = plan.model_dump_json()
 
             # Auto-create todos for plan steps
-            todos_created = self._auto_create_todos_from_plan(agent, plan)
+            todos_created = self._auto_create_todos_from_plan(agent, plan) if self.todo_enabled else 0
 
             # Format the plan for display
             plan_summary = self._format_plan_summary(plan)

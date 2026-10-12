@@ -63,12 +63,18 @@ class GoogleSearchTools(Toolkit):
         Returns:
             str: A JSON formatted string containing the search results.
         """
-        max_results = self.fixed_max_results or max_results
+        max_results = self.fixed_max_results if self.fixed_max_results is not None else max_results
         language = self.fixed_language or language
+
+        if max_results <= 0:
+            return json.dumps({"error": "max_results must be greater than 0"})
 
         # Resolve language to ISO 639-1 code if needed
         if len(language) != 2:
-            _language = pycountry.languages.lookup(language)
+            try:
+                _language = pycountry.languages.lookup(language)
+            except LookupError:
+                _language = None
             if _language:
                 language = _language.alpha_2
             else:

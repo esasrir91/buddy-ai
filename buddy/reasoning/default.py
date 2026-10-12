@@ -25,6 +25,11 @@ def get_default_reasoning_agent(
 ) -> Optional["Agent"]:  # type: ignore  # noqa: F821
     from buddy.agent import Agent
 
+    if min_steps < 1:
+        raise ValueError("min_steps must be at least 1")
+    if max_steps < min_steps:
+        raise ValueError("max_steps must be greater than or equal to min_steps")
+
     agent = Agent(
         model=reasoning_model,
         description="You are a meticulous, thoughtful, and logical Reasoning Agent who solves complex problems through clear, structured, step-by-step analysis.",

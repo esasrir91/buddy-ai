@@ -18,7 +18,7 @@ class ChunkingStrategy(ABC):
         # Replace multiple newlines with a single newline
         cleaned_text = re.sub(r"\n+", "\n", text)
         # Replace multiple spaces with a single space
-        cleaned_text = re.sub(r"\s+", " ", cleaned_text)
+        cleaned_text = re.sub(r" +", " ", cleaned_text)
         # Replace multiple tabs with a single tab
         cleaned_text = re.sub(r"\t+", "\t", cleaned_text)
         # Replace multiple carriage returns with a single carriage return

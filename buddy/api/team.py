@@ -46,10 +46,11 @@ def upsert_team_session(session: TeamSessionCreate, monitor: bool = False) -> No
     with api.AuthenticatedClient() as api_client:
         try:
             if monitor:
-                api_client.post(
+                response = api_client.post(
                     ApiRoutes.TEAM_SESSION_CREATE,
                     json={"session": session.model_dump(exclude_none=True)},
                 )
+                response.raise_for_status()
         except Exception as e:
             log_debug(f"Could not create Agent session: {e}")
     return
@@ -61,10 +62,11 @@ def create_team(team: TeamCreate) -> None:
 
     with api.AuthenticatedClient() as api_client:
         try:
-            api_client.post(
+            response = api_client.post(
                 ApiRoutes.TEAM_CREATE,
                 json=team.model_dump(exclude_none=True),
             )
+            response.raise_for_status()
         except Exception as e:
             log_debug(f"Could not create Team: {e}")
 
@@ -75,11 +77,10 @@ async def acreate_team(team: TeamCreate) -> None:
 
     async with api.AuthenticatedAsyncClient() as api_client:
         try:
-            await api_client.post(
+            response = await api_client.post(
                 ApiRoutes.TEAM_CREATE,
                 json=team.model_dump(exclude_none=True),
             )
+            response.raise_for_status()
         except Exception as e:
-            print(f"Could not create Team: {e}")
-
             log_debug(f"Could not create Team: {e}")

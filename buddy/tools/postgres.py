@@ -222,7 +222,12 @@ class PostgresTools(Toolkit):
         :param query: The SQL query to inspect.
         :return: The query's execution plan.
         """
-        return self._execute_query(f"EXPLAIN {query}")
+        normalized_query = query.strip().rstrip(";").strip()
+        if not normalized_query:
+            return "Error: query cannot be empty"
+        if ";" in normalized_query:
+            return "Error: inspect_query accepts a single SQL statement"
+        return self._execute_query(f"EXPLAIN {normalized_query}")
 
     def export_table_to_path(self, table: str, path: str) -> str:
         """

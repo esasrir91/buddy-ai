@@ -10,7 +10,7 @@ from typing import Optional
 
 import typer
 
-from buddy.train import get_available_models, list_available_models
+from buddy.train import list_available_models
 from buddy.train.data_processor import DataProcessor
 from buddy.train.model_manager import ModelManager
 from buddy.train.trainer import ModelTrainer
@@ -140,6 +140,8 @@ def train_model(
         typer.echo(f"  Training loss: {results.get('final_loss', 'N/A')}")
         typer.echo(f"  Training steps: {results.get('global_step', 'N/A')}")
 
+    except typer.Exit:
+        raise
     except Exception as e:
         typer.echo(f"❌ Error training model: {e}", err=True)
         logger.error(f"Training failed: {e}", exc_info=True)
@@ -207,7 +209,7 @@ def quick_train(
         # Clean up temporary file
         try:
             Path(temp_data_file).unlink()
-        except:
+        except OSError:
             pass
 
         typer.echo(f"\n🎉 Quick training completed!")
@@ -219,52 +221,6 @@ def quick_train(
         typer.echo(f"❌ Error in quick training: {e}", err=True)
         logger.error(f"Quick training failed: {e}", exc_info=True)
         raise typer.Exit(1)
-
-
-@train_cli.command("list")
-def list_models(
-    models_dir: str = typer.Option("./trained_models", "-d", "--dir", help="Directory containing trained models"),
-):
-    """
-    List all trained models in the specified directory.
-    """
-    models_path = Path(models_dir)
-
-    if not models_path.exists():
-        typer.echo(f"❌ Models directory not found: {models_dir}")
-        return
-
-    # Find model directories (contain config.json or tokenizer.json)
-    model_dirs = []
-    for item in models_path.iterdir():
-        if item.is_dir():
-            if (item / "config.json").exists() or (item / "tokenizer.json").exists():
-                model_dirs.append(item)
-
-    if not model_dirs:
-        typer.echo(f"No trained models found in {models_dir}")
-        return
-
-    typer.echo(f"📋 Trained models in {models_dir}:")
-    for model_dir in sorted(model_dirs):
-        model_size = sum(f.stat().st_size for f in model_dir.rglob("*") if f.is_file())
-        model_size_mb = model_size / (1024 * 1024)
-
-        # Try to get model info
-        config_file = model_dir / "config.json"
-        model_type = "Unknown"
-        if config_file.exists():
-            try:
-                with open(config_file) as f:
-                    config = json.load(f)
-                    model_type = config.get("model_type", "Unknown")
-            except:
-                pass
-
-        typer.echo(f"  📁 {model_dir.name}")
-        typer.echo(f"     Type: {model_type}")
-        typer.echo(f"     Size: {model_size_mb:.1f} MB")
-        typer.echo(f"     Path: {model_dir}")
 
 
 @train_cli.command("test")
@@ -319,6 +275,8 @@ def test_model(
             typer.echo(f"\n🤖 Generated text:")
             typer.echo(generation_result)
 
+    except typer.Exit:
+        raise
     except Exception as e:
         typer.echo(f"❌ Error testing model: {e}", err=True)
         raise typer.Exit(1)
@@ -366,15 +324,20 @@ def install_dependencies(
 
         typer.echo("📦 Installing training dependencies...")
 
+        failed_packages = []
         for package in packages:
             typer.echo(f"  Installing {package}...")
             result = subprocess.run([sys.executable, "-m", "pip", "install", package], capture_output=True, text=True)
 
             if result.returncode != 0:
+                failed_packages.append(package)
                 typer.echo(f"❌ Failed to install {package}")
                 typer.echo(result.stderr)
             else:
                 typer.echo(f"✅ Installed {package}")
+
+        if failed_packages:
+            raise RuntimeError(f"Failed to install: {', '.join(failed_packages)}")
 
         typer.echo("\n🎉 All dependencies installed successfully!")
 
@@ -437,21 +400,21 @@ def list_models(
 
                                 dt = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
                                 created_at = dt.strftime("%Y-%m-%d %H:%M")
-                            except:
+                            except ValueError:
                                 pass
 
                         # Get data stats
                         data_stats = info.get("data_stats", {})
                         if data_stats:
                             data_files = f"{data_stats.get('processed_files', 0)} files"
-                except:
+                except (OSError, ValueError):
                     pass
 
             # Get model size
             try:
                 model_size = sum(f.stat().st_size for f in model_dir.rglob("*") if f.is_file())
                 model_size_mb = model_size / (1024 * 1024)
-            except:
+            except OSError:
                 model_size_mb = 0
 
             typer.echo(f"🤖 {model_name}")

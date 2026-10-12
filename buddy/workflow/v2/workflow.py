@@ -965,7 +965,7 @@ class Workflow:
                         content += str(chunk)
                 workflow_run_response.content = content
             else:
-                workflow_run_response.content = self.steps(self, execution_input, **kwargs)
+                workflow_run_response.content = self._call_custom_function(self.steps, self, execution_input, **kwargs)
             workflow_run_response.status = RunStatus.completed
 
         else:
@@ -1464,8 +1464,9 @@ class Workflow:
     def _prepare_steps(self):
         """Prepare the steps for execution"""
         if not callable(self.steps) and self.steps is not None:
+            steps_to_prepare = self.steps.steps if isinstance(self.steps, Steps) else self.steps
             prepared_steps: List[Union[Step, Steps, Loop, Parallel, Condition, Router]] = []
-            for i, step in enumerate(self.steps):  # type: ignore
+            for i, step in enumerate(steps_to_prepare):  # type: ignore
                 if callable(step) and hasattr(step, "__name__"):
                     step_name = step.__name__
                     log_debug(f"Step {i + 1}: Wrapping callable function '{step_name}'")

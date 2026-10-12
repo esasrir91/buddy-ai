@@ -140,11 +140,25 @@ class DocumentKnowledgeBase(AgentKnowledge):
 
         # Recreate collection if requested
         if recreate:
-            await self.vector_db.async_drop()
+            try:
+                await self.vector_db.async_drop()
+            except NotImplementedError:
+                logger.warning("Vector db does not support async drop, falling back to sync drop")
+                self.vector_db.drop()
 
         # Create collection if it doesn't exist
-        if not await self.vector_db.async_exists():
-            await self.vector_db.async_create()
+        try:
+            exists = await self.vector_db.async_exists()
+        except NotImplementedError:
+            logger.warning("Vector db does not support async exists, falling back to sync exists")
+            exists = self.vector_db.exists()
+
+        if not exists:
+            try:
+                await self.vector_db.async_create()
+            except NotImplementedError:
+                logger.warning("Vector db does not support async create, falling back to sync create")
+                self.vector_db.create()
 
         return True
 

@@ -223,8 +223,14 @@ class PineconeDb(VectorDb):
 
         """
         try:
-            self.client.describe_index(name)
-            return True
+            result = self.index.query(
+                vector=[0.0] * int(self.dimension or 0),
+                top_k=1,
+                namespace=self.namespace,
+                filter={"name": {"$eq": name}},
+                include_metadata=False,
+            )
+            return bool(result.matches)
         except Exception:
             return False
 
@@ -254,11 +260,14 @@ class PineconeDb(VectorDb):
         vectors = []
         for document in documents:
             document.embed(embedder=self.embedder)
-            document.meta_data["text"] = document.content
+            metadata = document.meta_data.copy() if document.meta_data else {}
+            metadata["text"] = document.content
+            if filters:
+                metadata.update(filters)
             data_to_upsert = {
                 "id": document.id,
                 "values": document.embedding,
-                "metadata": document.meta_data,
+                "metadata": metadata,
             }
             if self.use_hybrid_search:
                 data_to_upsert["sparse_values"] = self.sparse_encoder.encode_documents(document.content)
@@ -293,7 +302,7 @@ class PineconeDb(VectorDb):
 
         # Process each batch in parallel
         async def process_batch(batch_docs):
-            return await asyncio.to_thread(self._prepare_vectors, batch_docs)
+            return await asyncio.to_thread(self._prepare_vectors, batch_docs, filters)
 
         # Run all batches in parallel
         batch_vectors = await asyncio.gather(*[process_batch(batch) for batch in batches])
@@ -308,16 +317,19 @@ class PineconeDb(VectorDb):
 
         log_debug(f"Finished async upsert of {len(documents)} documents")
 
-    def _prepare_vectors(self, documents):
+    def _prepare_vectors(self, documents, filters: Optional[Dict[str, Any]] = None):
         """Prepare vectors for upsert."""
         vectors = []
         for doc in documents:
             doc.embed(embedder=self.embedder)
-            doc.meta_data["text"] = doc.content
+            metadata = doc.meta_data.copy() if doc.meta_data else {}
+            metadata["text"] = doc.content
+            if filters:
+                metadata.update(filters)
             data_to_upsert = {
                 "id": doc.id,
                 "values": doc.embedding,
-                "metadata": doc.meta_data,
+                "metadata": metadata,
             }
             if self.use_hybrid_search:
                 data_to_upsert["sparse_values"] = self.sparse_encoder.encode_documents(doc.content)

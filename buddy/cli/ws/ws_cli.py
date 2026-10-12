@@ -292,7 +292,7 @@ def down(
         None,
         help="Resource filter. Format - ENV:INFRA:GROUP:NAME:TYPE",
     ),
-    env_filter: str = typer.Option(None, "-e", "--env", metavar="", help="Filter the environment to shut down."),
+    env_filter: Optional[str] = typer.Option(None, "-e", "--env", metavar="", help="Filter the environment to shut down."),
     infra_filter: Optional[str] = typer.Option(
         None, "-i", "--infra", metavar="", help="Filter the infra to shut down."
     ),
@@ -325,7 +325,7 @@ def down(
         "--debug",
         help="Print debug logs.",
     ),
-    force: bool = typer.Option(
+    force: Optional[bool] = typer.Option(
         None,
         "-f",
         "--force",
@@ -457,7 +457,7 @@ def patch(
         None,
         help="Resource filter. Format - ENV:INFRA:GROUP:NAME:TYPE",
     ),
-    env_filter: str = typer.Option(None, "-e", "--env", metavar="", help="Filter the environment to patch."),
+    env_filter: Optional[str] = typer.Option(None, "-e", "--env", metavar="", help="Filter the environment to patch."),
     infra_filter: Optional[str] = typer.Option(None, "-i", "--infra", metavar="", help="Filter the infra to patch."),
     group_filter: Optional[str] = typer.Option(
         None, "-g", "--group", metavar="", help="Filter resources using group name."
@@ -488,7 +488,7 @@ def patch(
         "--debug",
         help="Print debug logs.",
     ),
-    force: bool = typer.Option(
+    force: Optional[bool] = typer.Option(
         None,
         "-f",
         "--force",
@@ -627,7 +627,7 @@ def restart(
         None,
         help="Resource filter. Format - ENV:INFRA:GROUP:NAME:TYPE",
     ),
-    env_filter: str = typer.Option(None, "-e", "--env", metavar="", help="Filter the environment to restart."),
+    env_filter: Optional[str] = typer.Option(None, "-e", "--env", metavar="", help="Filter the environment to restart."),
     infra_filter: Optional[str] = typer.Option(None, "-i", "--infra", metavar="", help="Filter the infra to restart."),
     group_filter: Optional[str] = typer.Option(
         None, "-g", "--group", metavar="", help="Filter resources using group name."
@@ -658,7 +658,7 @@ def restart(
         "--debug",
         help="Print debug logs.",
     ),
-    force: bool = typer.Option(
+    force: Optional[bool] = typer.Option(
         None,
         "-f",
         "--force",
@@ -695,8 +695,9 @@ def restart(
         print_debug_log=print_debug_log,
         force=force,
     )
-    print_info("Sleeping for 2 seconds..")
-    sleep(2)
+    if not dry_run:
+        print_info("Sleeping for 2 seconds..")
+        sleep(2)
     up(
         resource_filter=resource_filter,
         env_filter=env_filter,
@@ -755,7 +756,7 @@ def config(
     load_env(
         dotenv_dir=active_ws_config.ws_root_path,
     )
-    print_info(active_ws_config.model_dump_json(include={"ws_name", "ws_root_path"}, indent=2))
+    print_info(active_ws_config.model_dump_json(include={"ws_root_path", "ws_schema", "ws_team"}, indent=2))
 
 
 @ws_cli.command(short_help="Delete workspace record")

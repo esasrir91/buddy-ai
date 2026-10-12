@@ -11,6 +11,8 @@ class AgenticChunking(ChunkingStrategy):
     """Chunking strategy that uses an LLM to determine natural breakpoints in the text"""
 
     def __init__(self, model: Optional[Model] = None, max_chunk_size: int = 5000):
+        if max_chunk_size < 1:
+            raise ValueError("max_chunk_size must be greater than zero")
         if model is None:
             try:
                 from buddy.models.openai import OpenAIChat
@@ -41,7 +43,7 @@ class AgenticChunking(ChunkingStrategy):
             try:
                 response = self.model.response([Message(role="user", content=prompt)])
                 if response and response.content:
-                    break_point = min(int(response.content.strip()), self.max_chunk_size)
+                    break_point = max(1, min(int(response.content.strip()), self.max_chunk_size))
                 else:
                     break_point = self.max_chunk_size
             except Exception:

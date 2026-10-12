@@ -509,8 +509,25 @@ class CodeMigrationTools(Toolkit):
     ) -> str:
         """Create a custom migration rule."""
         try:
-            # Validate migration type
-            migration_type_enum = MigrationType(migration_type)
+            if not 0.0 <= confidence <= 1.0:
+                return "Confidence must be between 0.0 and 1.0"
+
+            if migration_type in self.migration_rules:
+                rule_group = migration_type
+                migration_type_enum = next(
+                    (migration for migration in MigrationType if migration.value == migration_type),
+                    MigrationType.VERSION_MIGRATION,
+                )
+            else:
+                try:
+                    migration_type_enum = MigrationType(migration_type)
+                    rule_group = "custom"
+                except ValueError:
+                    try:
+                        migration_type_enum = MigrationType[migration_type.upper()]
+                        rule_group = "custom"
+                    except KeyError:
+                        return f"Invalid migration type: {migration_type}"
 
             rule = MigrationRule(
                 name=name,
@@ -522,10 +539,10 @@ class CodeMigrationTools(Toolkit):
             )
 
             # Add to custom rules
-            if "custom" not in self.migration_rules:
-                self.migration_rules["custom"] = []
+            if rule_group not in self.migration_rules:
+                self.migration_rules[rule_group] = []
 
-            self.migration_rules["custom"].append(rule)
+            self.migration_rules[rule_group].append(rule)
 
             return f"Custom migration rule '{name}' created successfully"
 

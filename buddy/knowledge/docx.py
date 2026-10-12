@@ -1,6 +1,8 @@
 from pathlib import Path
 from typing import Any, AsyncIterator, Dict, Iterator, List, Optional, Union
 
+from pydantic import Field
+
 from buddy.document import Document
 from buddy.document.reader.docx_reader import DocxReader
 from buddy.knowledge.agent import AgentKnowledge
@@ -9,8 +11,8 @@ from buddy.utils.log import log_info, logger
 
 class DocxKnowledgeBase(AgentKnowledge):
     path: Optional[Union[str, Path, List[Dict[str, Union[str, Dict[str, Any]]]]]] = None
-    formats: List[str] = [".doc", ".docx"]
-    reader: DocxReader = DocxReader()
+    formats: List[str] = Field(default_factory=lambda: [".doc", ".docx"])
+    reader: DocxReader = Field(default_factory=DocxReader)
 
     @property
     def document_lists(self) -> Iterator[List[Document]]:
@@ -44,7 +46,8 @@ class DocxKnowledgeBase(AgentKnowledge):
 
     def _is_valid_docx(self, path: Path) -> bool:
         """Helper to check if path is a valid doc/docx file."""
-        return path.exists() and path.is_file() and path.suffix in self.formats
+        formats = {extension.lower() for extension in self.formats}
+        return path.exists() and path.is_file() and path.suffix.lower() in formats
 
     @property
     async def async_document_lists(self) -> AsyncIterator[List[Document]]:

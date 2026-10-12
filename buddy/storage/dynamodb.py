@@ -232,14 +232,13 @@ class DynamoDbStorage(Storage):
         """
         try:
             key = {"session_id": session_id}
-            if user_id is not None:
-                key["user_id"] = user_id
-
             response = self.table.get_item(Key=key)
             item = response.get("Item", None)
             if item is not None:
                 # Convert Decimal to int or float
                 item = self._deserialize_item(item)
+                if user_id is not None and item.get("user_id") != user_id:
+                    return None
                 if self.mode == "agent":
                     return AgentSession.from_dict(item)
                 elif self.mode == "team":
@@ -265,7 +264,24 @@ class DynamoDbStorage(Storage):
         """
         session_ids: List[str] = []
         try:
-            if user_id is not None:
+            if user_id is not None and entity_id is not None:
+                entity_key = {
+                    "agent": "agent_id",
+                    "team": "team_id",
+                    "workflow": "workflow_id",
+                    "workflow_v2": "workflow_id",
+                }.get(self.mode)
+                if entity_key is None:
+                    return session_ids
+                response = self.table.query(
+                    IndexName="user_id-index",
+                    KeyConditionExpression=Key("user_id").eq(user_id),
+                    FilterExpression=Key(entity_key).eq(entity_id),
+                    ProjectionExpression="session_id",
+                )
+                items = response.get("Items", [])
+                session_ids.extend([item["session_id"] for item in items if "session_id" in item])
+            elif user_id is not None:
                 # Query using user_id index
                 response = self.table.query(
                     IndexName="user_id-index",
@@ -350,13 +366,25 @@ class DynamoDbStorage(Storage):
                         ProjectionExpression="session_id, workflow_id, user_id, workflow_name, runs, workflow_data, session_data, extra_data, created_at, updated_at",
                     )
                 items = response.get("Items", [])  # type: ignore
+                if entity_id is not None:
+                    entity_key = {
+                        "agent": "agent_id",
+                        "team": "team_id",
+                        "workflow": "workflow_id",
+                        "workflow_v2": "workflow_id",
+                    }.get(self.mode)
+                    items = [item for item in items if entity_key and item.get(entity_key) == entity_id]
                 for item in items:
                     item = self._deserialize_item(item)
                     _session: Optional[Session] = None
                     if self.mode == "agent":
                         _session = AgentSession.from_dict(item)
-                    else:
-                        _session = WorkflowSession.from_dict(item)  # type: ignore
+                    elif self.mode == "team":
+                        _session = TeamSession.from_dict(item)
+                    elif self.mode == "workflow":
+                        _session = WorkflowSession.from_dict(item)
+                    elif self.mode == "workflow_v2":
+                        _session = WorkflowSessionV2.from_dict(item)
                     if _session is not None:
                         sessions.append(_session)
             elif entity_id is not None:
@@ -393,8 +421,12 @@ class DynamoDbStorage(Storage):
                     item = self._deserialize_item(item)
                     if self.mode == "agent":
                         _session = AgentSession.from_dict(item)  # type: ignore
-                    else:
+                    elif self.mode == "team":
+                        _session = TeamSession.from_dict(item)  # type: ignore
+                    elif self.mode == "workflow":
                         _session = WorkflowSession.from_dict(item)  # type: ignore
+                    elif self.mode == "workflow_v2":
+                        _session = WorkflowSessionV2.from_dict(item)  # type: ignore
                     if _session is not None:
                         sessions.append(_session)
             else:
@@ -422,8 +454,10 @@ class DynamoDbStorage(Storage):
                         _session = AgentSession.from_dict(item)  # type: ignore
                     elif self.mode == "team":
                         _session = TeamSession.from_dict(item)  # type: ignore
-                    else:
+                    elif self.mode == "workflow":
                         _session = WorkflowSession.from_dict(item)  # type: ignore
+                    elif self.mode == "workflow_v2":
+                        _session = WorkflowSessionV2.from_dict(item)  # type: ignore
                     if _session is not None:
                         sessions.append(_session)
         except Exception as e:
@@ -536,7 +570,16 @@ class DynamoDbStorage(Storage):
                         ProjectionExpression="session_id, workflow_id, user_id, workflow_name, runs, workflow_data, session_data, extra_data, created_at, updated_at",
                         Limit=limit if limit is not None else None,
                     )
-            items = response.get("Items", [])
+                if user_id is not None and entity_id is not None:
+                    entity_key = {
+                        "agent": "agent_id",
+                        "team": "team_id",
+                        "workflow": "workflow_id",
+                        "workflow_v2": "workflow_id",
+                    }.get(self.mode)
+                    items = [item for item in response.get("Items", []) if entity_key and item.get(entity_key) == entity_id]
+                else:
+                    items = response.get("Items", [])
             for item in items:
                 item = self._deserialize_item(item)
                 session: Optional[Session] = None

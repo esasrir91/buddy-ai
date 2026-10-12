@@ -355,8 +355,10 @@ class PostgresStorage(Storage):
                         return [AgentSession.from_dict(row._mapping) for row in rows]  # type: ignore
                     elif self.mode == "team":
                         return [TeamSession.from_dict(row._mapping) for row in rows]  # type: ignore
-                    else:
+                    elif self.mode == "workflow":
                         return [WorkflowSession.from_dict(row._mapping) for row in rows]  # type: ignore
+                    elif self.mode == "workflow_v2":
+                        return [WorkflowSessionV2.from_dict(row._mapping) for row in rows]  # type: ignore
                 else:
                     return []
         except Exception as e:
@@ -667,7 +669,7 @@ class PostgresStorage(Storage):
             if k in {"metadata", "table", "inspector"}:
                 continue
             # Reuse db_engine and Session without copying
-            elif k in {"db_engine", "SqlSession"}:
+            elif k in {"db_engine", "Session"}:
                 setattr(copied_obj, k, v)
             else:
                 setattr(copied_obj, k, deepcopy(v, memo))

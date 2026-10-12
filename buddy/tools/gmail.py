@@ -236,14 +236,14 @@ class GmailTools(Toolkit):
         formatted_emails = []
         for email in emails:
             formatted_email = (
-                f"From: {email['from']}\n"
-                f"Subject: {email['subject']}\n"
-                f"Date: {email['date']}\n"
-                f"Body: {email['body']}\n"
-                f"Message ID: {email['id']}\n"
-                f"In-Reply-To: {email['in-reply-to']}\n"
-                f"References: {email['references']}\n"
-                f"Thread ID: {email['thread_id']}\n"
+                f"From: {email.get('from', '')}\n"
+                f"Subject: {email.get('subject', '')}\n"
+                f"Date: {email.get('date', '')}\n"
+                f"Body: {email.get('body', '')}\n"
+                f"Message ID: {email.get('id', '')}\n"
+                f"In-Reply-To: {email.get('in-reply-to', '')}\n"
+                f"References: {email.get('references', '')}\n"
+                f"Thread ID: {email.get('thread_id', '')}\n"
                 "----------------------------------------"
             )
             formatted_emails.append(formatted_email)

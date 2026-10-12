@@ -42,17 +42,16 @@ class BuddyCliConfig:
     @user.setter
     def user(self, user: Optional[UserSchema]) -> None:
         """Sets the user"""
-        if user is not None:
-            logger.debug(f"Setting user to: {user.email}")
-            clear_user_cache = (
-                self._user is not None  # previous user is not None
-                and self._user.email != "anon"  # previous user is not anon
-                and (user.email != self._user.email or user.id_user != self._user.id_user)  # new user is different
-            )
-            self._user = user
-            if clear_user_cache:
-                self.clear_user_cache()
-            self.save_config()
+        logger.debug(f"Setting user to: {user.email if user is not None else None}")
+        clear_user_cache = (
+            self._user is not None
+            and self._user.email != "anon"
+            and (user is None or user.email != self._user.email or user.id_user != self._user.id_user)
+        )
+        self._user = user
+        if clear_user_cache:
+            self.clear_user_cache()
+        self.save_config()
 
     def clear_user_cache(self) -> None:
         """Clears the user cache"""
@@ -71,10 +70,9 @@ class BuddyCliConfig:
         return self._active_ws_dir
 
     def set_active_ws_dir(self, ws_root_path: Optional[Path]) -> None:
-        if ws_root_path is not None:
-            logger.debug(f"Setting active workspace to: {str(ws_root_path)}")
-            self._active_ws_dir = str(ws_root_path)
-            self.save_config()
+        logger.debug(f"Setting active workspace to: {str(ws_root_path) if ws_root_path is not None else None}")
+        self._active_ws_dir = str(ws_root_path) if ws_root_path is not None else None
+        self.save_config()
 
     @property
     def available_ws(self) -> List[WorkspaceConfig]:
@@ -214,6 +212,7 @@ class BuddyCliConfig:
     ######################################################
 
     def save_config(self):
+        BUDDY_cli_settings.config_file_path.parent.mkdir(parents=True, exist_ok=True)
         config_data = {
             "user": self.user.model_dump() if self.user else None,
             "active_ws_dir": self.active_ws_dir,
@@ -237,10 +236,10 @@ class BuddyCliConfig:
             new_config = cls(user_schema, active_ws_dir)
 
             # Add all the workspaces
-            for k, v in config_data.get("ws_config_map", {}).items():
+            for v in config_data.get("ws_config_map", {}).values():
                 _ws_config = WorkspaceConfig.model_validate(v)
                 if _ws_config is not None:
-                    new_config.ws_config_map[k] = _ws_config
+                    new_config.ws_config_map[str(_ws_config.ws_root_path)] = _ws_config
             return new_config
         except Exception as e:
             logger.warning(e)

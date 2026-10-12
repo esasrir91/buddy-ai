@@ -1,22 +1,29 @@
-from typing import Any, Dict, Optional
+from typing import Annotated, Any, Dict, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, StringConstraints
+
+
+Identifier = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
 class AgentSessionCreate(BaseModel):
     """Data sent to API to create an Agent Session"""
 
-    session_id: str
+    model_config = ConfigDict(extra="forbid")
+
+    session_id: Identifier
     agent_data: Optional[Dict[str, Any]] = None
 
 
 class AgentRunCreate(BaseModel):
     """Data sent to API to create an Agent Run"""
 
-    session_id: str
-    team_session_id: Optional[str] = None
-    workflow_session_id: Optional[str] = None
-    run_id: Optional[str] = None
+    model_config = ConfigDict(extra="forbid")
+
+    session_id: Identifier
+    team_session_id: Optional[Identifier] = None
+    workflow_session_id: Optional[Identifier] = None
+    run_id: Optional[Identifier] = None
     run_data: Optional[Dict[str, Any]] = None
     agent_data: Optional[Dict[str, Any]] = None
 
@@ -24,9 +31,11 @@ class AgentRunCreate(BaseModel):
 class AgentCreate(BaseModel):
     """Data sent to API to create an Agent"""
 
-    agent_id: str
-    team_id: Optional[str] = None
-    app_id: Optional[str] = None
-    workflow_id: Optional[str] = None
+    model_config = ConfigDict(extra="forbid")
+
+    agent_id: Identifier
+    team_id: Optional[Identifier] = None
+    app_id: Optional[Identifier] = None
+    workflow_id: Optional[Identifier] = None
     name: Optional[str] = None
     config: Dict[str, Any]

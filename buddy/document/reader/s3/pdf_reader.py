@@ -1,5 +1,6 @@
 import asyncio
 from io import BytesIO
+from pathlib import Path
 from typing import List
 from uuid import uuid4
 
@@ -27,14 +28,14 @@ class S3PDFReader(Reader):
 
             object_resource = s3_object.get_resource()
             object_body = object_resource.get()["Body"]
-            doc_name = s3_object.name.split("/")[-1].split(".")[0].replace("/", "_").replace(" ", "_")
+            doc_name = Path(s3_object.name).stem.replace(" ", "_")
             doc_reader = DocumentReader(BytesIO(object_body.read()))
             documents = [
                 Document(
                     name=doc_name,
                     id=str(uuid4()),
                     meta_data={"page": page_number},
-                    content=page.extract_text(),
+                    content=page.extract_text() or "",
                 )
                 for page_number, page in enumerate(doc_reader.pages, start=1)
             ]

@@ -10,75 +10,71 @@ def create_agent_session(session: AgentSessionCreate, monitor: bool = False) -> 
         return
 
     log_debug("Logging Agent Session")
-    with api.AuthenticatedClient() as api_client:
-        try:
+    try:
+        with api.AuthenticatedClient() as api_client:
             api_client.post(
                 ApiRoutes.AGENT_SESSION_CREATE if monitor else ApiRoutes.AGENT_TELEMETRY_SESSION_CREATE,
                 json={"session": session.model_dump(exclude_none=True)},
-            )
-        except Exception as e:
-            log_debug(f"Could not create Agent session: {e}")
-    return
+            ).raise_for_status()
+    except Exception as e:
+        log_debug(f"Could not create Agent session: {e}")
 
 
 def create_agent_run(run: AgentRunCreate, monitor: bool = False) -> None:
     if not BUDDY_cli_settings.api_enabled:
         return
 
-    with api.AuthenticatedClient() as api_client:
-        try:
+    try:
+        with api.AuthenticatedClient() as api_client:
             api_client.post(
                 ApiRoutes.AGENT_RUN_CREATE if monitor else ApiRoutes.AGENT_TELEMETRY_RUN_CREATE,
                 json={"run": run.model_dump(exclude_none=True)},
-            )
-        except Exception as e:
-            log_debug(f"Could not create Agent run: {e}")
-    return
+            ).raise_for_status()
+    except Exception as e:
+        log_debug(f"Could not create Agent run: {e}")
 
 
 async def acreate_agent_run(run: AgentRunCreate, monitor: bool = False) -> None:
     if not BUDDY_cli_settings.api_enabled:
         return
 
-    async with api.AuthenticatedAsyncClient() as api_client:
-        try:
-            await api_client.post(
+    try:
+        async with api.AuthenticatedAsyncClient() as api_client:
+            response = await api_client.post(
                 ApiRoutes.AGENT_RUN_CREATE if monitor else ApiRoutes.AGENT_TELEMETRY_RUN_CREATE,
                 json={"run": run.model_dump(exclude_none=True)},
             )
-        except Exception as e:
-            log_debug(f"Could not create Agent run: {e}")
-    return
+            response.raise_for_status()
+    except Exception as e:
+        log_debug(f"Could not create Agent run: {e}")
 
 
 def create_agent(agent: AgentCreate) -> None:
     if not BUDDY_cli_settings.api_enabled:
         return
 
-    with api.AuthenticatedClient() as api_client:
-        try:
+    try:
+        with api.AuthenticatedClient() as api_client:
             api_client.post(
                 ApiRoutes.AGENT_CREATE,
                 json=agent.model_dump(exclude_none=True),
-            )
+            ).raise_for_status()
 
             log_debug(f"Created Agent on Platform. ID: {agent.agent_id}")
-        except Exception as e:
-            log_debug(f"Could not create Agent: {e}")
-    return
+    except Exception as e:
+        log_debug(f"Could not create Agent: {e}")
 
 
 async def acreate_agent(agent: AgentCreate) -> None:
     if not BUDDY_cli_settings.api_enabled:
         return
 
-    async with api.AuthenticatedAsyncClient() as api_client:
-        try:
+    try:
+        async with api.AuthenticatedAsyncClient() as api_client:
             await api_client.post(
                 ApiRoutes.AGENT_CREATE,
                 json=agent.model_dump(exclude_none=True),
-            )
+            ).raise_for_status()
             log_debug(f"Created Agent on Platform. ID: {agent.agent_id}")
-        except Exception as e:
-            log_debug(f"Could not create Agent: {e}")
-    return
+    except Exception as e:
+        log_debug(f"Could not create Agent: {e}")

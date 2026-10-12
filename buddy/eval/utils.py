@@ -54,7 +54,7 @@ async def async_log_eval_run(
     evaluated_entity_name: Optional[str] = None,
     team_id: Optional[str] = None,
 ) -> None:
-    """Asycn call to the API to create an evaluation run."""
+    """Async call to the API to create an evaluation run."""
 
     try:
         await async_create_eval_run(
@@ -79,7 +79,7 @@ def store_result_in_file(
     result: Union["AccuracyResult", "PerformanceResult", "ReliabilityResult"],
     eval_id: Optional[str] = None,
     name: Optional[str] = None,
-):
+) -> None:
     """Store the given result in the given file path"""
     try:
         import json
@@ -87,6 +87,6 @@ def store_result_in_file(
         fn_path = Path(file_path.format(name=name, eval_id=eval_id))
         if not fn_path.parent.exists():
             fn_path.parent.mkdir(parents=True, exist_ok=True)
-        fn_path.write_text(json.dumps(asdict(result), indent=4))
+        fn_path.write_text(json.dumps(asdict(result), indent=4), encoding="utf-8")
     except Exception as e:
         logger.warning(f"Failed to save result to file: {e}")

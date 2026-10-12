@@ -18,6 +18,7 @@ class MicrosoftTeamsTools(Toolkit):
         client_id: Optional[str] = None,
         client_secret: Optional[str] = None,
         webhook_url: Optional[str] = None,
+        timeout: float = 30.0,
         **kwargs,
     ):
         """Initialize Microsoft Teams Tools.
@@ -32,6 +33,7 @@ class MicrosoftTeamsTools(Toolkit):
         self.client_id = client_id
         self.client_secret = client_secret
         self.webhook_url = webhook_url
+        self.timeout = timeout
         self.access_token = None
         self.token_expiry = None
 
@@ -63,7 +65,7 @@ class MicrosoftTeamsTools(Toolkit):
                 "scope": "https://graph.microsoft.com/.default",
             }
 
-            response = requests.post(url, data=data)
+            response = requests.post(url, data=data, timeout=self.timeout)
             response.raise_for_status()
 
             token_data = response.json()
@@ -94,7 +96,7 @@ class MicrosoftTeamsTools(Toolkit):
             if title:
                 payload["title"] = title
 
-            response = requests.post(self.webhook_url, json=payload)
+            response = requests.post(self.webhook_url, json=payload, timeout=self.timeout)
             response.raise_for_status()
 
             return json.dumps({"success": "Message sent successfully"})
@@ -121,7 +123,7 @@ class MicrosoftTeamsTools(Toolkit):
             if actions:
                 card["potentialAction"] = actions
 
-            response = requests.post(self.webhook_url, json=card)
+            response = requests.post(self.webhook_url, json=card, timeout=self.timeout)
             response.raise_for_status()
 
             return json.dumps({"success": "Card message sent successfully"})
@@ -145,6 +147,8 @@ class MicrosoftTeamsTools(Toolkit):
         token = self._get_access_token()
         if not token:
             return json.dumps({"error": "Authentication failed"})
+        if duration_minutes <= 0:
+            return json.dumps({"error": "duration_minutes must be greater than 0"})
 
         try:
             headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
@@ -165,7 +169,9 @@ class MicrosoftTeamsTools(Toolkit):
             if attendees:
                 meeting_data["attendees"] = [{"emailAddress": {"address": email}} for email in attendees]
 
-            response = requests.post("https://graph.microsoft.com/v1.0/me/events", headers=headers, json=meeting_data)
+            response = requests.post(
+                "https://graph.microsoft.com/v1.0/me/events", headers=headers, json=meeting_data, timeout=self.timeout
+            )
             response.raise_for_status()
 
             return json.dumps(response.json())
@@ -184,7 +190,9 @@ class MicrosoftTeamsTools(Toolkit):
 
         try:
             headers = {"Authorization": f"Bearer {token}"}
-            response = requests.get("https://graph.microsoft.com/v1.0/me/joinedTeams", headers=headers)
+            response = requests.get(
+                "https://graph.microsoft.com/v1.0/me/joinedTeams", headers=headers, timeout=self.timeout
+            )
             response.raise_for_status()
 
             return json.dumps(response.json())
@@ -206,7 +214,9 @@ class MicrosoftTeamsTools(Toolkit):
 
         try:
             headers = {"Authorization": f"Bearer {token}"}
-            response = requests.get(f"https://graph.microsoft.com/v1.0/teams/{team_id}/channels", headers=headers)
+            response = requests.get(
+                f"https://graph.microsoft.com/v1.0/teams/{team_id}/channels", headers=headers, timeout=self.timeout
+            )
             response.raise_for_status()
 
             return json.dumps(response.json())

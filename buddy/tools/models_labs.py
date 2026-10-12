@@ -38,6 +38,7 @@ class ModelsLabTools(Toolkit):
         add_to_eta: int = 15,
         max_wait_time: int = 60,
         file_type: FileType = FileType.MP4,
+        timeout: float = 30.0,
         **kwargs,
     ):
         file_type_str = file_type.value.upper()
@@ -46,6 +47,7 @@ class ModelsLabTools(Toolkit):
         self.wait_for_completion = wait_for_completion
         self.add_to_eta = add_to_eta
         self.max_wait_time = max_wait_time
+        self.timeout = timeout
         self.file_type = file_type
         self.api_key = api_key or getenv("MODELS_LAB_API_KEY")
 
@@ -108,6 +110,7 @@ class ModelsLabTools(Toolkit):
                     f"{self.fetch_url}/{media_id}",
                     json={"key": self.api_key},
                     headers={"Content-Type": "application/json"},
+                    timeout=self.timeout,
                 )
                 fetch_result = fetch_response.json()
 
@@ -131,7 +134,7 @@ class ModelsLabTools(Toolkit):
             headers = {"Content-Type": "application/json"}
 
             log_debug(f"Generating {self.file_type.value} for prompt: {prompt}")
-            response = requests.post(self.url, data=payload, headers=headers)
+            response = requests.post(self.url, data=payload, headers=headers, timeout=self.timeout)
             response.raise_for_status()
 
             result = response.json()
@@ -147,7 +150,7 @@ class ModelsLabTools(Toolkit):
                 return f"Error: {result['error']}"
 
             eta = result.get("eta")
-            url_links = result.get("future_links")
+            url_links = result.get("future_links") or []
             media_id = str(uuid4())
 
             for media_url in url_links:

@@ -1,19 +1,25 @@
+from __future__ import annotations
+
 from dataclasses import asdict, dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from pydantic import BaseModel
 
 from buddy.media import AudioArtifact, AudioResponse, ImageArtifact, VideoArtifact
-from buddy.models.message import Citations, Message, MessageReferences
-from buddy.models.response import ToolExecution
-from buddy.reasoning.step import ReasoningStep
 from buddy.utils.log import log_error
+
+if TYPE_CHECKING:
+    from buddy.models.message import Citations, Message, MessageReferences
+    from buddy.models.response import ToolExecution
+    from buddy.reasoning.step import ReasoningStep
 
 
 @dataclass
 class BaseRunResponseEvent:
     def to_dict(self) -> Dict[str, Any]:
+        from buddy.models.response import ToolExecution
+
         _dict = {
             k: v
             for k, v in asdict(self).items()
@@ -115,6 +121,10 @@ class BaseRunResponseEvent:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]):
+        from buddy.models.message import Message, MessageReferences
+        from buddy.models.response import ToolExecution
+
+        data = data.copy()
         tool = data.pop("tool", None)
         if tool:
             data["tool"] = ToolExecution.from_dict(tool)
@@ -166,6 +176,8 @@ class RunResponseExtraData:
     reasoning_messages: Optional[List[Message]] = None
 
     def to_dict(self) -> Dict[str, Any]:
+        from buddy.models.message import MessageReferences
+
         _dict = {}
         if self.add_messages is not None:
             _dict["add_messages"] = [m.to_dict() for m in self.add_messages]
@@ -179,6 +191,10 @@ class RunResponseExtraData:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "RunResponseExtraData":
+        from buddy.models.message import Message, MessageReferences
+        from buddy.reasoning.step import ReasoningStep
+
+        data = data.copy()
         add_messages = data.pop("add_messages", None)
         if add_messages is not None:
             add_messages = [Message.model_validate(message) for message in add_messages]

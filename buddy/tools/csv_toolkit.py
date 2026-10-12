@@ -77,7 +77,9 @@ class CsvTools(Toolkit):
 
             # Read the csv file
             csv_data = []
-            _row_limit = row_limit or self.row_limit
+            _row_limit = self.row_limit if row_limit is None else row_limit
+            if _row_limit is not None and _row_limit < 0:
+                return "Error reading csv: row_limit must be greater than or equal to 0"
             with open(str(file_path), newline="") as csvfile:
                 reader = csv.DictReader(csvfile)
                 if _row_limit is not None:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from collections import ChainMap, defaultdict, deque
 from dataclasses import asdict, dataclass
 from os import getenv
@@ -296,6 +297,7 @@ class Agent:
     # * OpenAI: server-side caching is automatic (no flag needed), but enabling
     #   this surfaces cache hit/miss token counts in RunResponse metrics.
     cache_prompt: bool = False
+    parallel_tool_calls: Optional[bool] = None
 
     # --- Token Budget ---
     # Attach a TokenBudgetConfig to warn when approaching the context limit and
@@ -304,6 +306,10 @@ class Agent:
     #   from buddy.models.token_budget import TokenBudgetConfig
     #   Agent(token_budget=TokenBudgetConfig(max_input_tokens=100_000))
     token_budget: Optional[Any] = None  # type: Optional[TokenBudgetConfig]
+    advisor: bool = False
+    advisor_config: Optional[Dict[str, Any]] = None
+    judge: bool = False
+    judge_config: Optional[Dict[str, Any]] = None
 
     # --- Agent Streaming ---
     # Stream the response from the Agent
@@ -441,12 +447,18 @@ class Agent:
         use_json_mode: bool = False,
         save_response_to_file: Optional[str] = None,
         cache_prompt: bool = False,
+        parallel_tool_calls: Optional[bool] = None,
         token_budget: Optional[Any] = None,
+        advisor: bool = False,
+        advisor_config: Optional[Dict[str, Any]] = None,
+        judge: bool = False,
+        judge_config: Optional[Dict[str, Any]] = None,
         stream: Optional[bool] = None,
         stream_intermediate_steps: bool = False,
         store_events: bool = False,
         events_to_skip: Optional[List[RunEvent]] = None,
         team: Optional[List[Agent]] = None,
+        subagents: Optional[List[Agent]] = None,
         team_data: Optional[Dict[str, Any]] = None,
         role: Optional[str] = None,
         respond_directly: bool = False,
@@ -459,11 +471,11 @@ class Agent:
     ):
         self.model = model
         self.name = name
-        self.agent_id = agent_id
+        self.agent_id = agent_id or str(uuid4())
         self.introduction = introduction
         self.user_id = user_id
 
-        self.session_id = session_id
+        self.session_id = session_id or str(uuid4())
         self.session_name = session_name
         self.session_state = session_state
         self.search_previous_sessions_history = search_previous_sessions_history
@@ -550,7 +562,12 @@ class Agent:
         self.use_json_mode = use_json_mode
         self.save_response_to_file = save_response_to_file
         self.cache_prompt = cache_prompt
+        self.parallel_tool_calls = parallel_tool_calls
         self.token_budget = token_budget
+        self.advisor = advisor
+        self.advisor_config = advisor_config or {}
+        self.judge = judge
+        self.judge_config = judge_config or {}
 
         self.stream = stream
         self.stream_intermediate_steps = stream_intermediate_steps
@@ -561,7 +578,11 @@ class Agent:
         if self.events_to_skip is None:
             self.events_to_skip = [RunEvent.run_response_content]
 
-        self.team = team
+        members = []
+        for member in (team or []) + (subagents or []):
+            if not any(existing is member for existing in members):
+                members.append(member)
+        self.team = members or None
 
         self.team_data = team_data
         self.role = role
@@ -649,6 +670,7 @@ class Agent:
 
             log_info("Setting default model to OpenAI Chat")
             self.model = OpenAIChat(id="gpt-4o")
+        self._configure_model(self.model)
 
     def set_defaults(self) -> None:
         if self.add_memory_references is None:
@@ -660,19 +682,180 @@ class Agent:
         if self.num_history_responses is not None:
             self.num_history_runs = self.num_history_responses
 
-        # Propagate cache_prompt to the model so the provider can activate
-        # its native caching mechanism (e.g. Anthropic cache_control blocks).
-        if self.cache_prompt and self.model is not None and not self.model.cache_prompt:
-            self.model.cache_prompt = True
-            # Trigger the model's __post_init__ logic to build prompt_cache_config
-            if self.model.prompt_cache_config is None:
-                from buddy.models.cache import PromptCacheConfig
+        for model in (self.model, self.reasoning_model, self.parser_model, self.output_model):
+            self._configure_model(model)
 
-                self.model.prompt_cache_config = PromptCacheConfig(enabled=True)
+        for config in (self.advisor_config, self.judge_config):
+            if config:
+                self._configure_model(config.get("model"))
+
+        for member in self.team or []:
+            if self.cache_prompt:
+                member.cache_prompt = True
+            if self.parallel_tool_calls is not None:
+                member.parallel_tool_calls = self.parallel_tool_calls
+            for model in (member.model, member.reasoning_model, member.parser_model, member.output_model):
+                member._configure_model(model)
 
         # Propagate token_budget to the model
         if self.token_budget is not None and self.model is not None and self.model.token_budget is None:
             self.model.token_budget = self.token_budget
+
+    def _configure_model(self, model: Optional[Model]) -> None:
+        if model is None:
+            return
+        if self.cache_prompt and not model.cache_prompt:
+            model.cache_prompt = True
+            if model.prompt_cache_config is None:
+                from buddy.models.cache import PromptCacheConfig
+
+                model.prompt_cache_config = PromptCacheConfig(enabled=True)
+        if self.parallel_tool_calls is not None:
+            model.parallel_tool_calls = self.parallel_tool_calls
+
+    def _review_model(self, config: Dict[str, Any]) -> Optional[Model]:
+        model = config.get("model") or self.model
+        self._configure_model(model)
+        return model
+
+    @staticmethod
+    def _review_input(run_messages: RunMessages) -> str:
+        return "\n".join(
+            f"{message.role}: {message.get_content_string()}"
+            for message in run_messages.messages
+            if message.role in ("user", "assistant") and message.get_content_string()
+        )
+
+    @staticmethod
+    def _model_text(response: ModelResponse) -> str:
+        content = response.parsed if response.parsed is not None else response.content
+        if isinstance(content, str):
+            return content.strip()
+        return json.dumps(content, default=str) if content is not None else ""
+
+    def _apply_advisor(self, run_messages: RunMessages) -> Optional[str]:
+        if not self.advisor:
+            return None
+        config = self.advisor_config or {}
+        model = self._review_model(config)
+        if model is None:
+            return None
+        try:
+            response = model.response(
+                messages=[
+                    Message(
+                        role="system",
+                        content=config.get(
+                            "instructions", "Give concise, actionable advice for answering the user's request."
+                        ),
+                    ),
+                    Message(role="user", content=self._review_input(run_messages)),
+                ]
+            )
+            advice = self._model_text(response)
+            if advice:
+                index = next(
+                    (i for i, message in enumerate(run_messages.messages) if message.role != "system"),
+                    len(run_messages.messages),
+                )
+                run_messages.messages.insert(index, Message(role="system", content=f"Advisor guidance: {advice}"))
+                return advice
+        except Exception as error:
+            log_warning(f"Agent advisor failed; continuing without advice: {error}")
+        return None
+
+    async def _aapply_advisor(self, run_messages: RunMessages) -> Optional[str]:
+        if not self.advisor:
+            return None
+        config = self.advisor_config or {}
+        model = self._review_model(config)
+        if model is None:
+            return None
+        try:
+            response = await model.aresponse(
+                messages=[
+                    Message(
+                        role="system",
+                        content=config.get(
+                            "instructions", "Give concise, actionable advice for answering the user's request."
+                        ),
+                    ),
+                    Message(role="user", content=self._review_input(run_messages)),
+                ]
+            )
+            advice = self._model_text(response)
+            if advice:
+                index = next(
+                    (i for i, message in enumerate(run_messages.messages) if message.role != "system"),
+                    len(run_messages.messages),
+                )
+                run_messages.messages.insert(index, Message(role="system", content=f"Advisor guidance: {advice}"))
+                return advice
+        except Exception as error:
+            log_warning(f"Agent advisor failed; continuing without advice: {error}")
+        return None
+
+    def _apply_judge(self, run_response: RunResponse, run_messages: RunMessages) -> None:
+        if not self.judge:
+            return
+        config = self.judge_config or {}
+        model = self._review_model(config)
+        if model is None:
+            return
+        try:
+            prompt = (
+                "Evaluate the assistant response against the request and criteria. Return JSON with boolean 'passed', "
+                "optional numeric 'score', and string 'feedback'.\n"
+                f"Criteria: {config.get('criteria', self.success_criteria or self.expected_output or 'Answer accurately and completely.')}\n"
+                f"Conversation:\n{self._review_input(run_messages)}\n"
+                f"Response:\n{run_response.get_content_as_string()}"
+            )
+            result = self._model_text(model.response(messages=[Message(role="user", content=prompt)]))
+            try:
+                parsed = json.loads(result.strip().strip("`").removeprefix("json").strip())
+            except (json.JSONDecodeError, AttributeError):
+                parsed = {"passed": None, "feedback": result}
+            if not isinstance(parsed, dict):
+                parsed = {"passed": None, "feedback": result}
+            run_response.judge_result = {
+                "passed": parsed.get("passed", parsed.get("pass")),
+                "score": parsed.get("score"),
+                "feedback": parsed.get("feedback", ""),
+            }
+        except Exception as error:
+            log_warning(f"Agent judge failed; returning the original response: {error}")
+            run_response.judge_result = {"error": str(error)}
+
+    async def _aapply_judge(self, run_response: RunResponse, run_messages: RunMessages) -> None:
+        if not self.judge:
+            return
+        config = self.judge_config or {}
+        model = self._review_model(config)
+        if model is None:
+            return
+        try:
+            prompt = (
+                "Evaluate the assistant response against the request and criteria. Return JSON with boolean 'passed', "
+                "optional numeric 'score', and string 'feedback'.\n"
+                f"Criteria: {config.get('criteria', self.success_criteria or self.expected_output or 'Answer accurately and completely.')}\n"
+                f"Conversation:\n{self._review_input(run_messages)}\n"
+                f"Response:\n{run_response.get_content_as_string()}"
+            )
+            result = self._model_text(await model.aresponse(messages=[Message(role="user", content=prompt)]))
+            try:
+                parsed = json.loads(result.strip().strip("`").removeprefix("json").strip())
+            except (json.JSONDecodeError, AttributeError):
+                parsed = {"passed": None, "feedback": result}
+            if not isinstance(parsed, dict):
+                parsed = {"passed": None, "feedback": result}
+            run_response.judge_result = {
+                "passed": parsed.get("passed", parsed.get("pass")),
+                "score": parsed.get("score"),
+                "feedback": parsed.get("feedback", ""),
+            }
+        except Exception as error:
+            log_warning(f"Agent judge failed; returning the original response: {error}")
+            run_response.judge_result = {"error": str(error)}
 
     def reset_session(self) -> None:
         self.session_state = None
@@ -718,6 +901,14 @@ class Agent:
             self._formatter = SafeFormatter()
 
     @property
+    def subagents(self) -> Optional[List[Agent]]:
+        return self.team
+
+    @subagents.setter
+    def subagents(self, agents: Optional[List[Agent]]) -> None:
+        self.team = agents
+
+    @property
     def has_team(self) -> bool:
         return self.team is not None and len(self.team) > 0
 
@@ -754,7 +945,7 @@ class Agent:
             if self.team_session_state is not None:
                 self.team_session_state["current_session_id"] = session_id
             if self.workflow_session_state is not None:
-                self.workflow_session_state["current_user_id"] = user_id
+                self.workflow_session_state["current_session_id"] = session_id
 
     def _initialize_session(
         self,
@@ -819,6 +1010,7 @@ class Agent:
 
         # 1. Reason about the task
         self._handle_reasoning(run_messages=run_messages)
+        run_response.advisor_feedback = self._apply_advisor(run_messages)
 
         # Get the index of the last "user" message in messages_for_run
         # We track this so we can add messages after this index to the RunResponse and Memory
@@ -841,6 +1033,7 @@ class Agent:
         self._parse_response_with_parser_model(model_response, run_messages)
 
         self._update_run_response(model_response=model_response, run_response=run_response, run_messages=run_messages)
+        self._apply_judge(run_response, run_messages)
 
         # 3. Add the run to memory
         self._add_run_to_memory(
@@ -913,6 +1106,7 @@ class Agent:
 
         # 1. Reason about the task if reasoning is enabled
         yield from self._handle_reasoning_stream(run_messages=run_messages)
+        run_response.advisor_feedback = self._apply_advisor(run_messages)
 
         # Get the index of the last "user" message in messages_for_run
         # We track this, so we can add messages after this index to the RunResponse and Memory
@@ -954,6 +1148,7 @@ class Agent:
         yield from self._parse_response_with_parser_model_stream(
             run_response=run_response, stream_intermediate_steps=stream_intermediate_steps
         )
+        self._apply_judge(run_response, run_messages)
 
         # 3. Add the run to memory
         self._add_run_to_memory(
@@ -1261,6 +1456,7 @@ class Agent:
         self.model = cast(Model, self.model)
         # 1. Reason about the task if reasoning is enabled
         await self._ahandle_reasoning(run_messages=run_messages)
+        run_response.advisor_feedback = await self._aapply_advisor(run_messages)
 
         # Get the index of the last "user" message in messages_for_run
         # We track this so we can add messages after this index to the RunResponse and Memory
@@ -1283,6 +1479,7 @@ class Agent:
         await self._aparse_response_with_parser_model(model_response=model_response, run_messages=run_messages)
 
         self._update_run_response(model_response=model_response, run_response=run_response, run_messages=run_messages)
+        await self._aapply_judge(run_response, run_messages)
 
         # 3. Add the run to memory
         self._add_run_to_memory(
@@ -1354,6 +1551,7 @@ class Agent:
         # 1. Reason about the task if reasoning is enabled
         async for item in self._ahandle_reasoning_stream(run_messages=run_messages):
             yield item
+        run_response.advisor_feedback = await self._aapply_advisor(run_messages)
 
         # Get the index of the last "user" message in messages_for_run
         # We track this so we can add messages after this index to the RunResponse and Memory
@@ -1399,6 +1597,7 @@ class Agent:
             run_response=run_response, stream_intermediate_steps=stream_intermediate_steps
         ):
             yield event
+        await self._aapply_judge(run_response, run_messages)
 
         # 3. Add the run to memory
         self._add_run_to_memory(
@@ -1615,7 +1814,7 @@ class Agent:
                         delay = self.delay_between_retries
                     import time
 
-                    time.sleep(delay)
+                    await asyncio.sleep(delay)
             except KeyboardInterrupt:
                 self.run_response = self.create_run_response(
                     run_state=RunStatus.cancelled, content="Operation cancelled by user", run_response=run_response
@@ -2158,7 +2357,7 @@ class Agent:
         # Run can be continued from previous run response or from passed run_response context
         if run_response is not None:
             # The run is continued from a provided run_response. This contains the updated tools.
-            messages = run_response.messages or []
+            messages = list(run_response.messages or [])
             self.run_response = run_response
             self.run_id = run_response.run_id
         elif run_id is not None:
@@ -2175,7 +2374,7 @@ class Agent:
             if run_response is None:
                 raise RuntimeError(f"No runs found for run ID {run_id}")
             run_response.tools = updated_tools
-            messages = run_response.messages or []
+            messages = list(run_response.messages or [])
             self.run_response = run_response
             self.run_id = run_id
         else:
@@ -2268,7 +2467,7 @@ class Agent:
                         delay = self.delay_between_retries
                     import time
 
-                    time.sleep(delay)
+                    await asyncio.sleep(delay)
             except KeyboardInterrupt:
                 if stream:
                     return async_generator_wrapper(
@@ -2541,10 +2740,9 @@ class Agent:
         self.model = cast(Model, self.model)
 
         if tool.result is not None:
-            for msg in run_messages.messages:
-                # Skip if the message is already in the run_messages
-                if msg.tool_call_id == tool.tool_call_id:
-                    break
+            if any(msg.tool_call_id == tool.tool_call_id for msg in run_messages.messages):
+                tool.external_execution_required = False
+                return
 
             run_messages.messages.append(
                 Message(
@@ -3975,7 +4173,7 @@ class Agent:
         if self.workflow_session_state is not None and len(self.workflow_session_state) > 0:
             session_data["workflow_session_state"] = self.workflow_session_state
         if self.session_metrics is not None:
-            session_data["session_metrics"] = asdict(self.session_metrics) if self.session_metrics is not None else None
+            session_data["session_metrics"] = self.session_metrics.to_dict()
         if self.team_data is not None:
             session_data["team_data"] = self.team_data
         if self.images is not None:
@@ -5140,20 +5338,27 @@ class Agent:
     def get_messages_for_output_model(self, messages: List[Message]) -> List[Message]:
         """Get the messages for the output model."""
 
+        from copy import deepcopy
+
+        output_messages = deepcopy(messages)
+
         if self.output_model_prompt is not None:
             system_message_exists = False
-            for message in messages:
+            for message in output_messages:
                 if message.role == "system":
                     system_message_exists = True
                     message.content = self.output_model_prompt
                     break
             if not system_message_exists:
-                messages.insert(0, Message(role="system", content=self.output_model_prompt))
+                output_messages.insert(0, Message(role="system", content=self.output_model_prompt))
 
         # Remove the last assistant message from the messages list
-        messages.pop(-1)
+        for index in range(len(output_messages) - 1, -1, -1):
+            if output_messages[index].role == "assistant":
+                output_messages.pop(index)
+                break
 
-        return messages
+        return output_messages
 
     def get_session_summary(self, session_id: Optional[str] = None, user_id: Optional[str] = None):
         """Get the session summary for the given session ID and user ID."""
@@ -6030,12 +6235,13 @@ class Agent:
             # Ensure the reasoning model and agent do not show tool calls
             reasoning_agent.show_tool_calls = False
 
-            step_count = 1
+            step_count = 0
             next_action = NextAction.CONTINUE
             reasoning_messages: List[Message] = []
             all_reasoning_steps: List[ReasoningStep] = []
             log_debug("Starting Reasoning", center=True, symbol="=")
             while next_action == NextAction.CONTINUE and step_count < self.reasoning_max_steps:
+                step_count += 1
                 log_debug(f"Step {step_count}", center=True, symbol="=")
                 try:
                     # Run the reasoning agent
@@ -6088,8 +6294,6 @@ class Agent:
                 except Exception as e:
                     log_error(f"Reasoning error: {e}")
                     break
-
-                step_count += 1
 
             log_debug(f"Total Reasoning steps: {len(all_reasoning_steps)}")
             log_debug("Reasoning finished", center=True, symbol="=")
@@ -6181,17 +6385,17 @@ class Agent:
                         reasoning_agent=reasoning_agent, messages=run_messages.get_input_messages()
                     )
                 elif is_ollama:
-                    from buddy.reasoning.ollama import get_ollama_reasoning
+                    from buddy.reasoning.ollama import aget_ollama_reasoning
 
                     log_debug("Starting Ollama Reasoning", center=True, symbol="=")
-                    reasoning_message = get_ollama_reasoning(
+                    reasoning_message = await aget_ollama_reasoning(
                         reasoning_agent=reasoning_agent, messages=run_messages.get_input_messages()
                     )
                 elif is_ai_foundry:
-                    from buddy.reasoning.azure_ai_foundry import get_ai_foundry_reasoning
+                    from buddy.reasoning.azure_ai_foundry import aget_ai_foundry_reasoning
 
                     log_debug("Starting Azure AI Foundry Reasoning", center=True, symbol="=")
-                    reasoning_message = get_ai_foundry_reasoning(
+                    reasoning_message = await aget_ai_foundry_reasoning(
                         reasoning_agent=reasoning_agent, messages=run_messages.get_input_messages()
                     )
 
@@ -6260,7 +6464,7 @@ class Agent:
             # Ensure the reasoning model and agent do not show tool calls
             reasoning_agent.show_tool_calls = False
 
-            step_count = 1
+            step_count = 0
             next_action = NextAction.CONTINUE
             reasoning_messages: List[Message] = []
             all_reasoning_steps: List[ReasoningStep] = []

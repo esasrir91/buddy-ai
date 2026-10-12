@@ -282,7 +282,9 @@ class PlaywrightTools(Toolkit):
             selector = self._get_selector(locator_type, locator_value)
             if "Error:" in selector:
                 return selector
-            wait_timeout = timeout or self.timeout
+            wait_timeout = self.timeout if timeout is None else timeout
+            if wait_timeout < 0:
+                return "Error: timeout must be greater than or equal to 0"
             self._page.wait_for_selector(selector, timeout=wait_timeout)
             return f"Element appeared: {locator_type}='{locator_value}'"
         except Exception as e:
@@ -336,6 +338,9 @@ class PlaywrightTools(Toolkit):
     def scroll_page(self, direction: str = "down", pixels: int = 500) -> str:
         """Scroll the page."""
         try:
+            if pixels < 0:
+                return "Error: pixels must be greater than or equal to 0"
+
             self._ensure_browser()
             script_map = {
                 "down": f"window.scrollBy(0, {pixels})",

@@ -1,4 +1,6 @@
+import ast
 import hashlib
+import json
 import multiprocessing as mp
 import os
 import sqlite3
@@ -11,6 +13,7 @@ from pathlib import Path
 from typing import Any, AsyncIterator, Dict, Iterator, List, Optional, Tuple, Union
 
 import numpy as np
+from pydantic import Field
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity as sklearn_cosine_similarity
 
@@ -102,7 +105,7 @@ class irag(AgentKnowledge):
     file_path: Optional[Union[str, Path]] = None  # Explicit file path option
     dir_path: Optional[Union[str, Path]] = None  # Explicit directory path option
     db_path: str = "knowledge_database.db"
-    formats: List[str] = []
+    formats: List[str] = Field(default_factory=list)
     table_name: str = "documents"
     metadata_table_name: str = "document_metadata"
     ontology_table_name: str = "ontology_terms"
@@ -117,7 +120,7 @@ class irag(AgentKnowledge):
     # Efficient cosine similarity
     tfidf_vectorizer: Optional[Any] = None
     document_vectors: Optional[np.ndarray] = None
-    document_ids: List[str] = []
+    document_ids: List[str] = Field(default_factory=list)
 
     def __init__(
         self,
@@ -464,7 +467,7 @@ class irag(AgentKnowledge):
             # Emergency fallback - try basic search only
             try:
                 return self.search_basic(query, num_documents or 5)
-            except:
+            except Exception:
                 return []
 
     def search_comprehensive(
@@ -561,7 +564,7 @@ class irag(AgentKnowledge):
                 accuracy_str = doc.meta_data.get("match_accuracy", "0%")
                 try:
                     accuracy = float(accuracy_str.replace("%", ""))
-                except:
+                except Exception:
                     accuracy = 0
 
                 cosine_sim = doc.meta_data.get("cosine_similarity", 0)
@@ -581,7 +584,7 @@ class irag(AgentKnowledge):
             # Ultimate fallback - return everything we can find
             try:
                 return self.search(query, num_documents=_num_documents, accuracy=0.0)
-            except:
+            except Exception:
                 return []
 
     def _extract_query_ontology(self, query: str) -> List[str]:
@@ -689,7 +692,7 @@ class irag(AgentKnowledge):
                         import json
 
                         metadata = json.loads(metadata_str)
-                    except:
+                    except Exception:
                         pass
 
                 # Calculate accuracy as percentage of matched terms
@@ -957,13 +960,13 @@ class irag(AgentKnowledge):
         if not metadata_str:
             return {}
         try:
-            import json
-
-            return json.loads(metadata_str)
-        except:
+            parsed = json.loads(metadata_str)
+            return parsed if isinstance(parsed, dict) else {}
+        except (TypeError, ValueError, json.JSONDecodeError):
             try:
-                return eval(metadata_str)
-            except:
+                parsed = ast.literal_eval(metadata_str)
+                return parsed if isinstance(parsed, dict) else {}
+            except (SyntaxError, ValueError, TypeError):
                 return {}
 
     def debug_search(self, query: str) -> None:
@@ -1132,7 +1135,8 @@ class irag(AgentKnowledge):
             return False
         if not self.formats:
             return True
-        return path.suffix in self.formats
+        formats = {extension.lower() for extension in self.formats}
+        return path.suffix.lower() in formats
 
     @staticmethod
     def _extract_ontology_batch(doc_batch: List[Tuple[str, str]]) -> List[Tuple[str, List[Tuple[str, str, List[str]]]]]:
@@ -1597,10 +1601,7 @@ class irag(AgentKnowledge):
 
                 if result:
                     doc_id, filepath, filename, content, meta_data_str = result
-                    try:
-                        meta_data = eval(meta_data_str) if meta_data_str else {}
-                    except:
-                        meta_data = {}
+                    meta_data = self._parse_metadata(meta_data_str)
 
                     # Add similarity score to metadata
                     meta_data["cosine_similarity"] = similarity
@@ -1841,8 +1842,12 @@ class irag(AgentKnowledge):
             cursor.execute(f"DELETE FROM {self.table_name}")
             cursor.execute(f"DELETE FROM {self.metadata_table_name}")
             cursor.execute(f"DELETE FROM {self.ontology_table_name}")
+            cursor.execute(f"DELETE FROM {self.ontology_table_name}_mapping")
             conn.commit()
             conn.close()
+            self.tfidf_vectorizer = None
+            self.document_vectors = None
+            self.document_ids = []
 
         num_documents = 0
         for document_list in self.document_lists:

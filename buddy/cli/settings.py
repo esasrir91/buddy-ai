@@ -14,11 +14,12 @@ BUDDY_CLI_CONFIG_DIR: Path = Path.home().resolve().joinpath(".config").joinpath(
 
 def get_app_version() -> str:
     """Get the app version, handling both installed packages and local development."""
-    try:
-        return metadata.version("buddy")
-    except metadata.PackageNotFoundError:
-        # Fallback for local development when buddy is not installed as a package
-        return "dev-local"
+    for distribution_name in ("buddy-ai", "buddy"):
+        try:
+            return metadata.version(distribution_name)
+        except metadata.PackageNotFoundError:
+            continue
+    return "dev-local"
 
 
 class BuddyCliSettings(BaseSettings):
@@ -43,18 +44,18 @@ class BuddyCliSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="BUDDY_")
 
     @field_validator("api_runtime", mode="before")
-    def validate_runtime_env(cls, v):
+    def validate_runtime_env(cls, v: str) -> str:
         """Validate api_runtime."""
 
         valid_api_runtimes = ["dev", "stg", "prd"]
-        if v.lower() not in valid_api_runtimes:
+        if not isinstance(v, str) or v.lower() not in valid_api_runtimes:
             raise ValueError(f"Invalid api_runtime: {v}")
 
         return v.lower()
 
     @field_validator("cli_auth_url", mode="before")
     def update_cli_auth_url(cls, v, info: ValidationInfo):
-        api_runtime = info.data["api_runtime"]
+        api_runtime = info.data.get("api_runtime", "prd")
         if api_runtime == "dev":
             return "http://localhost:3000/cli-auth"
         elif api_runtime == "stg":
@@ -64,7 +65,7 @@ class BuddyCliSettings(BaseSettings):
 
     @field_validator("signin_url", mode="before")
     def update_signin_url(cls, v, info: ValidationInfo):
-        api_runtime = info.data["api_runtime"]
+        api_runtime = info.data.get("api_runtime", "prd")
         if api_runtime == "dev":
             return "http://localhost:3000/login"
         elif api_runtime == "stg":
@@ -74,7 +75,7 @@ class BuddyCliSettings(BaseSettings):
 
     @field_validator("playground_url", mode="before")
     def update_playground_url(cls, v, info: ValidationInfo):
-        api_runtime = info.data["api_runtime"]
+        api_runtime = info.data.get("api_runtime", "prd")
         if api_runtime == "dev":
             return "http://localhost:3000/playground"
         elif api_runtime == "stg":
@@ -84,7 +85,7 @@ class BuddyCliSettings(BaseSettings):
 
     @field_validator("api_url", mode="before")
     def update_api_url(cls, v, info: ValidationInfo):
-        api_runtime = info.data["api_runtime"]
+        api_runtime = info.data.get("api_runtime", "prd")
         if api_runtime == "dev":
             from os import getenv
 
@@ -96,10 +97,10 @@ class BuddyCliSettings(BaseSettings):
         else:
             return "https://api.buddy.com"
 
-    def gate_alpha_feature(self):
+    def gate_alpha_feature(self) -> None:
         if not self.alpha_features:
             logger.error("This is an Alpha feature not for general use.\nPlease message the Buddy team for access.")
-            exit(1)
+            raise SystemExit(1)
 
 
 BUDDY_cli_settings = BuddyCliSettings()

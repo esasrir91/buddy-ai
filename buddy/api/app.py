@@ -9,27 +9,28 @@ def create_app(app: AppCreate) -> None:
     if not BUDDY_cli_settings.api_enabled:
         return
 
-    with api.AuthenticatedClient() as api_client:
-        try:
+    try:
+        with api.AuthenticatedClient() as api_client:
             api_client.post(
                 ApiRoutes.APP_CREATE,
                 json=app.model_dump(exclude_none=True),
-            )
+            ).raise_for_status()
 
-        except Exception as e:
-            log_debug(f"Could not create App: {e}")
+    except Exception as e:
+        log_debug(f"Could not create App: {e}")
 
 
 async def acreate_app(app: AppCreate) -> None:
     if not BUDDY_cli_settings.api_enabled:
         return
 
-    async with api.AuthenticatedAsyncClient() as api_client:
-        try:
-            await api_client.post(
+    try:
+        async with api.AuthenticatedAsyncClient() as api_client:
+            response = await api_client.post(
                 ApiRoutes.APP_CREATE,
                 json=app.model_dump(exclude_none=True),
             )
+            response.raise_for_status()
 
-        except Exception as e:
-            log_debug(f"Could not create App: {e}")
+    except Exception as e:
+        log_debug(f"Could not create App: {e}")

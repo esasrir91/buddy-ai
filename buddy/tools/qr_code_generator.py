@@ -12,8 +12,10 @@ except ImportError:
 
 
 class QRCodeTools(Toolkit):
-    def __init__(self, **kwargs):
+    def __init__(self, timeout: float = 30.0, **kwargs):
         """Initialize QR Code Tools."""
+
+        self.timeout = timeout
 
         tools: List[Any] = [
             self.generate_qr_code,
@@ -38,10 +40,18 @@ class QRCodeTools(Toolkit):
             str: QR code generation result or error message
         """
         try:
+            width, separator, height = size.partition("x")
+            if not width.isdigit() or separator != "x" or not height.isdigit() or int(width) <= 0 or int(height) <= 0:
+                return json.dumps({"error": "size must be a positive WIDTHxHEIGHT value"})
+            if format.lower() not in {"png", "jpg", "svg"}:
+                return json.dumps({"error": "format must be png, jpg, or svg"})
+            if error_correction.upper() not in {"L", "M", "Q", "H"}:
+                return json.dumps({"error": "error_correction must be L, M, Q, or H"})
+
             # Using qr-server.com API for QR code generation
             params = {"size": size, "data": data, "format": format, "ecc": error_correction}
 
-            response = requests.get("https://api.qrserver.com/v1/create-qr-code/", params=params)
+            response = requests.get("https://api.qrserver.com/v1/create-qr-code/", params=params, timeout=self.timeout)
             response.raise_for_status()
 
             return json.dumps(
@@ -70,7 +80,7 @@ class QRCodeTools(Toolkit):
         try:
             params = {"size": size, "data": data, "logo": logo_url}
 
-            response = requests.get("https://api.qrserver.com/v1/create-qr-code/", params=params)
+            response = requests.get("https://api.qrserver.com/v1/create-qr-code/", params=params, timeout=self.timeout)
             response.raise_for_status()
 
             return json.dumps(
@@ -96,7 +106,7 @@ class QRCodeTools(Toolkit):
         try:
             params = {"fileurl": image_url}
 
-            response = requests.get("https://api.qrserver.com/v1/read-qr-code/", params=params)
+            response = requests.get("https://api.qrserver.com/v1/read-qr-code/", params=params, timeout=self.timeout)
             response.raise_for_status()
 
             result = response.json()

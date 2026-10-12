@@ -104,7 +104,7 @@ def initialize_buddy(reset: bool = False, login: bool = False) -> Optional[Buddy
                 raise Exception(f"Something went wrong, please delete {BUDDY_CLI_CONFIG_DIR} and run again")
             BUDDY_CLI_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     else:
-        BUDDY_CLI_CONFIG_DIR.mkdir(parents=True)
+        BUDDY_CLI_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
         logger.debug(f"Created {BUDDY_CLI_CONFIG_DIR}")
 
     # Confirm BUDDY_CLI_CONFIG_DIR exists otherwise we should return
@@ -123,7 +123,7 @@ def initialize_buddy(reset: bool = False, login: bool = False) -> Optional[Buddy
     if login:
         print_info("")
         authenticate_user()
-    else:
+    elif BUDDY_config.user is None:
         anon_user = create_anon_user()
         if anon_user is not None and BUDDY_config is not None:
             BUDDY_config.user = anon_user

@@ -1,5 +1,7 @@
 from typing import Any, AsyncIterator, Dict, Iterator, List, Optional
 
+from pydantic import Field
+
 from buddy.document import Document
 from buddy.document.reader.gcs.pdf_reader import GCSPDFReader
 from buddy.knowledge.gcs.base import GCSKnowledgeBase
@@ -7,18 +9,18 @@ from buddy.utils.log import log_debug, log_info
 
 
 class GCSPDFKnowledgeBase(GCSKnowledgeBase):
-    reader: GCSPDFReader = GCSPDFReader()
+    reader: GCSPDFReader = Field(default_factory=GCSPDFReader)
 
     @property
     def document_lists(self) -> Iterator[List[Document]]:
         for blob in self.gcs_blobs:
-            if blob.name.endswith(".pdf"):
+            if blob.name.lower().endswith(".pdf"):
                 yield self.reader.read(blob=blob)
 
     @property
     async def async_document_lists(self) -> AsyncIterator[List[Document]]:
         for blob in self.gcs_blobs:
-            if blob.name.endswith(".pdf"):
+            if blob.name.lower().endswith(".pdf"):
                 yield await self.reader.async_read(blob=blob)
 
     def load(

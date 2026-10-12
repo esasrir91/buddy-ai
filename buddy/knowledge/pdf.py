@@ -18,9 +18,9 @@ class PDFConfig(TypedDict, total=False):
 
 class PDFKnowledgeBase(AgentKnowledge):
     path: Optional[Union[str, Path, List[PDFConfig]]] = None
-    formats: List[str] = [".pdf"]
+    formats: List[str] = Field(default_factory=lambda: [".pdf"])
     exclude_files: List[str] = Field(default_factory=list)
-    reader: Union[PDFReader, PDFImageReader] = PDFReader()
+    reader: Union[PDFReader, PDFImageReader] = Field(default_factory=PDFReader)
 
     @property
     def document_lists(self) -> Iterator[List[Document]]:
@@ -48,9 +48,10 @@ class PDFKnowledgeBase(AgentKnowledge):
         else:
             _pdf_path = Path(self.path)
             if _pdf_path.is_dir():
-                for _pdf in _pdf_path.glob("**/*.pdf"):
+                for _pdf in _pdf_path.glob("**/*"):
                     if _pdf.name not in self.exclude_files:
-                        yield self.reader.read(pdf=_pdf)
+                        if self._is_valid_pdf(_pdf):
+                            yield self.reader.read(pdf=_pdf)
             elif self._is_valid_pdf(_pdf_path):
                 yield self.reader.read(pdf=_pdf_path)
 
@@ -62,7 +63,8 @@ class PDFKnowledgeBase(AgentKnowledge):
         if not path.is_file():
             log_error(f"Path is not a file: {path}")
             return False
-        if path.suffix != ".pdf":
+        formats = {extension.lower() for extension in self.formats}
+        if path.suffix.lower() not in formats:
             log_error(f"File is not a PDF: {path}")
             return False
         if path.name in self.exclude_files:
@@ -97,9 +99,10 @@ class PDFKnowledgeBase(AgentKnowledge):
             # Handle single path
             _pdf_path = Path(self.path)
             if _pdf_path.is_dir():
-                for _pdf in _pdf_path.glob("**/*.pdf"):
+                for _pdf in _pdf_path.glob("**/*"):
                     if _pdf.name not in self.exclude_files:
-                        yield await self.reader.async_read(pdf=_pdf)
+                        if self._is_valid_pdf(_pdf):
+                            yield await self.reader.async_read(pdf=_pdf)
             elif self._is_valid_pdf(_pdf_path):
                 yield await self.reader.async_read(pdf=_pdf_path)
 

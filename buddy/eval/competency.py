@@ -89,6 +89,16 @@ class CompetencyResult:
         return self.dependency.get((a, b), self.dependency.get((b, a), 1.0))
 
     def compute(self) -> None:
+        self.vertical = 0.0
+        self.crosswise = 0.0
+        self.integrated = 0.0
+        self.integrated_max = 0.0
+        self.index = 0.0
+        self.total_deficit = 0.0
+        self.deficits = {}
+        self.centrality = {}
+        self.priority = {}
+
         names = [d.name for d in self.domains]
         values = [max(0.0, min(self.base, float(d.competency))) for d in self.domains]
         n = len(values)
@@ -239,6 +249,9 @@ class DeficitDrivenController:
         self.action = action
 
     def recommend(self, result: CompetencyResult) -> List[CompetencyAction]:
+        if self.max_actions is not None and self.max_actions <= 0:
+            return []
+
         actions: List[CompetencyAction] = []
         for name, priority in result.ranked_priorities():
             deficit = result.deficits.get(name, 0.0)

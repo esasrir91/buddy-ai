@@ -32,6 +32,7 @@ class OpenWeatherTools(Toolkit):
         forecast: bool = True,
         air_pollution: bool = True,
         geocoding: bool = True,
+        timeout: float = 30.0,
         **kwargs,
     ):
         self.api_key = api_key or getenv("OPENWEATHER_API_KEY")
@@ -40,7 +41,10 @@ class OpenWeatherTools(Toolkit):
                 "OpenWeather API key is required. Provide it as an argument or set the OPENWEATHER_API_KEY environment variable."
             )
 
+        if units not in {"standard", "metric", "imperial"}:
+            raise ValueError("units must be one of: standard, metric, imperial")
         self.units = units
+        self.timeout = timeout
         self.base_url = "https://api.openweathermap.org/data/2.5"
         self.geo_url = "https://api.openweathermap.org/geo/1.0"
 
@@ -68,7 +72,7 @@ class OpenWeatherTools(Toolkit):
         """
         try:
             params["appid"] = self.api_key
-            response = requests.get(url, params=params)
+            response = requests.get(url, params=params, timeout=self.timeout)
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
@@ -86,6 +90,9 @@ class OpenWeatherTools(Toolkit):
             str: JSON string containing location data with coordinates.
         """
         try:
+            if limit <= 0:
+                return json.dumps({"error": "limit must be greater than 0"})
+
             log_info(f"Geocoding location: {location}")
             url = f"{self.geo_url}/direct"
             params = {"q": location, "limit": limit}
@@ -154,6 +161,9 @@ class OpenWeatherTools(Toolkit):
             str: JSON string containing forecast data.
         """
         try:
+            if days <= 0:
+                return json.dumps({"error": "days must be greater than 0"})
+
             log_info(f"Getting {days}-day forecast for: {location}")
 
             # First geocode the location to get coordinates

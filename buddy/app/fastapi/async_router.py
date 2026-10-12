@@ -147,16 +147,20 @@ def get_async_router(
                 try:
                     base64_image = process_image(file)
                     base64_images.append(base64_image)
+                except HTTPException:
+                    raise
                 except Exception as e:
                     logger.error(f"Error processing image {file.filename}: {e}")
-                    continue
+                    raise HTTPException(status_code=400, detail=f"Could not process file {file.filename}") from e
             elif file.content_type in ["audio/wav", "audio/mp3", "audio/mpeg"]:
                 try:
                     base64_audio = process_audio(file)
                     base64_audios.append(base64_audio)
+                except HTTPException:
+                    raise
                 except Exception as e:
                     logger.error(f"Error processing audio {file.filename}: {e}")
-                    continue
+                    raise HTTPException(status_code=400, detail=f"Could not process file {file.filename}") from e
             elif file.content_type in [
                 "video/x-flv",
                 "video/quicktime",
@@ -173,9 +177,11 @@ def get_async_router(
                 try:
                     base64_video = process_video(file)
                     base64_videos.append(base64_video)
+                except HTTPException:
+                    raise
                 except Exception as e:
                     logger.error(f"Error processing video {file.filename}: {e}")
-                    continue
+                    raise HTTPException(status_code=400, detail=f"Could not process file {file.filename}") from e
             else:
                 # Check for knowledge base before processing documents
                 if agent.knowledge is None:
@@ -318,20 +324,20 @@ def get_async_router(
         if not agent_id and not team_id and not workflow_id:
             raise HTTPException(status_code=400, detail="One of agent_id, team_id or workflow_id must be provided")
 
-        if agent_id and agents:
-            agent = next((agent for agent in agents if agent.agent_id == agent_id), None)
+        if agent_id:
+            agent = next((agent for agent in (agents or []) if agent.agent_id == agent_id), None)
             if agent is None:
                 raise HTTPException(status_code=404, detail="Agent not found")
             if not message:
                 raise HTTPException(status_code=400, detail="Message is required")
-        if team_id and teams:
-            team = next((team for team in teams if team.team_id == team_id), None)
+        if team_id:
+            team = next((team for team in (teams or []) if team.team_id == team_id), None)
             if team is None:
                 raise HTTPException(status_code=404, detail="Team not found")
             if not message:
                 raise HTTPException(status_code=400, detail="Message is required")
-        if workflow_id and workflows:
-            workflow = next((workflow for workflow in workflows if workflow.workflow_id == workflow_id), None)
+        if workflow_id:
+            workflow = next((workflow for workflow in (workflows or []) if workflow.workflow_id == workflow_id), None)
             if workflow is None:
                 raise HTTPException(status_code=404, detail="Workflow not found")
             if not workflow_input:

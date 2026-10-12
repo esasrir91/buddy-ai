@@ -13,10 +13,12 @@ def create_eval_run(eval_run: EvalRunCreate) -> None:
     log_debug("Calling the API to create an evaluation run")
     with api.AuthenticatedClient() as api_client:
         try:
-            api_client.post(ApiRoutes.EVAL_RUN_CREATE, json={"eval_run": eval_run.model_dump(exclude_none=True)})
+            api_client.post(
+                ApiRoutes.EVAL_RUN_CREATE,
+                json={"eval_run": eval_run.model_dump(exclude_none=True)},
+            ).raise_for_status()
         except Exception as e:
             log_debug(f"Could not create evaluation run: {e}")
-    return
 
 
 async def async_create_eval_run(eval_run: EvalRunCreate) -> None:
@@ -27,7 +29,10 @@ async def async_create_eval_run(eval_run: EvalRunCreate) -> None:
     log_debug("Calling the API to create an evaluation run")
     async with api.AuthenticatedAsyncClient() as api_client:
         try:
-            await api_client.post(ApiRoutes.EVAL_RUN_CREATE, json={"eval_run": eval_run.model_dump(exclude_none=True)})
+            response = await api_client.post(
+                ApiRoutes.EVAL_RUN_CREATE,
+                json={"eval_run": eval_run.model_dump(exclude_none=True)},
+            )
+            response.raise_for_status()
         except Exception as e:
             log_debug(f"Could not create evaluation run: {e}")
-    return

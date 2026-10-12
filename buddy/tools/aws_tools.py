@@ -194,7 +194,7 @@ class AWSTools(Toolkit):
         try:
             lambda_client = self._get_boto3_client("lambda")
 
-            invoke_payload = json.dumps(payload or {})
+            invoke_payload = json.dumps(payload or {}).encode("utf-8")
             response = lambda_client.invoke(FunctionName=function_name, Payload=invoke_payload)
 
             response_payload = response["Payload"].read().decode("utf-8")

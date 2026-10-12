@@ -71,6 +71,13 @@ class MLXTranscribeTools(Toolkit):
 
         super().__init__(name="mlx_transcribe", tools=tools, **kwargs)
 
+    def _resolve_audio_path(self, file_name: str) -> Path:
+        base_path = self.base_dir.resolve()
+        audio_path = (base_path / file_name).resolve()
+        if audio_path != base_path and base_path not in audio_path.parents:
+            raise ValueError(f"Path escapes base directory: {file_name}")
+        return audio_path
+
     def transcribe(self, file_name: str) -> str:
         """
         Transcribe uses Apple's MLX Whisper model.
@@ -82,10 +89,11 @@ class MLXTranscribeTools(Toolkit):
             str: The transcribed text or an error message if the transcription fails.
         """
         try:
-            audio_file_path = str(self.base_dir.joinpath(file_name))
-            if audio_file_path is None:
-                return "No audio file path provided"
+            audio_path = self._resolve_audio_path(file_name)
+            if not audio_path.is_file():
+                return f"Audio file not found: {file_name}"
 
+            audio_file_path = str(audio_path)
             log_info(f"Transcribing audio file {audio_file_path}")
             transcription_kwargs: Dict[str, Any] = {
                 "path_or_hf_repo": self.path_or_hf_repo,

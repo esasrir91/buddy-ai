@@ -1,16 +1,18 @@
 from typing import Iterator, List
 
+from pydantic import Field
+
 from buddy.document import Document
 from buddy.knowledge.agent import AgentKnowledge
 
 try:
-    import wikipedia  # noqa: F401
+    import wikipedia
 except ImportError:
-    raise ImportError("The `wikipedia` package is not installed. Please install it via `pip install wikipedia`.")
+    wikipedia = None  # type: ignore[assignment]
 
 
 class WikipediaKnowledgeBase(AgentKnowledge):
-    topics: List[str] = []
+    topics: List[str] = Field(default_factory=list)
     auto_suggest: bool = True
 
     @property
@@ -21,6 +23,9 @@ class WikipediaKnowledgeBase(AgentKnowledge):
         Returns:
             Iterator[List[Document]]: Iterator yielding list of documents
         """
+
+        if wikipedia is None:
+            raise ImportError("The `wikipedia` package is not installed. Please install it via `pip install wikipedia`.")
 
         for topic in self.topics:
             yield [

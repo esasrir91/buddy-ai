@@ -1,3 +1,4 @@
+import json
 from os import getenv
 from typing import Any, List, Optional
 
@@ -18,6 +19,7 @@ class LinearTools(Toolkit):
         get_user_assigned_issues: bool = True,
         get_workflow_issues: bool = True,
         get_high_priority_issues: bool = True,
+        timeout: float = 30.0,
         **kwargs,
     ):
         self.api_token = getenv("LINEAR_API_KEY")
@@ -27,6 +29,7 @@ class LinearTools(Toolkit):
             logger.error(api_error_message)
 
         self.endpoint = "https://api.linear.app/graphql"
+        self.timeout = timeout
         self.headers = {"Authorization": f"{self.api_token}"}
 
         tools: List[Any] = []
@@ -53,7 +56,12 @@ class LinearTools(Toolkit):
         """Helper method to execute GraphQL queries with optional variables."""
 
         try:
-            response = requests.post(self.endpoint, json={"query": query, "variables": variables}, headers=self.headers)
+            response = requests.post(
+                self.endpoint,
+                json={"query": query, "variables": variables},
+                headers=self.headers,
+                timeout=self.timeout,
+            )
             response.raise_for_status()
 
             data = response.json()
@@ -103,7 +111,7 @@ class LinearTools(Toolkit):
                 log_info(
                     f"Retrieved authenticated user details with name: {user['name']}, ID: {user['id']}, Email: {user['email']}"
                 )
-                return str(user)
+                return json.dumps(user)
             else:
                 logger.error("Failed to retrieve the current user details")
                 return None
@@ -141,7 +149,7 @@ class LinearTools(Toolkit):
             if response.get("teams"):
                 teams = response["teams"]["nodes"]
                 log_info(f"Retrieved authenticated team details: {teams}")
-                return str(teams)
+                return json.dumps(teams)
             else:
                 logger.error("Failed to retrieve the current user details")
                 return None
@@ -181,7 +189,7 @@ class LinearTools(Toolkit):
             if response.get("issue"):
                 issue = response["issue"]
                 log_info(f"Issue '{issue['title']}' retrieved successfully with ID {issue['id']}.")
-                return str(issue)
+                return json.dumps(issue)
             else:
                 logger.error(f"Failed to retrieve issue with ID {issue_id}.")
                 return None
@@ -248,7 +256,7 @@ class LinearTools(Toolkit):
             if response["issueCreate"]["success"]:
                 issue = response["issueCreate"]["issue"]
                 log_info(f"Issue '{issue['title']}' created successfully with ID {issue['id']}")
-                return str(issue)
+                return json.dumps(issue)
             else:
                 logger.error("Issue creation failed.")
                 return None
@@ -299,7 +307,7 @@ class LinearTools(Toolkit):
             if response["issueUpdate"]["success"]:
                 issue = response["issueUpdate"]["issue"]
                 log_info(f"Issue ID {issue_id} updated successfully.")
-                return str(issue)
+                return json.dumps(issue)
             else:
                 logger.error(f"Failed to update issue ID {issue_id}. Success flag was false.")
                 return None
@@ -347,7 +355,7 @@ class LinearTools(Toolkit):
                 user = response["user"]
                 issues = user["assignedIssues"]["nodes"]
                 log_info(f"Retrieved {len(issues)} issues assigned to user '{user['name']}' (ID: {user['id']}).")
-                return str(issues)
+                return json.dumps(issues)
             else:
                 logger.error("Failed to retrieve user or issues.")
                 return None
@@ -390,7 +398,7 @@ class LinearTools(Toolkit):
             if response.get("workflowState"):
                 issues = response["workflowState"]["issues"]["nodes"]
                 log_info(f"Retrieved {len(issues)} issues in workflow state ID {workflow_id}.")
-                return str(issues)
+                return json.dumps(issues)
             else:
                 logger.error("Failed to retrieve issues for the specified workflow state.")
                 return None
@@ -431,7 +439,7 @@ class LinearTools(Toolkit):
             if response.get("issues"):
                 high_priority_issues = response["issues"]["nodes"]
                 log_info(f"Retrieved {len(high_priority_issues)} high-priority issues.")
-                return str(high_priority_issues)
+                return json.dumps(high_priority_issues)
             else:
                 logger.error("Failed to retrieve high-priority issues.")
                 return None

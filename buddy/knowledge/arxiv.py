@@ -1,13 +1,15 @@
 from typing import AsyncIterator, Iterator, List
 
+from pydantic import Field
+
 from buddy.document import Document
 from buddy.document.reader.arxiv_reader import ArxivReader
 from buddy.knowledge.agent import AgentKnowledge
 
 
 class ArxivKnowledgeBase(AgentKnowledge):
-    queries: List[str] = []
-    reader: ArxivReader = ArxivReader()
+    queries: List[str] = Field(default_factory=list)
+    reader: ArxivReader = Field(default_factory=ArxivReader)
 
     @property
     def document_lists(self) -> Iterator[List[Document]]:

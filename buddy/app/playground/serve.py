@@ -36,7 +36,7 @@ def serve_playground_app(
 
     logger.info(f"Starting playground on {scheme}://{host}:{port}")
     # Encode the full endpoint (host:port)
-    encoded_endpoint = quote(f"{host}:{port}")
+    encoded_endpoint = quote(f"{host}:{port}{prefix}")
 
     # Create a panel with the playground URL
     url = f"{BUDDY_cli_settings.playground_url}?endpoint={encoded_endpoint}"

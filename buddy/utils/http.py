@@ -1,7 +1,6 @@
 import asyncio
 import logging
 from time import sleep
-from typing import Optional
 
 import httpx
 
@@ -15,7 +14,7 @@ def fetch_with_retry(
     url: str,
     max_retries: int = DEFAULT_MAX_RETRIES,
     backoff_factor: int = DEFAULT_BACKOFF_FACTOR,
-    proxy: Optional[str] = None,
+    proxy: str | None = None,
 ) -> httpx.Response:
     """Synchronous HTTP GET with retry logic."""
 
@@ -40,10 +39,10 @@ def fetch_with_retry(
 
 async def async_fetch_with_retry(
     url: str,
-    client: Optional[httpx.AsyncClient] = None,
+    client: httpx.AsyncClient | None = None,
     max_retries: int = DEFAULT_MAX_RETRIES,
     backoff_factor: int = DEFAULT_BACKOFF_FACTOR,
-    proxy: Optional[str] = None,
+    proxy: str | None = None,
 ) -> httpx.Response:
     """Asynchronous HTTP GET with retry logic."""
 

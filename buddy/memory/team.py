@@ -29,7 +29,7 @@ class TeamRun:
         response = self.response.to_dict() if self.response else None
         return {
             "message": message,
-            "member_responses": member_responses,
+            "member_runs": member_responses,
             "response": response,
         }
 
@@ -191,14 +191,16 @@ class TeamMemory:
             # Update the system message in memory if content has changed
             if system_message_index is not None:
                 if (
-                    self.messages[system_message_index].content != message.content
+                    message is not None
+                    and self.messages[system_message_index].content != message.content
                     and self.update_system_message_on_change
                 ):
                     log_info("Updating system message in memory with new content")
                     self.messages[system_message_index] = message
             else:
                 # Add the system message to the messages list
-                self.messages.insert(0, message)
+                if message is not None:
+                    self.messages.insert(0, message)
 
     def add_messages(self, messages: List[Message]) -> None:
         """Add a list of messages to the messages list."""

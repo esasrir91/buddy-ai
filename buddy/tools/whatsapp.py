@@ -19,6 +19,8 @@ class WhatsAppTools(Toolkit):
         version: str = "v22.0",
         recipient_waid: Optional[str] = None,
         async_mode: bool = False,
+        timeout: float = 30.0,
+        **kwargs,
     ):
         """Initialize WhatsApp toolkit.
 
@@ -50,6 +52,7 @@ class WhatsAppTools(Toolkit):
         # API version and mode
         self.version = version or os.getenv("WHATSAPP_VERSION") or os.getenv("WHATSAPP_VERSION", "v22.0")
         self.async_mode = async_mode
+        self.timeout = timeout
 
         tools: List[Any] = []
         if self.async_mode:
@@ -59,7 +62,7 @@ class WhatsAppTools(Toolkit):
             tools.append(self.send_text_message_sync)
             tools.append(self.send_template_message_sync)
 
-        super().__init__(name="whatsapp", tools=tools)
+        super().__init__(name="whatsapp", tools=tools, **kwargs)
 
     def _get_headers(self) -> Dict[str, str]:
         """Get headers for API requests."""
@@ -83,7 +86,7 @@ class WhatsAppTools(Toolkit):
 
         logger.debug(f"Sending WhatsApp request to URL: {url}")
 
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.post(url, headers=headers, json=data)
 
             response.raise_for_status()
@@ -102,7 +105,7 @@ class WhatsAppTools(Toolkit):
         headers = self._get_headers()
 
         logger.debug(f"Sending WhatsApp request to URL: {url}")
-        response = httpx.post(url, headers=headers, json=data)
+        response = httpx.post(url, headers=headers, json=data, timeout=self.timeout)
 
         response.raise_for_status()
         return response.json()
@@ -124,6 +127,8 @@ class WhatsAppTools(Toolkit):
         Returns:
             Success message with message ID
         """
+        if not text.strip():
+            return "Error: text cannot be empty"
         # Use default recipient if none provided
         if recipient is None:
             if not self.default_recipient:
@@ -172,6 +177,8 @@ class WhatsAppTools(Toolkit):
         Returns:
             Success message with message ID
         """
+        if not template_name.strip():
+            return "Error: template_name cannot be empty"
         # Use default recipient if none provided
         if recipient is None:
             if not self.default_recipient:
@@ -215,6 +222,8 @@ class WhatsAppTools(Toolkit):
         Returns:
             Success message with message ID
         """
+        if not text.strip():
+            return "Error: text cannot be empty"
         # Use default recipient if none provided
         if recipient is None:
             if not self.default_recipient:
@@ -263,6 +272,8 @@ class WhatsAppTools(Toolkit):
         Returns:
             Success message with message ID
         """
+        if not template_name.strip():
+            return "Error: template_name cannot be empty"
         # Use default recipient if none provided
         if recipient is None:
             if not self.default_recipient:

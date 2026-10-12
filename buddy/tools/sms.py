@@ -21,6 +21,7 @@ class SMSTools(Toolkit):
         aws_access_key: Optional[str] = None,
         aws_secret_key: Optional[str] = None,
         aws_region: str = "us-east-1",
+        timeout: float = 30.0,
         **kwargs,
     ):
         """Initialize SMS Tools.
@@ -34,6 +35,8 @@ class SMSTools(Toolkit):
             aws_secret_key (Optional[str]): AWS secret key for SNS
             aws_region (str): AWS region for SNS
         """
+        if provider not in {"twilio", "aws_sns"}:
+            raise ValueError("provider must be twilio or aws_sns")
         self.provider = provider
         self.account_sid = account_sid or getenv("TWILIO_ACCOUNT_SID")
         self.auth_token = auth_token or getenv("TWILIO_AUTH_TOKEN")
@@ -41,6 +44,7 @@ class SMSTools(Toolkit):
         self.aws_access_key = aws_access_key or getenv("AWS_ACCESS_KEY_ID")
         self.aws_secret_key = aws_secret_key or getenv("AWS_SECRET_ACCESS_KEY")
         self.aws_region = aws_region
+        self.timeout = timeout
 
         tools: List[Any] = [
             self.send_sms,
@@ -77,7 +81,7 @@ class SMSTools(Toolkit):
 
             data = {"From": self.from_number, "To": to_number, "Body": message}
 
-            response = requests.post(url, data=data, auth=(self.account_sid, self.auth_token))
+            response = requests.post(url, data=data, auth=(self.account_sid, self.auth_token), timeout=self.timeout)
             response.raise_for_status()
 
             return json.dumps(response.json())
@@ -123,6 +127,9 @@ class SMSTools(Toolkit):
         """
         results = []
 
+        if not phone_numbers:
+            return json.dumps({"error": "At least one phone number is required"})
+
         for number in phone_numbers:
             result = self.send_sms(number, message)
             results.append({"number": number, "result": json.loads(result)})
@@ -147,7 +154,7 @@ class SMSTools(Toolkit):
         try:
             url = f"https://api.twilio.com/2010-04-01/Accounts/{self.account_sid}/Messages/{message_sid}.json"
 
-            response = requests.get(url, auth=(self.account_sid, self.auth_token))
+            response = requests.get(url, auth=(self.account_sid, self.auth_token), timeout=self.timeout)
             response.raise_for_status()
 
             return json.dumps(response.json())

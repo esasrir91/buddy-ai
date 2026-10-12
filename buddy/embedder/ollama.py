@@ -64,8 +64,8 @@ class OllamaEmbedder(Embedder):
             kwargs["options"] = self.options
 
         response = self.client.embed(input=text, model=self.id, **kwargs)
-        if response and "embeddings" in response:
-            embeddings = response["embeddings"]
+        embeddings = response.get("embeddings") if isinstance(response, dict) else getattr(response, "embeddings", None)
+        if embeddings is not None:
             if isinstance(embeddings, list) and len(embeddings) > 0 and isinstance(embeddings[0], list):
                 return {"embeddings": embeddings[0]}  # Use the first element
             elif isinstance(embeddings, list) and all(isinstance(x, (int, float)) for x in embeddings):

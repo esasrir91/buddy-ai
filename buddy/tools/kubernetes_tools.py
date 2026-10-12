@@ -226,6 +226,9 @@ class KubernetesTools(Toolkit):
             str: Scaling result or error message
         """
         try:
+            if replicas < 0:
+                return json.dumps({"error": "replicas must be greater than or equal to 0"})
+
             k8s_client = self._get_k8s_client()
             apps_v1 = k8s_client.AppsV1Api()
 
@@ -259,6 +262,9 @@ class KubernetesTools(Toolkit):
             results = []
             for obj in yaml_objects:
                 if obj is None:
+                    continue
+                if not isinstance(obj, dict):
+                    results.append("Failed to apply YAML: each document must be a mapping")
                     continue
 
                 # Set namespace if not specified and needed
@@ -294,6 +300,9 @@ class KubernetesTools(Toolkit):
             str: Pod logs or error message
         """
         try:
+            if tail_lines < 0:
+                return json.dumps({"error": "tail_lines must be greater than or equal to 0"})
+
             k8s_client = self._get_k8s_client()
             v1 = k8s_client.CoreV1Api()
 

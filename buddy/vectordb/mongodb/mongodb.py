@@ -454,7 +454,8 @@ class MongoDb(VectorDb):
         try:
             collection = self._get_collection()
             # Use content hash as document ID
-            doc_id = md5(document.content.encode("utf-8")).hexdigest()
+            cleaned_content = document.content.replace("\x00", "\ufffd")
+            doc_id = md5(cleaned_content.encode("utf-8")).hexdigest()
             result = collection.find_one({"_id": doc_id})
             exists = result is not None
             log_debug(f"Document {'exists' if exists else 'does not exist'}: {doc_id}")
@@ -516,7 +517,7 @@ class MongoDb(VectorDb):
 
         for document in documents:
             try:
-                doc_data = self.prepare_doc(document)
+                doc_data = self.prepare_doc(document, filters)
                 collection.update_one(
                     {"_id": doc_data["_id"]},
                     {"$set": doc_data},
@@ -953,7 +954,8 @@ class MongoDb(VectorDb):
         """Check if a document exists asynchronously."""
         try:
             collection = await self._get_async_collection()
-            doc_id = md5(document.content.encode("utf-8")).hexdigest()
+            cleaned_content = document.content.replace("\x00", "\ufffd")
+            doc_id = md5(cleaned_content.encode("utf-8")).hexdigest()
             result = await collection.find_one({"_id": doc_id})
             exists = result is not None
             log_debug(f"Document {'exists' if exists else 'does not exist'}: {doc_id}")
@@ -993,7 +995,7 @@ class MongoDb(VectorDb):
 
         for document in documents:
             try:
-                doc_data = self.prepare_doc(document)
+                doc_data = self.prepare_doc(document, filters)
                 await collection.update_one(
                     {"_id": doc_data["_id"]},
                     {"$set": doc_data},

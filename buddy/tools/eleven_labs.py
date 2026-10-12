@@ -1,3 +1,4 @@
+import json
 from base64 import b64encode
 from io import BytesIO
 from os import getenv, path
@@ -84,7 +85,7 @@ class ElevenLabsTools(Toolkit):
                     }
                 )
 
-            return str(response)
+            return json.dumps(response)
 
         except Exception as e:
             logger.error(f"Failed to fetch voices: {e}")
@@ -122,6 +123,15 @@ class ElevenLabsTools(Toolkit):
 
         return base64_audio
 
+    def _mime_type(self) -> str:
+        if self.output_format.startswith("mp3"):
+            return "audio/mpeg"
+        if self.output_format.startswith("pcm"):
+            return "audio/L16"
+        if self.output_format.startswith("ulaw"):
+            return "audio/basic"
+        return "application/octet-stream"
+
     def generate_sound_effect(
         self, agent: Union[Agent, Team], prompt: str, duration_seconds: Optional[float] = None
     ) -> str:
@@ -146,7 +156,7 @@ class ElevenLabsTools(Toolkit):
                 AudioArtifact(
                     id=str(uuid4()),
                     base64_audio=base64_audio,
-                    mime_type="audio/mpeg",
+                    mime_type=self._mime_type(),
                 )
             )
 
@@ -180,7 +190,7 @@ class ElevenLabsTools(Toolkit):
                 AudioArtifact(
                     id=str(uuid4()),
                     base64_audio=base64_audio,
-                    mime_type="audio/mpeg",
+                    mime_type=self._mime_type(),
                 )
             )
 

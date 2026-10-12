@@ -31,6 +31,8 @@ class TokenUsageStats:
 
     def add_usage(self, input_tokens: int, output_tokens: int):
         """Add token usage to statistics"""
+        if any(not isinstance(value, int) or value < 0 for value in (input_tokens, output_tokens)):
+            raise ValueError("Token usage must be nonnegative integers")
         self.total_input_tokens += input_tokens
         self.total_output_tokens += output_tokens
         self.total_tokens += input_tokens + output_tokens
@@ -76,6 +78,8 @@ class TokenManager(Toolkit):
         provide_chunk_guidance: bool = True,
         # Token counting method
         encoding: str = "cl100k_base",
+        token_counter: Optional[Callable[[str], int]] = None,
+        soft_limit_threshold: float = 0.8,
         # Tool selection
         get_token_count: bool = True,
         get_usage_stats: bool = True,
@@ -108,12 +112,22 @@ class TokenManager(Toolkit):
             encoding: Tokenizer encoding to use for counting
         """
 
+        self._validate_limits(
+            max_input_tokens,
+            max_output_tokens,
+            max_total_tokens,
+            max_tokens_per_request,
+            max_context_window,
+        )
+        if not 0 <= soft_limit_threshold <= 1:
+            raise ValueError("soft_limit_threshold must be between 0 and 1")
         self.limits = TokenLimits(
             max_input_tokens=max_input_tokens,
             max_output_tokens=max_output_tokens,
             max_total_tokens=max_total_tokens,
             max_tokens_per_request=max_tokens_per_request,
             max_context_window=max_context_window,
+            soft_limit_threshold=soft_limit_threshold,
         )
 
         self.stats = TokenUsageStats()
@@ -125,18 +139,22 @@ class TokenManager(Toolkit):
         self.enable_warnings = enable_warnings
         self.provide_chunk_guidance = provide_chunk_guidance
         self.encoding = encoding
+        self.token_counter = token_counter
 
         # Try to import tiktoken for accurate token counting
         self.tiktoken_available = False
-        try:
-            import tiktoken
+        self.tokenizer = None
+        if token_counter is not None:
+            log_debug("TokenManager: Using custom token counter")
+        else:
+            try:
+                import tiktoken
 
-            self.tokenizer = tiktoken.get_encoding(encoding)
-            self.tiktoken_available = True
-            log_debug(f"TokenManager: Using tiktoken with encoding {encoding}")
-        except ImportError:
-            log_warning("TokenManager: tiktoken not available, using approximate token counting")
-            self.tokenizer = None
+                self.tokenizer = tiktoken.get_encoding(encoding)
+                self.tiktoken_available = True
+                log_debug(f"TokenManager: Using tiktoken with encoding {encoding}")
+            except Exception:
+                log_warning("TokenManager: tiktoken not available, using approximate token counting")
 
         # Model-specific token costs (per 1K tokens)
         self.token_costs = {
@@ -203,6 +221,11 @@ class TokenManager(Toolkit):
 
         # Agent reference - will be set when added to agent
         self._agent_ref = None
+
+    @staticmethod
+    def _validate_limits(*limits: Optional[int]) -> None:
+        if any(limit is not None and (not isinstance(limit, int) or limit < 0) for limit in limits):
+            raise ValueError("Token limits must be nonnegative integers")
 
     def setup_agent_integration(self) -> str:
         """
@@ -378,6 +401,12 @@ class TokenManager(Toolkit):
         if not text:
             return 0
 
+        if self.token_counter is not None:
+            count = self.token_counter(text)
+            if not isinstance(count, int) or count < 0:
+                raise ValueError("token_counter must return a nonnegative integer")
+            return count
+
         if self.tiktoken_available and self.tokenizer:
             try:
                 return len(self.tokenizer.encode(text))
@@ -405,27 +434,37 @@ class TokenManager(Toolkit):
         Returns:
             Dictionary with check results
         """
+        if any(not isinstance(value, int) or value < 0 for value in (input_tokens, output_tokens)):
+            raise ValueError("Token usage must be nonnegative integers")
         total_tokens = input_tokens + output_tokens
         violations = []
         warnings = []
 
         # Check individual limits
-        if self.limits.max_input_tokens and input_tokens > self.limits.max_input_tokens:
+        if self.limits.max_input_tokens is not None and input_tokens > self.limits.max_input_tokens:
             violations.append(f"Input tokens ({input_tokens}) exceed limit ({self.limits.max_input_tokens})")
-        elif self.limits.max_input_tokens and input_tokens > (
+        elif self.limits.max_input_tokens is not None and input_tokens > (
             self.limits.max_input_tokens * self.limits.soft_limit_threshold
         ):
             warnings.append(f"Input tokens ({input_tokens}) approaching limit ({self.limits.max_input_tokens})")
 
-        if self.limits.max_output_tokens and output_tokens > self.limits.max_output_tokens:
+        if self.limits.max_output_tokens is not None and output_tokens > self.limits.max_output_tokens:
             violations.append(f"Output tokens ({output_tokens}) exceed limit ({self.limits.max_output_tokens})")
 
-        if self.limits.max_tokens_per_request and total_tokens > self.limits.max_tokens_per_request:
+        if self.limits.max_tokens_per_request is not None and total_tokens > self.limits.max_tokens_per_request:
             violations.append(
                 f"Request tokens ({total_tokens}) exceed per-request limit ({self.limits.max_tokens_per_request})"
             )
 
-        if self.limits.max_total_tokens and (self.stats.total_tokens + total_tokens) > self.limits.max_total_tokens:
+        if self.limits.max_context_window is not None and total_tokens > self.limits.max_context_window:
+            violations.append(
+                f"Request tokens ({total_tokens}) exceed context window ({self.limits.max_context_window})"
+            )
+
+        if (
+            self.limits.max_total_tokens is not None
+            and (self.stats.total_tokens + total_tokens) > self.limits.max_total_tokens
+        ):
             violations.append(
                 f"Session total ({self.stats.total_tokens + total_tokens}) would exceed session limit ({self.limits.max_total_tokens})"
             )
@@ -457,7 +496,11 @@ class TokenManager(Toolkit):
                 "token_count": token_count,
                 "character_count": len(text),
                 "word_count": len(text.split()),
-                "encoding_method": "tiktoken" if self.tiktoken_available else "approximation",
+                "encoding_method": (
+                    "custom"
+                    if self.token_counter is not None
+                    else "tiktoken" if self.tiktoken_available else "approximation"
+                ),
             }
 
             if include_metadata:
@@ -537,6 +580,13 @@ class TokenManager(Toolkit):
             JSON string with updated limits
         """
         try:
+            self._validate_limits(
+                max_input_tokens,
+                max_output_tokens,
+                max_total_tokens,
+                max_tokens_per_request,
+                max_context_window,
+            )
             # Update limits
             if max_input_tokens is not None:
                 self.limits.max_input_tokens = max_input_tokens
@@ -620,7 +670,9 @@ class TokenManager(Toolkit):
                 "warnings": check_result["warnings"],
                 "current_session_tokens": self.stats.total_tokens,
                 "remaining_session_tokens": (
-                    self.limits.max_total_tokens - self.stats.total_tokens if self.limits.max_total_tokens else None
+                    self.limits.max_total_tokens - self.stats.total_tokens
+                    if self.limits.max_total_tokens is not None
+                    else None
                 ),
             }
 
@@ -672,7 +724,10 @@ class TokenManager(Toolkit):
             total_output_tokens = expected_output_tokens
 
             # Get model costs
-            model_costs = self.token_costs.get(model, {"input": 0.03, "output": 0.06})
+            model_costs = self.token_costs.get(model.lower())
+            pricing_available = model_costs is not None
+            if model_costs is None:
+                model_costs = {"input": 0.0, "output": 0.0}
 
             input_cost = (total_input_tokens / 1000) * model_costs["input"]
             output_cost = (total_output_tokens / 1000) * model_costs["output"]
@@ -680,6 +735,7 @@ class TokenManager(Toolkit):
 
             result = {
                 "model": model,
+                "pricing_available": pricing_available,
                 "input_tokens": total_input_tokens,
                 "output_tokens": total_output_tokens,
                 "total_tokens": total_input_tokens + total_output_tokens,
@@ -807,12 +863,9 @@ class TokenManager(Toolkit):
             JSON string with tracking result
         """
         try:
-            old_total = self.stats.total_tokens
+            check_result = self._check_limits(input_tokens, output_tokens)
             self.stats.add_usage(input_tokens, output_tokens)
             self.stats.session_count += 1
-
-            # Check for limit violations
-            check_result = self._check_limits(input_tokens, output_tokens)
 
             result = {
                 "status": "success",
@@ -864,17 +917,17 @@ class TokenManager(Toolkit):
             JSON string with tracking result
         """
         try:
-            input_tokens = metrics.input_tokens or 0
-            output_tokens = metrics.output_tokens or 0
+            input_tokens = metrics.input_tokens or metrics.prompt_tokens or 0
+            output_tokens = metrics.output_tokens or metrics.completion_tokens or 0
 
             if input_tokens > 0 or output_tokens > 0:
+                check_result = self._check_limits(input_tokens, output_tokens)
                 self.stats.add_usage(input_tokens, output_tokens)
                 self.stats.session_count += 1
 
                 log_debug(f"TokenManager: Updated usage - Input: {input_tokens}, Output: {output_tokens}")
 
                 # Check for limit violations
-                check_result = self._check_limits(input_tokens, output_tokens)
                 if not check_result["within_limits"] and self.enable_warnings:
                     for violation in check_result["violations"]:
                         log_warning(f"TokenManager: {violation}")
@@ -912,22 +965,16 @@ class TokenManager(Toolkit):
             result: The run result containing metrics
         """
         try:
-            if hasattr(result, "usage_metrics") and result.usage_metrics:
-                metrics = result.usage_metrics
-                if hasattr(metrics, "input_tokens") and hasattr(metrics, "output_tokens"):
-                    input_tokens = getattr(metrics, "input_tokens", 0) or 0
-                    output_tokens = getattr(metrics, "output_tokens", 0) or 0
+            input_tokens, output_tokens = self._extract_token_counts(result)
+            if input_tokens > 0 or output_tokens > 0:
+                check_result = self._check_limits(input_tokens, output_tokens)
+                self.stats.add_usage(input_tokens, output_tokens)
+                self.stats.session_count += 1
+                log_debug(f"TokenManager: Auto-tracked {input_tokens} input, {output_tokens} output tokens")
 
-                    if input_tokens > 0 or output_tokens > 0:
-                        self.stats.add_usage(input_tokens, output_tokens)
-                        self.stats.session_count += 1
-                        log_debug(f"TokenManager: Auto-tracked {input_tokens} input, {output_tokens} output tokens")
-
-                        # Check for limit violations
-                        check_result = self._check_limits(input_tokens, output_tokens)
-                        if not check_result["within_limits"] and self.enable_warnings:
-                            for violation in check_result["violations"]:
-                                log_warning(f"TokenManager: {violation}")
+                if not check_result["within_limits"] and self.enable_warnings:
+                    for violation in check_result["violations"]:
+                        log_warning(f"TokenManager: {violation}")
 
         except Exception as e:
             log_error(f"TokenManager: Error in post-run hook: {e}")
@@ -944,26 +991,7 @@ class TokenManager(Toolkit):
             JSON string with tracking result
         """
         try:
-            input_tokens = 0
-            output_tokens = 0
-
-            # Try to extract metrics from various response object structures
-            if hasattr(response, "usage_metrics"):
-                metrics = response.usage_metrics
-                input_tokens = getattr(metrics, "input_tokens", 0) or 0
-                output_tokens = getattr(metrics, "output_tokens", 0) or 0
-            elif hasattr(response, "metrics"):
-                metrics = response.metrics
-                input_tokens = getattr(metrics, "input_tokens", 0) or 0
-                output_tokens = getattr(metrics, "output_tokens", 0) or 0
-            elif hasattr(response, "token_usage"):
-                usage = response.token_usage
-                input_tokens = getattr(usage, "prompt_tokens", 0) or getattr(usage, "input_tokens", 0) or 0
-                output_tokens = getattr(usage, "completion_tokens", 0) or getattr(usage, "output_tokens", 0) or 0
-            elif hasattr(response, "usage"):
-                usage = response.usage
-                input_tokens = getattr(usage, "prompt_tokens", 0) or getattr(usage, "input_tokens", 0) or 0
-                output_tokens = getattr(usage, "completion_tokens", 0) or getattr(usage, "output_tokens", 0) or 0
+            input_tokens, output_tokens = self._extract_token_counts(response)
 
             # Also try to extract from content if tokens are 0
             if input_tokens == 0 and output_tokens == 0:
@@ -1004,6 +1032,29 @@ class TokenManager(Toolkit):
             log_error(error_msg)
             return json.dumps({"error": error_msg})
 
+    @staticmethod
+    def _read_usage_value(source: Any, *names: str) -> int:
+        for name in names:
+            value = source.get(name) if isinstance(source, dict) else getattr(source, name, None)
+            if value is not None:
+                return int(value)
+        return 0
+
+    @classmethod
+    def _extract_token_counts(cls, response: Any) -> tuple[int, int]:
+        """Read token usage from Buddy responses, dictionaries, or provider SDK objects."""
+        usage = response
+        for name in ("usage_metrics", "metrics", "response_usage", "token_usage", "usage"):
+            candidate = response.get(name) if isinstance(response, dict) else getattr(response, name, None)
+            if candidate is not None:
+                usage = candidate
+                break
+        input_tokens = cls._read_usage_value(usage, "input_tokens", "prompt_tokens")
+        output_tokens = cls._read_usage_value(usage, "output_tokens", "completion_tokens")
+        if input_tokens < 0 or output_tokens < 0:
+            raise ValueError("Provider token usage must be nonnegative")
+        return input_tokens, output_tokens
+
     def suggest_optimal_chunks(self, text: str, target_chunk_tokens: Optional[int] = None) -> str:
         """
         Suggest how to break large content into optimal chunks for processing.
@@ -1021,12 +1072,15 @@ class TokenManager(Toolkit):
 
             # Determine target chunk size
             if target_chunk_tokens is None:
-                if self.limits.max_input_tokens:
+                if self.limits.max_input_tokens is not None and self.limits.max_input_tokens > 0:
                     # Use 70% of max input tokens to leave room for instructions and context
                     target_chunk_tokens = int(self.limits.max_input_tokens * 0.7)
                 else:
                     # Default to a reasonable chunk size if no limits set
                     target_chunk_tokens = 1000
+
+            if target_chunk_tokens <= 0:
+                return json.dumps({"error": "target_chunk_tokens must be greater than zero"})
 
             # Calculate chunking strategy
             if total_tokens <= target_chunk_tokens:

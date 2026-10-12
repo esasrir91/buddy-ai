@@ -5,13 +5,10 @@ Implements sophisticated reasoning strategies including Chain-of-Thought Plus,
 Tree of Thoughts, analogical reasoning, causal inference, and logical deduction.
 """
 
-import json
-import re
-from collections import defaultdict, deque
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Literal, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 
 from pydantic import BaseModel, Field
 
@@ -61,21 +58,15 @@ class ReasoningStep:
     content: str
     reasoning: str
     confidence: float
-    evidence: List[str] = None
-    assumptions: List[str] = None
-    references: List[str] = None
+    evidence: List[str] = field(default_factory=list)
+    assumptions: List[str] = field(default_factory=list)
+    references: List[str] = field(default_factory=list)
     verification_status: Optional[bool] = None
-    timestamp: datetime = None
+    timestamp: datetime = field(default_factory=datetime.now)
 
     def __post_init__(self):
-        if self.evidence is None:
-            self.evidence = []
-        if self.assumptions is None:
-            self.assumptions = []
-        if self.references is None:
-            self.references = []
-        if self.timestamp is None:
-            self.timestamp = datetime.now()
+        if not 0.0 <= self.confidence <= 1.0:
+            raise ValueError("confidence must be between 0.0 and 1.0")
 
 
 class ReasoningResult(BaseModel):
@@ -103,7 +94,7 @@ class ChainOfThoughtPlus:
         self.verification_enabled = verification_enabled
         self.step_verifier = StepVerifier() if verification_enabled else None
 
-    def reason(self, query: str, context: Dict[str, Any] = None) -> ReasoningResult:
+    def reason(self, query: str, context: Optional[Dict[str, Any]] = None) -> ReasoningResult:
         """Execute Chain-of-Thought Plus reasoning"""
         start_time = datetime.now()
         steps = []
@@ -133,6 +124,8 @@ class ChainOfThoughtPlus:
                 if not verification_result.is_valid:
                     # Generate alternative step
                     next_step = self._generate_alternative_step(current_understanding, steps, f"cot_plus_{i}_alt")
+                    fallback_verification = self.step_verifier.verify_step(next_step, steps)
+                    next_step.verification_status = fallback_verification.is_valid
 
             steps.append(next_step)
             current_understanding = next_step.content
@@ -248,7 +241,7 @@ class TreeOfThoughts:
         self.max_branches = max_branches
         self.thought_tree = {}
 
-    def reason(self, query: str, context: Dict[str, Any] = None) -> ReasoningResult:
+    def reason(self, query: str, context: Optional[Dict[str, Any]] = None) -> ReasoningResult:
         """Execute Tree of Thoughts reasoning"""
         start_time = datetime.now()
 
@@ -377,7 +370,7 @@ class AnalogicalReasoning:
     def __init__(self):
         self.analogy_database = {}  # Would be loaded from knowledge base
 
-    def reason(self, query: str, context: Dict[str, Any] = None) -> ReasoningResult:
+    def reason(self, query: str, context: Optional[Dict[str, Any]] = None) -> ReasoningResult:
         """Execute analogical reasoning"""
         start_time = datetime.now()
         steps = []
@@ -461,7 +454,7 @@ class CausalInference:
     def __init__(self):
         self.causal_models = {}
 
-    def reason(self, query: str, context: Dict[str, Any] = None) -> ReasoningResult:
+    def reason(self, query: str, context: Optional[Dict[str, Any]] = None) -> ReasoningResult:
         """Execute causal inference reasoning"""
         start_time = datetime.now()
         steps = []
@@ -533,7 +526,12 @@ class LogicalDeduction:
     def __init__(self):
         self.logical_rules = self._load_logical_rules()
 
-    def reason(self, query: str, premises: List[str] = None, context: Dict[str, Any] = None) -> ReasoningResult:
+    def reason(
+        self,
+        query: str,
+        premises: Optional[List[str]] = None,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> ReasoningResult:
         """Execute logical deduction reasoning"""
         start_time = datetime.now()
         steps = []
@@ -618,7 +616,10 @@ class AdvancedReasoning:
         self.strategy_selector = StrategySelector()
 
     def reason(
-        self, query: str, strategy: Optional[ReasoningStrategy] = None, context: Dict[str, Any] = None
+        self,
+        query: str,
+        strategy: Optional[ReasoningStrategy] = None,
+        context: Optional[Dict[str, Any]] = None,
     ) -> ReasoningResult:
         """Execute advanced reasoning with specified or auto-selected strategy"""
 
@@ -631,7 +632,7 @@ class AdvancedReasoning:
 
         return reasoning_engine.reason(query, context)
 
-    def hybrid_reason(self, query: str, context: Dict[str, Any] = None) -> ReasoningResult:
+    def hybrid_reason(self, query: str, context: Optional[Dict[str, Any]] = None) -> ReasoningResult:
         """Execute hybrid reasoning using multiple strategies"""
         start_time = datetime.now()
 
@@ -671,7 +672,7 @@ class AdvancedReasoning:
 class StrategySelector:
     """Selects optimal reasoning strategy based on query characteristics"""
 
-    def select_strategy(self, query: str, context: Dict[str, Any] = None) -> ReasoningStrategy:
+    def select_strategy(self, query: str, context: Optional[Dict[str, Any]] = None) -> ReasoningStrategy:
         """Select best reasoning strategy for the query"""
 
         # Simple heuristic-based selection
@@ -778,7 +779,10 @@ class AdvancedReasoningMixin:
         self.reasoning_verification: bool = kwargs.get("reasoning_verification", True)
 
     def reason_advanced(
-        self, query: str, strategy: Optional[ReasoningStrategy] = None, context: Dict[str, Any] = None
+        self,
+        query: str,
+        strategy: Optional[ReasoningStrategy] = None,
+        context: Optional[Dict[str, Any]] = None,
     ) -> ReasoningResult:
         """Execute advanced reasoning on query"""
         if not self.reasoning_enabled:
@@ -810,6 +814,6 @@ class AdvancedReasoningMixin:
 
         return result
 
-    def hybrid_reasoning(self, query: str, context: Dict[str, Any] = None) -> ReasoningResult:
+    def hybrid_reasoning(self, query: str, context: Optional[Dict[str, Any]] = None) -> ReasoningResult:
         """Execute hybrid reasoning combining multiple strategies"""
         return self.advanced_reasoning.hybrid_reason(query, context)

@@ -1,3 +1,4 @@
+import asyncio
 import json
 from io import BytesIO
 from typing import Any, AsyncGenerator, Dict, List, Optional, cast
@@ -242,7 +243,7 @@ def get_async_playground_router(
                         )
 
                     if agent.memory.db is not None:
-                        memory_dict["db"] = agent.memory.db.__dict__()  # type: ignore
+                        memory_dict["db"] = vars(agent.memory.db)
 
                 else:
                     memory_dict = None
@@ -550,7 +551,7 @@ def get_async_playground_router(
         agent_session_dict = agent_session.to_dict()
         if agent_session.memory is not None:
             runs = agent_session.memory.get("runs")
-            if runs is not None:
+            if runs:
                 first_run = runs[0]
                 # This is how we know it is a RunResponse or RunPaused
                 if "content" in first_run or first_run.get("is_paused", False) or first_run.get("event") == "RunPaused":
@@ -562,12 +563,13 @@ def get_async_playground_router(
                             if msg.get("role") == "user" and msg.get("from_history", False) is False:
                                 first_user_message = msg
                                 break
-                        # Remove the memory from the response
-                        run.pop("memory", None)
+                        # Remove the memory from the response without mutating storage data
+                        response_run = dict(run)
+                        response_run.pop("memory", None)
                         agent_session_dict["runs"].append(
                             {
                                 "message": first_user_message,
-                                "response": run,
+                                "response": response_run,
                             }
                         )
         return agent_session_dict
@@ -685,7 +687,7 @@ def get_async_playground_router(
             try:
                 if new_workflow_instance._run_return_type == "RunResponse":
                     # Return as a normal response
-                    return new_workflow_instance.run(**body.input)
+                    return await asyncio.to_thread(new_workflow_instance.run, **body.input)
                 else:
                     # Return as a streaming response
                     return StreamingResponse(
@@ -789,15 +791,20 @@ def get_async_playground_router(
         workflow = get_workflow_by_id(workflow_id, workflows)
         if workflow is None:
             raise HTTPException(status_code=404, detail="Workflow not found")
+        if workflow.storage is None or workflow.storage.read(session_id, body.user_id) is None:  # type: ignore
+            raise HTTPException(status_code=404, detail="Session not found")
         workflow.session_id = session_id
         workflow.rename_session(body.name)
         return JSONResponse(content={"message": f"successfully renamed workflow {workflow.name}"})
 
     @playground_router.delete("/workflows/{workflow_id}/sessions/{session_id}")
-    async def delete_workflow_session(workflow_id: str, session_id: str):
+    async def delete_workflow_session(workflow_id: str, session_id: str, user_id: str = Query(..., min_length=1)):
         workflow = get_workflow_by_id(workflow_id, workflows)
         if workflow is None:
             raise HTTPException(status_code=404, detail="Workflow not found")
+
+        if workflow.storage is None or workflow.storage.read(session_id, user_id) is None:  # type: ignore
+            raise HTTPException(status_code=404, detail="Session not found")
 
         workflow.delete_session(session_id)
         return JSONResponse(content={"message": f"successfully deleted workflow {workflow.name}"})
@@ -970,7 +977,7 @@ def get_async_playground_router(
         team_session_dict = team_session.to_dict()
         if team_session.memory is not None:
             runs = team_session.memory.get("runs")
-            if runs is not None:
+            if runs:
                 first_run = runs[0]
                 # This is how we know it is a RunResponse or RunPaused
                 if "content" in first_run or first_run.get("is_paused", False) or first_run.get("event") == "RunPaused":
@@ -987,10 +994,12 @@ def get_async_playground_router(
                                 break
                         # Remove the memory from the response
                         team_session_dict.pop("memory", None)
+                        response_run = dict(run)
+                        response_run.pop("memory", None)
                         team_session_dict["runs"].append(
                             {
                                 "message": first_user_message,
-                                "response": run,
+                                "response": response_run,
                             }
                         )
 

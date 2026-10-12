@@ -125,10 +125,9 @@ class ChromaDb(VectorDb):
             bool: True if document exists, False otherwise."""
         if self.client:
             try:
-                collections: Collection = self.client.get_collection(name=self.collection_name)
-                for collection in collections:  # type: ignore
-                    if name in collection:
-                        return True
+                collection: Collection = self.client.get_collection(name=self.collection_name)
+                result = collection.get(where={"document_name": name}, limit=1)
+                return bool(result.get("ids"))
             except Exception as e:
                 logger.error(f"Document with given name does not exist: {e}")
         return False
@@ -160,6 +159,7 @@ class ChromaDb(VectorDb):
 
             # Handle metadata and filters
             metadata = document.meta_data or {}
+            metadata["document_name"] = document.name
             if filters:
                 metadata.update(filters)
 
@@ -207,7 +207,11 @@ class ChromaDb(VectorDb):
             docs_embeddings.append(document.embedding)
             docs.append(cleaned_content)
             ids.append(doc_id)
-            docs_metadata.append(document.meta_data)
+            metadata = document.meta_data or {}
+            metadata["document_name"] = document.name
+            if filters:
+                metadata.update(filters)
+            docs_metadata.append(metadata)
             log_debug(f"Upserted document: {document.id} | {document.name} | {document.meta_data}")
 
         if self._collection is None:

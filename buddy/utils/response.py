@@ -1,4 +1,4 @@
-from typing import AsyncIterator, Iterator, List, Set, Union
+from collections.abc import AsyncIterator, Iterator
 
 from buddy.exceptions import RunCancelledException
 from buddy.models.message import Message
@@ -18,7 +18,7 @@ def create_panel(content, title, border_style="blue"):
     )
 
 
-def escape_markdown_tags(content: str, tags: Set[str]) -> str:
+def escape_markdown_tags(content: str, tags: set[str]) -> str:
     """Escape special tags in markdown content."""
     escaped_content = content
     for tag in tags:
@@ -29,15 +29,15 @@ def escape_markdown_tags(content: str, tags: Set[str]) -> str:
     return escaped_content
 
 
-def check_if_run_cancelled(run_response: Union[RunResponse, RunResponseEvent, TeamRunResponse, TeamRunResponseEvent]):
+def check_if_run_cancelled(run_response: RunResponse | RunResponseEvent | TeamRunResponse | TeamRunResponseEvent):
     if run_response.is_cancelled:
         raise RunCancelledException()
 
 
 def update_run_response_with_reasoning(
-    run_response: Union[RunResponse, TeamRunResponse],
-    reasoning_steps: List[ReasoningStep],
-    reasoning_agent_messages: List[Message],
+    run_response: RunResponse | TeamRunResponse,
+    reasoning_steps: list[ReasoningStep],
+    reasoning_agent_messages: list[Message],
 ) -> None:
     if run_response.extra_data is None:
         run_response.extra_data = RunResponseExtraData()
@@ -55,7 +55,7 @@ def update_run_response_with_reasoning(
         run_response.extra_data.reasoning_messages.extend(reasoning_agent_messages)
 
 
-def format_tool_calls(tool_calls: List[ToolExecution]) -> List[str]:
+def format_tool_calls(tool_calls: list[ToolExecution]) -> list[str]:
     """Format tool calls for display in a readable format.
 
     Args:
@@ -77,7 +77,7 @@ def format_tool_calls(tool_calls: List[ToolExecution]) -> List[str]:
     return formatted_tool_calls
 
 
-def create_paused_run_response_panel(run_response: Union[RunResponsePausedEvent, RunResponse]):
+def create_paused_run_response_panel(run_response: RunResponsePausedEvent | RunResponse):
     from rich.text import Text
 
     tool_calls_content = Text("Run is paused. ")
@@ -120,44 +120,37 @@ def create_paused_run_response_panel(run_response: Union[RunResponsePausedEvent,
 
 
 def get_paused_content(run_response: RunResponse) -> str:
-    paused_content = ""
-    for tool in run_response.tools or []:
-        # Initialize flags for each tool
-        confirmation_required = False
-        user_input_required = False
-        external_execution_required = False
+    tools = run_response.tools or []
+    confirmation_required = any(tool.requires_confirmation and not tool.confirmed for tool in tools)
+    user_input_required = any(tool.requires_user_input for tool in tools)
+    external_execution_required = any(tool.external_execution_required for tool in tools)
 
-        if tool.requires_confirmation is not None and tool.requires_confirmation is True and not tool.confirmed:
-            confirmation_required = True
-        if tool.requires_user_input is not None and tool.requires_user_input is True:
-            user_input_required = True
-        if tool.external_execution_required is not None and tool.external_execution_required is True:
-            external_execution_required = True
-
-        if confirmation_required and user_input_required and external_execution_required:
+    if confirmation_required and user_input_required and external_execution_required:
             paused_content = "I have tools to execute, but I need confirmation, user input, or external execution."
-        elif confirmation_required and user_input_required:
+    elif confirmation_required and user_input_required:
             paused_content = "I have tools to execute, but I need confirmation or user input."
-        elif confirmation_required and external_execution_required:
+    elif confirmation_required and external_execution_required:
             paused_content = "I have tools to execute, but I need confirmation or external execution."
-        elif user_input_required and external_execution_required:
+    elif user_input_required and external_execution_required:
             paused_content = "I have tools to execute, but I need user input or external execution."
-        elif confirmation_required:
+    elif confirmation_required:
             paused_content = "I have tools to execute, but I need confirmation."
-        elif user_input_required:
+    elif user_input_required:
             paused_content = "I have tools to execute, but I need user input."
-        elif external_execution_required:
+    elif external_execution_required:
             paused_content = "I have tools to execute, but it needs external execution."
+    else:
+        paused_content = ""
     return paused_content
 
 
 def generator_wrapper(
-    event: Union[RunResponseEvent, TeamRunResponseEvent],
-) -> Iterator[Union[RunResponseEvent, TeamRunResponseEvent]]:
+    event: RunResponseEvent | TeamRunResponseEvent,
+) -> Iterator[RunResponseEvent | TeamRunResponseEvent]:
     yield event
 
 
 async def async_generator_wrapper(
-    event: Union[RunResponseEvent, TeamRunResponseEvent],
-) -> AsyncIterator[Union[RunResponseEvent, TeamRunResponseEvent]]:
+    event: RunResponseEvent | TeamRunResponseEvent,
+) -> AsyncIterator[RunResponseEvent | TeamRunResponseEvent]:
     yield event

@@ -51,6 +51,13 @@ class PythonTools(Toolkit):
 
         super().__init__(name="python_tools", tools=tools, **kwargs)
 
+    def _resolve_path(self, file_name: str) -> Path:
+        base_path = self.base_dir.resolve()
+        file_path = (base_path / file_name).resolve()
+        if file_path != base_path and base_path not in file_path.parents:
+            raise ValueError(f"Path escapes base directory: {file_name}")
+        return file_path
+
     def save_to_file_and_run(
         self, file_name: str, code: str, variable_to_return: Optional[str] = None, overwrite: bool = True
     ) -> str:
@@ -68,7 +75,7 @@ class PythonTools(Toolkit):
         """
         try:
             warn()
-            file_path = self.base_dir.joinpath(file_name)
+            file_path = self._resolve_path(file_name)
             log_debug(f"Saving code to {file_path}")
             if not file_path.parent.exists():
                 file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -102,7 +109,7 @@ class PythonTools(Toolkit):
         """
         try:
             warn()
-            file_path = self.base_dir.joinpath(file_name)
+            file_path = self._resolve_path(file_name)
 
             log_info(f"Running {file_path}")
             globals_after_run = runpy.run_path(str(file_path), init_globals=self.safe_globals, run_name="__main__")
@@ -126,7 +133,7 @@ class PythonTools(Toolkit):
         """
         try:
             log_info(f"Reading file: {file_name}")
-            file_path = self.base_dir.joinpath(file_name)
+            file_path = self._resolve_path(file_name)
             contents = file_path.read_text(encoding="utf-8")
             return str(contents)
         except Exception as e:

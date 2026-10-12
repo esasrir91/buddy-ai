@@ -30,6 +30,10 @@ class WikipediaTools(Toolkit):
 
         if self.knowledge_base is None:
             return "Knowledge base not provided"
+        if not topic.strip():
+            return "Error: topic cannot be empty"
+        if topic in self.knowledge_base.topics:
+            return "Topic already added"
 
         log_debug(f"Adding to knowledge base: {topic}")
         self.knowledge_base.topics.append(topic)
@@ -45,6 +49,8 @@ class WikipediaTools(Toolkit):
         :param query: The query to search for.
         :return: Relevant documents from wikipedia.
         """
+        if not query.strip():
+            return json.dumps({"error": "query cannot be empty"})
         try:
             import wikipedia  # noqa: F401
         except ImportError:
@@ -52,5 +58,8 @@ class WikipediaTools(Toolkit):
                 "The `wikipedia` package is not installed. Please install it via `pip install wikipedia`."
             )
 
-        log_info(f"Searching wikipedia for: {query}")
-        return json.dumps(Document(name=query, content=wikipedia.summary(query)).to_dict())
+        try:
+            log_info(f"Searching wikipedia for: {query}")
+            return json.dumps(Document(name=query, content=wikipedia.summary(query)).to_dict())
+        except Exception as e:
+            return json.dumps({"error": f"Wikipedia search failed: {e}"})

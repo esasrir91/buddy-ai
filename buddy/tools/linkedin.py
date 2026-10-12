@@ -17,6 +17,7 @@ class LinkedInTools(Toolkit):
         access_token: Optional[str] = None,
         client_id: Optional[str] = None,
         client_secret: Optional[str] = None,
+        timeout: float = 30.0,
         **kwargs,
     ):
         """Initialize LinkedIn Tools.
@@ -29,6 +30,7 @@ class LinkedInTools(Toolkit):
         self.access_token = access_token or getenv("LINKEDIN_ACCESS_TOKEN")
         self.client_id = client_id or getenv("LINKEDIN_CLIENT_ID")
         self.client_secret = client_secret or getenv("LINKEDIN_CLIENT_SECRET")
+        self.timeout = timeout
         self.base_url = "https://api.linkedin.com/v2"
 
         tools: List[Any] = [
@@ -64,7 +66,7 @@ class LinkedInTools(Toolkit):
 
         try:
             # Get user profile first
-            profile_response = requests.get(f"{self.base_url}/people/~", headers=self._get_headers())
+            profile_response = requests.get(f"{self.base_url}/people/~", headers=self._get_headers(), timeout=self.timeout)
             profile_response.raise_for_status()
             profile = profile_response.json()
             person_urn = profile["id"]
@@ -78,7 +80,9 @@ class LinkedInTools(Toolkit):
                 "visibility": {"com.linkedin.ugc.MemberNetworkVisibility": visibility},
             }
 
-            response = requests.post(f"{self.base_url}/ugcPosts", headers=self._get_headers(), json=payload)
+            response = requests.post(
+                f"{self.base_url}/ugcPosts", headers=self._get_headers(), json=payload, timeout=self.timeout
+            )
             response.raise_for_status()
 
             return json.dumps(response.json())
@@ -95,7 +99,7 @@ class LinkedInTools(Toolkit):
             return json.dumps({"error": "Access token not provided"})
 
         try:
-            response = requests.get(f"{self.base_url}/people/~", headers=self._get_headers())
+            response = requests.get(f"{self.base_url}/people/~", headers=self._get_headers(), timeout=self.timeout)
             response.raise_for_status()
 
             return json.dumps(response.json())
@@ -118,7 +122,7 @@ class LinkedInTools(Toolkit):
 
         try:
             # Get user profile first
-            profile_response = requests.get(f"{self.base_url}/people/~", headers=self._get_headers())
+            profile_response = requests.get(f"{self.base_url}/people/~", headers=self._get_headers(), timeout=self.timeout)
             profile_response.raise_for_status()
             profile = profile_response.json()
             person_urn = profile["id"]
@@ -143,7 +147,9 @@ class LinkedInTools(Toolkit):
                 "visibility": {"com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"},
             }
 
-            response = requests.post(f"{self.base_url}/ugcPosts", headers=self._get_headers(), json=payload)
+            response = requests.post(
+                f"{self.base_url}/ugcPosts", headers=self._get_headers(), json=payload, timeout=self.timeout
+            )
             response.raise_for_status()
 
             return json.dumps(response.json())
@@ -162,11 +168,15 @@ class LinkedInTools(Toolkit):
         """
         if not self.access_token:
             return json.dumps({"error": "Access token not provided"})
+        if start < 0 or count <= 0:
+            return json.dumps({"error": "start must be nonnegative and count must be greater than 0"})
 
         try:
             params = {"start": start, "count": count}
 
-            response = requests.get(f"{self.base_url}/people/~/connections", headers=self._get_headers(), params=params)
+            response = requests.get(
+                f"{self.base_url}/people/~/connections", headers=self._get_headers(), params=params, timeout=self.timeout
+            )
             response.raise_for_status()
 
             return json.dumps(response.json())
@@ -194,7 +204,9 @@ class LinkedInTools(Toolkit):
                 "body": message,
             }
 
-            response = requests.post(f"{self.base_url}/people/~/mailbox", headers=self._get_headers(), json=payload)
+            response = requests.post(
+                f"{self.base_url}/people/~/mailbox", headers=self._get_headers(), json=payload, timeout=self.timeout
+            )
             response.raise_for_status()
 
             return json.dumps(response.json())

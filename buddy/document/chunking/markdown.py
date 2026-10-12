@@ -16,6 +16,12 @@ class MarkdownChunking(ChunkingStrategy):
     """A chunking strategy that splits markdown based on structure like headers, paragraphs and sections"""
 
     def __init__(self, chunk_size: int = 5000, overlap: int = 0):
+        if chunk_size < 1:
+            raise ValueError("chunk_size must be greater than zero")
+        if overlap < 0:
+            raise ValueError("overlap cannot be negative")
+        if overlap >= chunk_size:
+            raise ValueError(f"overlap ({overlap}) must be less than chunk_size ({chunk_size})")
         self.chunk_size = chunk_size
         self.overlap = overlap
 
@@ -35,7 +41,7 @@ class MarkdownChunking(ChunkingStrategy):
                 elements = partition_md(filename=temp_file_path)
 
                 if not elements:
-                    return self.clean_text(content).split("\n\n")
+                    return content.replace("\r\n", "\n").replace("\r", "\n").split("\n\n")
 
                 # Chunk by title with some default values
                 chunked_elements = chunk_by_title(
@@ -57,7 +63,7 @@ class MarkdownChunking(ChunkingStrategy):
                     if chunk_text.strip():
                         text_chunks.append(chunk_text.strip())
 
-                return text_chunks if text_chunks else self.clean_text(content).split("\n\n")
+                return text_chunks if text_chunks else content.replace("\r\n", "\n").replace("\r", "\n").split("\n\n")
 
             # Always clean up the temporary file
             finally:
@@ -65,7 +71,7 @@ class MarkdownChunking(ChunkingStrategy):
 
         # Fallback to simple paragraph splitting if the markdown chunking fails
         except Exception:
-            return self.clean_text(content).split("\n\n")
+            return content.replace("\r\n", "\n").replace("\r", "\n").split("\n\n")
 
     def chunk(self, document: Document) -> List[Document]:
         """Split markdown document into chunks based on markdown structure"""

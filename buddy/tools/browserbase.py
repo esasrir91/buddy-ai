@@ -94,8 +94,10 @@ class BrowserbaseTools(Toolkit):
             self._playwright = sync_playwright().start()  # type: ignore
             if self._playwright:
                 self._browser = self._playwright.chromium.connect_over_cdp(self._connect_url)
-            context = self._browser.contexts[0] if self._browser else ""
-            self._page = context.pages[0] or context.new_page()  # type: ignore
+            context = self._browser.contexts[0] if self._browser and self._browser.contexts else None
+            if context is None:
+                raise RuntimeError("Browserbase did not provide a browser context")
+            self._page = context.pages[0] if context.pages else context.new_page()
 
     def _cleanup(self):
         """Clean up browser resources."""

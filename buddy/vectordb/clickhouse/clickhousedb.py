@@ -184,7 +184,7 @@ class Clickhouse(VectorDb):
 
             if isinstance(self.index, HNSW):
                 index = (
-                    f"INDEX embedding_index embedding TYPE vector_similarity('hnsw', 'L2Distance', {self.index.quantization}, "
+                    f"INDEX embedding_index embedding TYPE vector_similarity('hnsw', 'L2Distance', {self.embedder.dimensions}, {self.index.quantization}, "
                     f"{self.index.hnsw_max_connections_per_layer}, {self.index.hnsw_candidate_list_size_for_construction})"
                 )
                 await async_client.command("SET allow_experimental_vector_similarity_index = 1")
@@ -256,7 +256,7 @@ class Clickhouse(VectorDb):
             "SELECT name FROM {database_name:Identifier}.{table_name:Identifier} WHERE name = {name:String}",
             parameters=parameters,
         )
-        return bool(result)
+        return bool(result.result_rows)
 
     async def async_name_exists(self, name: str) -> bool:
         """Check if a document with given name exists asynchronously."""
@@ -269,7 +269,7 @@ class Clickhouse(VectorDb):
             "SELECT name FROM {database_name:Identifier}.{table_name:Identifier} WHERE name = {name:String}",
             parameters=parameters,
         )
-        return bool(result)
+        return bool(result.result_rows)
 
     def id_exists(self, id: str) -> bool:
         """
@@ -285,7 +285,7 @@ class Clickhouse(VectorDb):
             "SELECT id FROM {database_name:Identifier}.{table_name:Identifier} WHERE id = {id:String}",
             parameters=parameters,
         )
-        return bool(result)
+        return bool(result.result_rows)
 
     def insert(
         self,

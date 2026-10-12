@@ -28,9 +28,17 @@ class LocalFileSystemTools(Toolkit):
         target_path.mkdir(parents=True, exist_ok=True)
 
         tools = []
-        tools.append(self.write_file)
+        tools.extend([self.write_file, self.read_file])
 
         super().__init__(name="write_to_local", tools=tools, **kwargs)
+
+    def _resolve_path(self, directory: Optional[str], filename: str) -> Path:
+        base_path = Path(self.target_directory).resolve()
+        candidate = (Path(directory).resolve() if directory else base_path) / filename
+        candidate = candidate.resolve()
+        if candidate != base_path and base_path not in candidate.parents:
+            raise ValueError(f"Path escapes target directory: {filename}")
+        return candidate
 
     def write_file(
         self,
@@ -61,12 +69,15 @@ class LocalFileSystemTools(Toolkit):
             extension = (extension or self.default_extension).lstrip(".")
 
             # Create directory if it doesn't exist
-            dir_path = Path(directory)
+            dir_path = Path(directory or self.target_directory).resolve()
+            base_path = Path(self.target_directory).resolve()
+            if dir_path != base_path and base_path not in dir_path.parents:
+                raise ValueError(f"Path escapes target directory: {directory}")
             dir_path.mkdir(parents=True, exist_ok=True)
 
             # Construct full filename with extension
             full_filename = f"{filename}.{extension}"
-            file_path = dir_path / full_filename
+            file_path = self._resolve_path(str(dir_path), full_filename)
 
             file_path.write_text(content)
 
@@ -81,7 +92,7 @@ class LocalFileSystemTools(Toolkit):
         """
         Read content from a local file.
         """
-        file_path = Path(directory or self.target_directory) / filename
+        file_path = self._resolve_path(directory, filename)
         if not file_path.exists():
             return f"File not found: {file_path}"
         return file_path.read_text()

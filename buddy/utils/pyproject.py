@@ -1,10 +1,9 @@
 from pathlib import Path
-from typing import Dict, Optional
 
 from buddy.utils.log import log_debug, logger
 
 
-def read_pyproject_buddy(pyproject_file: Path) -> Optional[Dict]:
+def read_pyproject_buddy(pyproject_file: Path) -> dict | None:
     log_debug(f"Reading {pyproject_file}")
     try:
         import tomli
@@ -13,6 +12,6 @@ def read_pyproject_buddy(pyproject_file: Path) -> Optional[Dict]:
         BUDDY_conf = pyproject_dict.get("tool", {}).get("buddy", None)
         if BUDDY_conf is not None and isinstance(BUDDY_conf, dict):
             return BUDDY_conf
-    except Exception as e:
+    except (OSError, UnicodeError, ValueError) as e:
         logger.error(f"Could not read {pyproject_file}: {e}")
     return None

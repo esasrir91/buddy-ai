@@ -18,6 +18,7 @@ class FacebookTools(Toolkit):
         page_id: Optional[str] = None,
         app_id: Optional[str] = None,
         app_secret: Optional[str] = None,
+        timeout: float = 30.0,
         **kwargs,
     ):
         """Initialize Facebook Tools.
@@ -32,6 +33,7 @@ class FacebookTools(Toolkit):
         self.page_id = page_id or getenv("FACEBOOK_PAGE_ID")
         self.app_id = app_id or getenv("FACEBOOK_APP_ID")
         self.app_secret = app_secret or getenv("FACEBOOK_APP_SECRET")
+        self.timeout = timeout
         self.base_url = "https://graph.facebook.com/v18.0"
 
         tools: List[Any] = [
@@ -63,7 +65,7 @@ class FacebookTools(Toolkit):
             if link:
                 data["link"] = link
 
-            response = requests.post(f"{self.base_url}/{self.page_id}/feed", data=data)
+            response = requests.post(f"{self.base_url}/{self.page_id}/feed", data=data, timeout=self.timeout)
             response.raise_for_status()
 
             return json.dumps(response.json())
@@ -89,7 +91,7 @@ class FacebookTools(Toolkit):
             if caption:
                 data["caption"] = caption
 
-            response = requests.post(f"{self.base_url}/{self.page_id}/photos", data=data)
+            response = requests.post(f"{self.base_url}/{self.page_id}/photos", data=data, timeout=self.timeout)
             response.raise_for_status()
 
             return json.dumps(response.json())
@@ -112,7 +114,7 @@ class FacebookTools(Toolkit):
         try:
             params = {"metric": metric, "period": period, "access_token": self.access_token}
 
-            response = requests.get(f"{self.base_url}/{self.page_id}/insights", params=params)
+            response = requests.get(f"{self.base_url}/{self.page_id}/insights", params=params, timeout=self.timeout)
             response.raise_for_status()
 
             return json.dumps(response.json())
@@ -130,6 +132,8 @@ class FacebookTools(Toolkit):
         """
         if not all([self.access_token, self.page_id]):
             return json.dumps({"error": "Access token and page ID not provided"})
+        if limit <= 0:
+            return json.dumps({"error": "Limit must be greater than 0"})
 
         try:
             params = {
@@ -138,7 +142,7 @@ class FacebookTools(Toolkit):
                 "access_token": self.access_token,
             }
 
-            response = requests.get(f"{self.base_url}/{self.page_id}/posts", params=params)
+            response = requests.get(f"{self.base_url}/{self.page_id}/posts", params=params, timeout=self.timeout)
             response.raise_for_status()
 
             return json.dumps(response.json())
@@ -160,7 +164,7 @@ class FacebookTools(Toolkit):
         try:
             params = {"access_token": self.access_token}
 
-            response = requests.delete(f"{self.base_url}/{post_id}", params=params)
+            response = requests.delete(f"{self.base_url}/{post_id}", params=params, timeout=self.timeout)
             response.raise_for_status()
 
             return json.dumps({"success": "Post deleted successfully"})

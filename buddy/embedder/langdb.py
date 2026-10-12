@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from os import getenv
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -13,6 +14,7 @@ except ImportError:
     raise ImportError("`openai` not installed")
 
 
+@dataclass
 class LangDBEmbedder(Embedder):
     model: str = "text-embedding-ada-002"
     dimensions: int = 1536
@@ -46,7 +48,8 @@ class LangDBEmbedder(Embedder):
 
         if self.client_params:
             _client_params.update(self.client_params)
-        return OpenAIClient(**_client_params)
+        self.openai_client = OpenAIClient(**_client_params)
+        return self.openai_client
 
     def response(self, text: str) -> CreateEmbeddingResponse:
         _request_params: Dict[str, Any] = {

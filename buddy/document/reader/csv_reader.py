@@ -32,7 +32,9 @@ class CSVReader(Reader):
             else:
                 logger.info(f"Reading retrieved file: {file.name}")
                 file.seek(0)
-                file_content = io.StringIO(file.read().decode("utf-8"))  # type: ignore
+                raw_content = file.read()
+                content = raw_content.decode("utf-8") if isinstance(raw_content, bytes) else raw_content
+                file_content = io.StringIO(content)
 
             csv_name = Path(file.name).stem if isinstance(file, Path) else file.name.split(".")[0]
             csv_content = ""
@@ -55,7 +57,7 @@ class CSVReader(Reader):
                 return chunked_documents
             return documents
         except Exception as e:
-            logger.error(f"Error reading: {file.name if isinstance(file, IO) else file}: {e}")
+            logger.error(f"Error reading: {getattr(file, 'name', file)}: {e}")
             return []
 
     async def async_read(
@@ -73,6 +75,8 @@ class CSVReader(Reader):
         Returns:
             List of Document objects
         """
+        if page_size < 1:
+            raise ValueError("page_size must be greater than zero")
         try:
             if isinstance(file, Path):
                 if not file.exists():
@@ -84,7 +88,9 @@ class CSVReader(Reader):
             else:
                 logger.info(f"Reading retrieved file async: {file.name}")
                 file.seek(0)
-                file_content_io = io.StringIO(file.read().decode("utf-8"))  # type: ignore
+                raw_content = file.read()
+                content = raw_content.decode("utf-8") if isinstance(raw_content, bytes) else raw_content
+                file_content_io = io.StringIO(content)
 
             csv_name = Path(file.name).stem if isinstance(file, Path) else file.name.split(".")[0]
 
@@ -128,7 +134,7 @@ class CSVReader(Reader):
 
             return documents
         except Exception as e:
-            logger.error(f"Error reading async: {file.name if isinstance(file, IO) else file}: {e}")
+            logger.error(f"Error reading async: {getattr(file, 'name', file)}: {e}")
             return []
 
 
@@ -152,7 +158,11 @@ class CSVUrlReader(Reader):
 
         file_obj = io.BytesIO(response.content)
         file_obj.name = filename
-        documents = CSVReader().read(file=file_obj)
+        documents = CSVReader(
+            chunk=self.chunk,
+            chunk_size=self.chunk_size,
+            chunking_strategy=self.chunking_strategy,
+        ).read(file=file_obj)
 
         file_obj.close()
 
@@ -177,7 +187,11 @@ class CSVUrlReader(Reader):
             file_obj.name = filename
 
             # Use the async version of CSVReader
-            documents = await CSVReader().async_read(file=file_obj)
+            documents = await CSVReader(
+                chunk=self.chunk,
+                chunk_size=self.chunk_size,
+                chunking_strategy=self.chunking_strategy,
+            ).async_read(file=file_obj)
 
             file_obj.close()
 

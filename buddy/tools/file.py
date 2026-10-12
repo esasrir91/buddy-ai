@@ -75,6 +75,14 @@ class FileTools(Toolkit):
 
         super().__init__(name="file_tools", tools=tools, **kwargs)
 
+    def _resolve_path(self, file_name: Union[str, Path]) -> Path:
+        """Resolve a user-provided path without allowing it to escape base_dir."""
+        base_path = self.base_dir.resolve()
+        candidate = (base_path / file_name).resolve()
+        if candidate != base_path and base_path not in candidate.parents:
+            raise ValueError(f"Path escapes base directory: {file_name}")
+        return candidate
+
     def save_file(self, contents: str, file_name: str, overwrite: bool = True) -> str:
         """Saves the contents to a file called `file_name` and returns the file name if successful.
 
@@ -84,7 +92,7 @@ class FileTools(Toolkit):
         :return: The file name if successful, otherwise returns an error message.
         """
         try:
-            file_path = self.base_dir.joinpath(file_name)
+            file_path = self._resolve_path(file_name)
             log_debug(f"Saving contents to {file_path}")
             if not file_path.parent.exists():
                 file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -105,7 +113,7 @@ class FileTools(Toolkit):
         """
         try:
             log_info(f"Reading file: {file_name}")
-            file_path = self.base_dir.joinpath(file_name)
+            file_path = self._resolve_path(file_name)
             contents = file_path.read_text(encoding="utf-8")
             return str(contents)
         except Exception as e:
@@ -161,7 +169,7 @@ class FileTools(Toolkit):
         :return: Success message or error message.
         """
         try:
-            file_path = self.base_dir.joinpath(file_name)
+            file_path = self._resolve_path(file_name)
             if file_path.exists():
                 return f"File {file_name} already exists"
 
@@ -183,7 +191,7 @@ class FileTools(Toolkit):
         :return: Success message or error message.
         """
         try:
-            dir_path = self.base_dir.joinpath(dir_name)
+            dir_path = self._resolve_path(dir_name)
             if dir_path.exists():
                 return f"Directory {dir_name} already exists"
 
@@ -205,7 +213,7 @@ class FileTools(Toolkit):
             if not confirm:
                 return "Confirmation required. Set confirm=True to delete the file."
 
-            file_path = self.base_dir.joinpath(file_name)
+            file_path = self._resolve_path(file_name)
             if not file_path.exists():
                 return f"File {file_name} does not exist"
 
@@ -230,7 +238,7 @@ class FileTools(Toolkit):
             if not confirm:
                 return "Confirmation required. Set confirm=True to delete the directory."
 
-            dir_path = self.base_dir.joinpath(dir_name)
+            dir_path = self._resolve_path(dir_name)
             if not dir_path.exists():
                 return f"Directory {dir_name} does not exist"
 
@@ -252,8 +260,8 @@ class FileTools(Toolkit):
         :return: Success message or error message.
         """
         try:
-            source_path = self.base_dir.joinpath(source)
-            dest_path = self.base_dir.joinpath(destination)
+            source_path = self._resolve_path(source)
+            dest_path = self._resolve_path(destination)
 
             if not source_path.exists():
                 return f"Source file {source} does not exist"
@@ -277,8 +285,8 @@ class FileTools(Toolkit):
         :return: Success message or error message.
         """
         try:
-            old_path = self.base_dir.joinpath(old_name)
-            new_path = self.base_dir.joinpath(new_name)
+            old_path = self._resolve_path(old_name)
+            new_path = self._resolve_path(new_name)
 
             if not old_path.exists():
                 return f"File {old_name} does not exist"
@@ -302,8 +310,8 @@ class FileTools(Toolkit):
         :return: Success message or error message.
         """
         try:
-            source_path = self.base_dir.joinpath(source)
-            dest_path = self.base_dir.joinpath(destination)
+            source_path = self._resolve_path(source)
+            dest_path = self._resolve_path(destination)
 
             if not source_path.exists():
                 return f"Source file {source} does not exist"
@@ -329,7 +337,7 @@ class FileTools(Toolkit):
         :return: JSON formatted file information or error message.
         """
         try:
-            file_path = self.base_dir.joinpath(file_name)
+            file_path = self._resolve_path(file_name)
             if not file_path.exists():
                 return f"File/directory {file_name} does not exist"
 
@@ -366,7 +374,7 @@ class FileTools(Toolkit):
         :return: JSON with existence status.
         """
         try:
-            file_path = self.base_dir.joinpath(file_name)
+            file_path = self._resolve_path(file_name)
             result = {
                 "file_name": file_name,
                 "exists": file_path.exists(),
@@ -385,7 +393,7 @@ class FileTools(Toolkit):
         :return: File size information or error message.
         """
         try:
-            file_path = self.base_dir.joinpath(file_name)
+            file_path = self._resolve_path(file_name)
             if not file_path.exists():
                 return f"File {file_name} does not exist"
 
@@ -413,7 +421,7 @@ class FileTools(Toolkit):
         :return: File hash or error message.
         """
         try:
-            file_path = self.base_dir.joinpath(file_name)
+            file_path = self._resolve_path(file_name)
             if not file_path.exists():
                 return f"File {file_name} does not exist"
 
@@ -447,7 +455,7 @@ class FileTools(Toolkit):
         :return: Success message or error message.
         """
         try:
-            file_path = self.base_dir.joinpath(file_name)
+            file_path = self._resolve_path(file_name)
 
             # Create file if it doesn't exist
             if not file_path.exists():
@@ -470,14 +478,14 @@ class FileTools(Toolkit):
         :return: Success message or error message.
         """
         try:
-            file_path = self.base_dir.joinpath(file_name)
+            file_path = self._resolve_path(file_name)
             if not file_path.exists():
                 return f"File {file_name} does not exist"
 
             # Add timestamp to backup suffix
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             backup_name = f"{file_name}{backup_suffix}_{timestamp}"
-            backup_path = self.base_dir.joinpath(backup_name)
+            backup_path = self._resolve_path(backup_name)
 
             shutil.copy2(str(file_path), str(backup_path))
             log_info(f"Created backup: {backup_path}")
@@ -494,8 +502,8 @@ class FileTools(Toolkit):
         :return: Success message or error message.
         """
         try:
-            backup_path = self.base_dir.joinpath(backup_file_name)
-            original_path = self.base_dir.joinpath(original_file_name)
+            backup_path = self._resolve_path(backup_file_name)
+            original_path = self._resolve_path(original_file_name)
 
             if not backup_path.exists():
                 return f"Backup file {backup_file_name} does not exist"
@@ -516,7 +524,7 @@ class FileTools(Toolkit):
         :return: JSON with search results or error message.
         """
         try:
-            file_path = self.base_dir.joinpath(file_name)
+            file_path = self._resolve_path(file_name)
             if not file_path.exists():
                 return f"File {file_name} does not exist"
 
@@ -560,7 +568,7 @@ class FileTools(Toolkit):
         :return: Success message with replacement count or error message.
         """
         try:
-            file_path = self.base_dir.joinpath(file_name)
+            file_path = self._resolve_path(file_name)
             if not file_path.exists():
                 return f"File {file_name} does not exist"
 
@@ -600,7 +608,7 @@ class FileTools(Toolkit):
         :return: Line count information or error message.
         """
         try:
-            file_path = self.base_dir.joinpath(file_name)
+            file_path = self._resolve_path(file_name)
             if not file_path.exists():
                 return f"File {file_name} does not exist"
 

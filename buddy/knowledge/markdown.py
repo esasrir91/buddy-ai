@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Any, AsyncIterator, Dict, Iterator, List, Optional, Union, cast
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 
 from buddy.document import Document
 from buddy.document.chunking.markdown import MarkdownChunking
@@ -12,7 +12,7 @@ from buddy.utils.log import log_info, logger
 
 class MarkdownKnowledgeBase(AgentKnowledge):
     path: Optional[Union[str, Path, List[Dict[str, Union[str, Dict[str, Any]]]]]] = None
-    formats: List[str] = [".md"]
+    formats: List[str] = Field(default_factory=lambda: [".md"])
     reader: Optional[MarkdownReader] = None
 
     @model_validator(mode="after")
@@ -54,7 +54,8 @@ class MarkdownKnowledgeBase(AgentKnowledge):
 
     def _is_valid_text(self, path: Path) -> bool:
         """Helper to check if path is a valid text file."""
-        return path.exists() and path.is_file() and path.suffix in self.formats
+        formats = {extension.lower() for extension in self.formats}
+        return path.exists() and path.is_file() and path.suffix.lower() in formats
 
     @property
     async def async_document_lists(self) -> AsyncIterator[List[Document]]:

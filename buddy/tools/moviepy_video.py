@@ -228,6 +228,7 @@ class MoviePyVideoTools(Toolkit):
         Returns:
             str: Path to the extracted audio file
         """
+        video = None
         try:
             log_debug(f"Extracting audio from {video_path}")
             video = VideoFileClip(video_path)
@@ -237,6 +238,9 @@ class MoviePyVideoTools(Toolkit):
         except Exception as e:
             logger.error(f"Failed to extract audio: {str(e)}")
             return f"Failed to extract audio: {str(e)}"
+        finally:
+            if video is not None:
+                video.close()
 
     def create_srt(self, transcription: str, output_path: str) -> str:
         """Save transcription text to SRT formatted file
@@ -246,6 +250,9 @@ class MoviePyVideoTools(Toolkit):
         Returns:
             str: Path to the created SRT file, or error message if failed
         """
+        video = None
+        final_video = None
+        all_caption_clips = []
         try:
             log_debug(f"Creating SRT file at {output_path}")
             # Since we're getting SRT format from Whisper API now,
@@ -297,8 +304,6 @@ class MoviePyVideoTools(Toolkit):
             # Split into lines
             subtitle_lines = self.split_text_into_lines(words)
 
-            all_caption_clips = []
-
             # Create caption clips for each line
             for line in subtitle_lines:
                 # Increase background height to accommodate larger text
@@ -336,13 +341,15 @@ class MoviePyVideoTools(Toolkit):
             )
 
             # Cleanup
-            video.close()
-            final_video.close()
-            for clip in all_caption_clips:
-                clip.close()
-
             return output_path
 
         except Exception as e:
             logger.error(f"Failed to embed captions: {str(e)}")
             return f"Failed to embed captions: {str(e)}"
+        finally:
+            if final_video is not None:
+                final_video.close()
+            for clip in all_caption_clips:
+                clip.close()
+            if video is not None:
+                video.close()

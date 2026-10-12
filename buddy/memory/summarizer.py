@@ -23,7 +23,10 @@ class MemorySummarizer(BaseModel):
                 logger.error(
                     "Buddy uses `openai` as the default model provider. Please provide a `model` or install `openai`."
                 )
-                exit(1)
+                raise ImportError(
+                    "No model was provided and the default OpenAI provider is unavailable. "
+                    "Provide a model or install the `openai` package."
+                ) from e
             self.model = OpenAIChat(id="gpt-4o")
 
     def get_system_message(self, messages_for_summarization: List[Dict[str, str]]) -> Message:
@@ -154,6 +157,11 @@ class MemorySummarizer(BaseModel):
         # Update the Model (set defaults, add logit etc.)
         self.update_model()
 
+        if self.use_structured_outputs:
+            response_format: Any = SessionSummary
+        else:
+            response_format = {"type": "json_object"}
+
         # Convert the message pairs to a list of dictionaries
         messages_for_summarization: List[Dict[str, str]] = []
         for message_pair in message_pairs:
@@ -174,7 +182,7 @@ class MemorySummarizer(BaseModel):
 
         # Generate a response from the Model (includes running function calls)
         self.model = cast(Model, self.model)
-        response = await self.model.aresponse(messages=messages_for_model)
+        response = await self.model.aresponse(messages=messages_for_model, response_format=response_format)
         log_debug("*********** Async MemorySummarizer End ***********")
 
         # If the model natively supports structured outputs, the parsed value is already in the structured format

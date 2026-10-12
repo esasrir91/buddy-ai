@@ -23,6 +23,8 @@ class TavilyTools(Toolkit):
         use_search_context: bool = False,
         **kwargs,
     ):
+        if max_tokens <= 0:
+            raise ValueError("max_tokens must be greater than 0")
         self.api_key = api_key or getenv("TAVILY_API_KEY")
         if not self.api_key:
             logger.error("TAVILY_API_KEY not provided")
@@ -54,6 +56,9 @@ class TavilyTools(Toolkit):
             str: JSON string of results related to the query.
         """
 
+        if max_results <= 0:
+            return json.dumps({"error": "max_results must be greater than 0"})
+
         response = self.client.search(
             query=query, search_depth=self.search_depth, include_answer=self.include_answer, max_results=max_results
         )
@@ -66,10 +71,10 @@ class TavilyTools(Toolkit):
         current_token_count = len(json.dumps(clean_response))
         for result in response.get("results", []):
             _result = {
-                "title": result["title"],
-                "url": result["url"],
-                "content": result["content"],
-                "score": result["score"],
+                "title": result.get("title", ""),
+                "url": result.get("url", ""),
+                "content": result.get("content", ""),
+                "score": result.get("score"),
             }
             current_token_count += len(json.dumps(_result))
             if current_token_count > self.max_tokens:

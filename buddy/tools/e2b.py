@@ -181,7 +181,7 @@ class E2BTools(Toolkit):
 
         try:
             # Check if the result exists
-            if result_index >= len(self.last_execution.results):
+            if result_index < 0 or result_index >= len(self.last_execution.results):
                 return f"Result index {result_index} is out of range. Only {len(self.last_execution.results)} results available."
 
             result = self.last_execution.results[result_index]
@@ -246,7 +246,7 @@ class E2BTools(Toolkit):
 
         try:
             # Check if the result exists
-            if result_index >= len(self.last_execution.results):
+            if result_index < 0 or result_index >= len(self.last_execution.results):
                 return f"Result index {result_index} is out of range. Only {len(self.last_execution.results)} results available."
 
             result = self.last_execution.results[result_index]

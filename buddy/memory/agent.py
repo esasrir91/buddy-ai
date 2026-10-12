@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Tuple
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from buddy.memory.classifier import MemoryClassifier
 from buddy.memory.db import MemoryDb
@@ -33,9 +33,9 @@ class AgentRun(BaseModel):
 
 class AgentMemory(BaseModel):
     # Runs between the user and agent
-    runs: List[AgentRun] = []
+    runs: List[AgentRun] = Field(default_factory=list)
     # List of messages sent to the model
-    messages: List[Message] = []
+    messages: List[Message] = Field(default_factory=list)
     update_system_message_on_change: bool = False
 
     # Summary of the session

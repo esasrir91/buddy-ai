@@ -262,9 +262,11 @@ class Condition:
         all_results = []
         current_step_input = step_input
         condition_step_outputs = {}
+        executed_step_count = 0
 
         for i, step in enumerate(self.steps):
             try:
+                executed_step_count += 1
                 step_outputs_for_step = []
 
                 # Create child index for each step within condition
@@ -340,7 +342,7 @@ class Condition:
                 step_name=self.name,
                 step_index=step_index,
                 condition_result=True,
-                executed_steps=len(self.steps),
+                executed_steps=executed_step_count,
                 step_results=all_results,
             )
 
@@ -467,9 +469,11 @@ class Condition:
         all_results = []
         current_step_input = step_input
         condition_step_outputs = {}
+        executed_step_count = 0
 
         for i, step in enumerate(self.steps):
             try:
+                executed_step_count += 1
                 step_outputs_for_step = []
 
                 # Create child index for each step within condition
@@ -546,7 +550,7 @@ class Condition:
                 step_name=self.name,
                 step_index=step_index,
                 condition_result=True,
-                executed_steps=len(self.steps),
+                executed_steps=executed_step_count,
                 step_results=all_results,
             )
 

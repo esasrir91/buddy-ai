@@ -193,9 +193,10 @@ def tool(*args, **kwargs) -> Union[Function, Callable[[F], Function]]:
                 raise
 
         @wraps(func)
-        async def async_gen_wrapper(*args: Any, **kwargs: Any) -> Any:
+        async def async_gen_wrapper(*args: Any, **kwargs: Any):
             try:
-                return func(*args, **kwargs)
+                async for item in func(*args, **kwargs):
+                    yield item
             except Exception as e:
                 logger.error(
                     f"Error in async generator tool {func.__name__!r}: {e!r}",

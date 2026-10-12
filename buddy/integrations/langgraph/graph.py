@@ -100,7 +100,13 @@ def build_sequential_graph(
         # Chain output -> input between consecutive steps by writing the next
         # step's input key. The first node reads the user-provided "input".
         append_messages = True
-        add_buddy_node(graph, name, agent, append_messages=append_messages)
+        add_buddy_node(
+            graph,
+            name,
+            agent,
+            input_key="input" if i == 0 else "output",
+            append_messages=append_messages,
+        )
 
     graph.add_edge(START, resolved[0][0])
     for (name, _), (next_name, _) in zip(resolved, resolved[1:]):

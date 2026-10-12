@@ -11,10 +11,11 @@ def create_workflow(workflow: WorkflowCreate) -> None:
 
     with api.AuthenticatedClient() as api_client:
         try:
-            api_client.post(
+            response = api_client.post(
                 ApiRoutes.WORKFLOW_CREATE,
                 json=workflow.model_dump(exclude_none=True),
             )
+            response.raise_for_status()
         except Exception as e:
             log_debug(f"Could not create Workflow: {e}")
 
@@ -25,9 +26,10 @@ async def acreate_workflow(workflow: WorkflowCreate) -> None:
 
     async with api.AuthenticatedAsyncClient() as api_client:
         try:
-            await api_client.post(
+            response = await api_client.post(
                 ApiRoutes.WORKFLOW_CREATE,
                 json=workflow.model_dump(exclude_none=True),
             )
+            response.raise_for_status()
         except Exception as e:
-            log_debug(f"Could not create Team: {e}")
+            log_debug(f"Could not create Workflow: {e}")

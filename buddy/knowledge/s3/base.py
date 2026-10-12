@@ -47,18 +47,19 @@ class S3KnowledgeBase(AgentKnowledge):
         if self.object is not None and self.key is not None:
             raise ValueError("Provide either object or key")
 
+        bucket = self.bucket
         if self.bucket_name is not None:
-            self.bucket = S3Bucket(name=self.bucket_name)
+            bucket = S3Bucket(name=self.bucket_name)
 
-        if self.bucket is not None:
+        if bucket is not None:
             if self.key is not None:
-                _object = S3Object(bucket_name=self.bucket.name, name=self.key)
+                _object = S3Object(bucket_name=bucket.name, name=self.key)
                 s3_objects_to_read.append(_object)
             elif self.object is not None:
                 s3_objects_to_read.append(self.object)
             elif self.prefix is not None:
-                s3_objects_to_read.extend(self.bucket.get_objects(prefix=self.prefix))
+                s3_objects_to_read.extend(bucket.get_objects(prefix=self.prefix))
             else:
-                s3_objects_to_read.extend(self.bucket.get_objects())
+                s3_objects_to_read.extend(bucket.get_objects())
 
         return s3_objects_to_read

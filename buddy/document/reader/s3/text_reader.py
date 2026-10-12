@@ -21,6 +21,7 @@ class S3TextReader(Reader):
     """Reader for text files on S3"""
 
     def read(self, s3_object: S3Object) -> List[Document]:
+        temporary_file = None
         try:
             log_info(f"Reading: {s3_object.uri}")
 
@@ -29,13 +30,13 @@ class S3TextReader(Reader):
             s3_object.download(temporary_file)
 
             log_info(f"Parsing: {temporary_file}")
-            doc_name = s3_object.name.split("/")[-1].split(".")[0].replace("/", "_").replace(" ", "_")
+            doc_name = Path(s3_object.name).stem.replace(" ", "_")
             doc_content = textract.process(temporary_file)
             documents = [
                 Document(
                     name=doc_name,
                     id=doc_name,
-                    content=doc_content.decode("utf-8"),
+                    content=doc_content.decode("utf-8") if isinstance(doc_content, bytes) else doc_content,
                 )
             ]
             if self.chunk:
@@ -44,11 +45,13 @@ class S3TextReader(Reader):
                     chunked_documents.extend(self.chunk_document(document))
                 return chunked_documents
 
-            log_debug(f"Deleting: {temporary_file}")
-            temporary_file.unlink()
             return documents
         except Exception as e:
             logger.error(f"Error reading: {s3_object.uri}: {e}")
+        finally:
+            if temporary_file is not None:
+                log_debug(f"Deleting: {temporary_file}")
+                temporary_file.unlink(missing_ok=True)
         return []
 
     async def async_read(self, s3_object: S3Object) -> List[Document]:

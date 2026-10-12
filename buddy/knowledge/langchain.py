@@ -28,11 +28,11 @@ class LangChainKnowledgeBase(AgentKnowledge):
 
         if self.vectorstore is not None and self.retriever is None:
             log_debug("Creating retriever")
-            if self.search_kwargs is None:
-                self.search_kwargs = {"k": self.num_documents}
+            search_kwargs = dict(self.search_kwargs or {})
+            search_kwargs.setdefault("k", self.num_documents)
             if filters is not None:
-                self.search_kwargs.update(filters)
-            self.retriever = self.vectorstore.as_retriever(search_kwargs=self.search_kwargs)
+                search_kwargs.update(filters)
+            self.retriever = self.vectorstore.as_retriever(search_kwargs=search_kwargs)
 
         if self.retriever is None:
             logger.error("No retriever provided")

@@ -12,7 +12,13 @@ except ImportError:
 
 
 class IPGeolocationTools(Toolkit):
-    def __init__(self, ipapi_key: Optional[str] = None, ipgeolocation_key: Optional[str] = None, **kwargs):
+    def __init__(
+        self,
+        ipapi_key: Optional[str] = None,
+        ipgeolocation_key: Optional[str] = None,
+        timeout: float = 30.0,
+        **kwargs,
+    ):
         """Initialize IP Geolocation Tools.
 
         Args:
@@ -21,6 +27,7 @@ class IPGeolocationTools(Toolkit):
         """
         self.ipapi_key = ipapi_key or getenv("IPAPI_KEY")
         self.ipgeolocation_key = ipgeolocation_key or getenv("IPGEOLOCATION_KEY")
+        self.timeout = timeout
 
         tools: List[Any] = [
             self.get_ip_location,
@@ -60,7 +67,7 @@ class IPGeolocationTools(Toolkit):
             if self.ipapi_key:
                 params["access_key"] = self.ipapi_key
 
-            response = requests.get(url, params=params)
+            response = requests.get(url, params=params, timeout=self.timeout)
             response.raise_for_status()
 
             data = response.json()
@@ -91,7 +98,7 @@ class IPGeolocationTools(Toolkit):
             if self.ipgeolocation_key:
                 params["apiKey"] = self.ipgeolocation_key
 
-            response = requests.get(url, params=params)
+            response = requests.get(url, params=params, timeout=self.timeout)
             response.raise_for_status()
 
             data = response.json()
@@ -121,9 +128,9 @@ class IPGeolocationTools(Toolkit):
         """
         try:
             # First get current public IP
-            ip_response = requests.get("https://httpbin.org/ip")
+            ip_response = requests.get("https://httpbin.org/ip", timeout=self.timeout)
             ip_response.raise_for_status()
-            current_ip = ip_response.json()["origin"]
+            current_ip = ip_response.json()["origin"].split(",", 1)[0].strip()
 
             # Then get location for that IP
             return self.get_ip_location(current_ip)
@@ -171,7 +178,7 @@ class IPGeolocationTools(Toolkit):
             url = "https://api.ipgeolocation.io/ipgeo"
             params = {"ip": ip_address, "apiKey": self.ipgeolocation_key, "fields": "security"}
 
-            response = requests.get(url, params=params)
+            response = requests.get(url, params=params, timeout=self.timeout)
             response.raise_for_status()
 
             data = response.json()

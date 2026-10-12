@@ -43,7 +43,7 @@ class MongoMemoryDb(MemoryDb):
         self.db: Database = self._client[self.db_name]
         self.collection: Collection = self.db[self.collection_name]
 
-    def __dict__(self) -> Dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             "name": "MongoMemoryDb",
             "collection_name": self.collection_name,
@@ -103,7 +103,7 @@ class MongoMemoryDb(MemoryDb):
             for doc in cursor:
                 # Remove MongoDB _id before converting to MemoryRow
                 doc.pop("_id", None)
-                memories.append(MemoryRow(user_id=doc["user_id"], memory=doc["memory"]))
+                memories.append(MemoryRow.model_validate(doc))
         except PyMongoError as e:
             logger.error(f"Error reading memories: {e}")
         return memories

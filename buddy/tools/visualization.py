@@ -62,6 +62,13 @@ class VisualizationTools(Toolkit):
         if histogram:
             self.register(self.create_histogram)
 
+    def _resolve_output_path(self, filename: str) -> str:
+        output_dir = os.path.abspath(self.output_dir)
+        file_path = os.path.abspath(os.path.join(output_dir, filename))
+        if os.path.commonpath([output_dir, file_path]) != output_dir:
+            raise ValueError(f"Filename escapes output directory: {filename}")
+        return file_path
+
     def _normalize_data_for_charts(
         self, data: Union[Dict[str, Any], List[Dict[str, Any]], List[Any], str]
     ) -> Dict[str, Union[int, float]]:
@@ -153,7 +160,7 @@ class VisualizationTools(Toolkit):
             if filename is None:
                 filename = f"bar_chart_{len(os.listdir(self.output_dir)) + 1}.png"
 
-            file_path = os.path.join(self.output_dir, filename)
+            file_path = self._resolve_output_path(filename)
             plt.savefig(file_path, dpi=300, bbox_inches="tight")
             plt.close()
 
@@ -226,7 +233,7 @@ class VisualizationTools(Toolkit):
             if filename is None:
                 filename = f"line_chart_{len(os.listdir(self.output_dir)) + 1}.png"
 
-            file_path = os.path.join(self.output_dir, filename)
+            file_path = self._resolve_output_path(filename)
             plt.savefig(file_path, dpi=300, bbox_inches="tight")
             plt.close()
 
@@ -291,7 +298,7 @@ class VisualizationTools(Toolkit):
             if filename is None:
                 filename = f"pie_chart_{len(os.listdir(self.output_dir)) + 1}.png"
 
-            file_path = os.path.join(self.output_dir, filename)
+            file_path = self._resolve_output_path(filename)
             plt.savefig(file_path, dpi=300, bbox_inches="tight")
             plt.close()
 
@@ -380,7 +387,7 @@ class VisualizationTools(Toolkit):
             if filename is None:
                 filename = f"scatter_plot_{len(os.listdir(self.output_dir)) + 1}.png"
 
-            file_path = os.path.join(self.output_dir, filename)
+            file_path = self._resolve_output_path(filename)
             plt.savefig(file_path, dpi=300, bbox_inches="tight")
             plt.close()
 
@@ -454,7 +461,7 @@ class VisualizationTools(Toolkit):
             if filename is None:
                 filename = f"histogram_{len(os.listdir(self.output_dir)) + 1}.png"
 
-            file_path = os.path.join(self.output_dir, filename)
+            file_path = self._resolve_output_path(filename)
             plt.savefig(file_path, dpi=300, bbox_inches="tight")
             plt.close()
 

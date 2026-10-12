@@ -376,6 +376,47 @@ class StepOutputEvent(BaseWorkflowRunResponseEvent):
         return self.step_output.stop if self.step_output else False
 
 
+WORKFLOW_RUN_EVENT_TYPE_REGISTRY = {
+    event_class().event: event_class
+    for event_class in (
+        WorkflowStartedEvent,
+        WorkflowCompletedEvent,
+        WorkflowErrorEvent,
+        WorkflowCancelledEvent,
+        StepStartedEvent,
+        StepCompletedEvent,
+        StepErrorEvent,
+        LoopExecutionStartedEvent,
+        LoopIterationStartedEvent,
+        LoopIterationCompletedEvent,
+        LoopExecutionCompletedEvent,
+        ParallelExecutionStartedEvent,
+        ParallelExecutionCompletedEvent,
+        ConditionExecutionStartedEvent,
+        ConditionExecutionCompletedEvent,
+        RouterExecutionStartedEvent,
+        RouterExecutionCompletedEvent,
+        StepsExecutionStartedEvent,
+        StepsExecutionCompletedEvent,
+        StepOutputEvent,
+    )
+}
+
+
+def workflow_run_response_event_from_dict(data: Dict[str, Any]) -> BaseWorkflowRunResponseEvent:
+    event_data = data.copy()
+    event_class = WORKFLOW_RUN_EVENT_TYPE_REGISTRY.get(event_data.get("event", ""))
+    if event_class is None:
+        raise ValueError(f"Unknown workflow event type: {event_data.get('event', '')}")
+
+    if event_class is StepOutputEvent and event_data.get("step_output") is not None:
+        from buddy.workflow.v2.step import StepOutput
+
+        event_data["step_output"] = StepOutput.from_dict(event_data["step_output"])
+
+    return event_class(**event_data)
+
+
 # Union type for all workflow run response events
 WorkflowRunResponseEvent = Union[
     WorkflowStartedEvent,
@@ -505,6 +546,7 @@ class WorkflowRunResponse:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "WorkflowRunResponse":
+        data = data.copy()
         # Import here to avoid circular import
         from buddy.workflow.v2.step import StepOutput
 
@@ -537,6 +579,7 @@ class WorkflowRunResponse:
         response_audio = AudioResponse.model_validate(response_audio) if response_audio else None
 
         events = data.pop("events", [])
+        events = [workflow_run_response_event_from_dict(event) for event in events]
 
         return cls(
             step_responses=parsed_step_responses,

@@ -19,6 +19,7 @@ class TwitterTools(Toolkit):
         access_token: Optional[str] = None,
         access_token_secret: Optional[str] = None,
         bearer_token: Optional[str] = None,
+        timeout: float = 30.0,
         **kwargs,
     ):
         """Initialize Twitter Tools.
@@ -35,6 +36,7 @@ class TwitterTools(Toolkit):
         self.access_token = access_token or getenv("TWITTER_ACCESS_TOKEN")
         self.access_token_secret = access_token_secret or getenv("TWITTER_ACCESS_TOKEN_SECRET")
         self.bearer_token = bearer_token or getenv("TWITTER_BEARER_TOKEN")
+        self.timeout = timeout
         self.base_url = "https://api.twitter.com/2"
 
         tools: List[Any] = [
@@ -67,6 +69,8 @@ class TwitterTools(Toolkit):
         """
         if not self.bearer_token:
             return json.dumps({"error": "Bearer token not provided"})
+        if not text.strip() or len(text) > 280:
+            return json.dumps({"error": "Tweet text must be between 1 and 280 characters"})
 
         try:
             payload = {"text": text}
@@ -74,7 +78,7 @@ class TwitterTools(Toolkit):
             if reply_to_id:
                 payload["reply"] = {"in_reply_to_tweet_id": reply_to_id}
 
-            response = requests.post(f"{self.base_url}/tweets", headers=self._get_headers(), json=payload)
+            response = requests.post(f"{self.base_url}/tweets", headers=self._get_headers(), json=payload, timeout=self.timeout)
             response.raise_for_status()
 
             return json.dumps(response.json())
@@ -93,12 +97,14 @@ class TwitterTools(Toolkit):
         """
         if not self.bearer_token:
             return json.dumps({"error": "Bearer token not provided"})
+        if max_results <= 0:
+            return json.dumps({"error": "max_results must be greater than 0"})
 
         try:
             params = {"max_results": max_results, "tweet.fields": "created_at,author_id,public_metrics"}
 
             response = requests.get(
-                f"{self.base_url}/users/{user_id}/tweets", headers=self._get_headers(), params=params
+                f"{self.base_url}/users/{user_id}/tweets", headers=self._get_headers(), params=params, timeout=self.timeout
             )
             response.raise_for_status()
 
@@ -118,11 +124,15 @@ class TwitterTools(Toolkit):
         """
         if not self.bearer_token:
             return json.dumps({"error": "Bearer token not provided"})
+        if not query.strip() or max_results <= 0:
+            return json.dumps({"error": "query must be nonempty and max_results must be greater than 0"})
 
         try:
             params = {"query": query, "max_results": max_results, "tweet.fields": "created_at,author_id,public_metrics"}
 
-            response = requests.get(f"{self.base_url}/tweets/search/recent", headers=self._get_headers(), params=params)
+            response = requests.get(
+                f"{self.base_url}/tweets/search/recent", headers=self._get_headers(), params=params, timeout=self.timeout
+            )
             response.raise_for_status()
 
             return json.dumps(response.json())
@@ -145,7 +155,7 @@ class TwitterTools(Toolkit):
             params = {"user.fields": "created_at,description,location,public_metrics,verified"}
 
             response = requests.get(
-                f"{self.base_url}/users/by/username/{username}", headers=self._get_headers(), params=params
+                f"{self.base_url}/users/by/username/{username}", headers=self._get_headers(), params=params, timeout=self.timeout
             )
             response.raise_for_status()
 
@@ -168,7 +178,9 @@ class TwitterTools(Toolkit):
         try:
             payload = {"target_user_id": user_id}
 
-            response = requests.post(f"{self.base_url}/users/me/following", headers=self._get_headers(), json=payload)
+            response = requests.post(
+                f"{self.base_url}/users/me/following", headers=self._get_headers(), json=payload, timeout=self.timeout
+            )
             response.raise_for_status()
 
             return json.dumps(response.json())
@@ -190,7 +202,9 @@ class TwitterTools(Toolkit):
         try:
             payload = {"tweet_id": tweet_id}
 
-            response = requests.post(f"{self.base_url}/users/me/retweets", headers=self._get_headers(), json=payload)
+            response = requests.post(
+                f"{self.base_url}/users/me/retweets", headers=self._get_headers(), json=payload, timeout=self.timeout
+            )
             response.raise_for_status()
 
             return json.dumps(response.json())

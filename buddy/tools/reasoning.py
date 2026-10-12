@@ -64,6 +64,9 @@ class ReasoningTools(Toolkit):
             A list of previous thoughts and the new thought
         """
         try:
+            if not 0.0 <= confidence <= 1.0:
+                return "Error recording thought: confidence must be between 0.0 and 1.0"
+
             log_debug(f"Thought about {title}")
 
             # Create a reasoning step
@@ -80,14 +83,15 @@ class ReasoningTools(Toolkit):
                 agent.session_state = {}
             if "reasoning_steps" not in agent.session_state:
                 agent.session_state["reasoning_steps"] = {}
-            if agent.run_id not in agent.session_state["reasoning_steps"]:
-                agent.session_state["reasoning_steps"][agent.run_id] = []
-            agent.session_state["reasoning_steps"][agent.run_id].append(reasoning_step.model_dump_json())
+            run_key = getattr(agent, "run_id", "default") or "default"
+            if run_key not in agent.session_state["reasoning_steps"]:
+                agent.session_state["reasoning_steps"][run_key] = []
+            agent.session_state["reasoning_steps"][run_key].append(reasoning_step.model_dump_json())
 
             # Return all previous reasoning_steps and the new reasoning_step
-            if "reasoning_steps" in agent.session_state and agent.run_id in agent.session_state["reasoning_steps"]:
+            if "reasoning_steps" in agent.session_state and run_key in agent.session_state["reasoning_steps"]:
                 formatted_reasoning_steps = ""
-                for i, step in enumerate(agent.session_state["reasoning_steps"][agent.run_id], 1):
+                for i, step in enumerate(agent.session_state["reasoning_steps"][run_key], 1):
                     step_parsed = ReasoningStep.model_validate_json(step)
                     step_str = dedent(f"""\
 Step {i}:
@@ -125,6 +129,9 @@ Confidence: {step_parsed.confidence}
             A list of previous thoughts and the new analysis
         """
         try:
+            if not 0.0 <= confidence <= 1.0:
+                return "Error recording analysis: confidence must be between 0.0 and 1.0"
+
             log_debug(f"Analyzed {title}")
 
             # Map string next_action to enum
@@ -148,14 +155,15 @@ Confidence: {step_parsed.confidence}
                 agent.session_state = {}
             if "reasoning_steps" not in agent.session_state:
                 agent.session_state["reasoning_steps"] = {}
-            if agent.run_id not in agent.session_state["reasoning_steps"]:
-                agent.session_state["reasoning_steps"][agent.run_id] = []
-            agent.session_state["reasoning_steps"][agent.run_id].append(reasoning_step.model_dump_json())
+            run_key = getattr(agent, "run_id", "default") or "default"
+            if run_key not in agent.session_state["reasoning_steps"]:
+                agent.session_state["reasoning_steps"][run_key] = []
+            agent.session_state["reasoning_steps"][run_key].append(reasoning_step.model_dump_json())
 
             # Return all previous reasoning_steps and the new reasoning_step
-            if "reasoning_steps" in agent.session_state and agent.run_id in agent.session_state["reasoning_steps"]:
+            if "reasoning_steps" in agent.session_state and run_key in agent.session_state["reasoning_steps"]:
                 formatted_reasoning_steps = ""
-                for i, step in enumerate(agent.session_state["reasoning_steps"][agent.run_id], 1):
+                for i, step in enumerate(agent.session_state["reasoning_steps"][run_key], 1):
                     step_parsed = ReasoningStep.model_validate_json(step)
                     step_str = dedent(f"""\
 Step {i}:

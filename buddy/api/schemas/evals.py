@@ -1,7 +1,10 @@
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Annotated, Any, Dict, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, StringConstraints
+
+
+Identifier = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
 class EvalType(str, Enum):
@@ -14,13 +17,14 @@ class EvalType(str, Enum):
 class EvalRunCreate(BaseModel):
     """Data sent to the API to create an evaluation run"""
 
-    agent_id: Optional[str] = None
-    model_id: Optional[str] = None
+    model_config = ConfigDict(extra="forbid")
+    agent_id: Optional[Identifier] = None
+    model_id: Optional[Identifier] = None
     model_provider: Optional[str] = None
-    team_id: Optional[str] = None
+    team_id: Optional[Identifier] = None
     name: Optional[str] = None
     evaluated_entity_name: Optional[str] = None
 
-    run_id: str
+    run_id: Identifier
     eval_type: EvalType
     eval_data: Dict[str, Any]

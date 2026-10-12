@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any, ClassVar, Dict, Iterator, List, Optional, Union
+from urllib.parse import urlparse
 
 import textract
 from pydantic import Field
@@ -26,9 +27,9 @@ class LightRagKnowledgeBase(AgentKnowledge):
     urls: Optional[Union[List[str], List[Dict[str, Union[str, Dict[str, Any]]]]]] = None
     exclude_files: List[str] = Field(default_factory=list)
 
-    pdf_url_reader: PDFUrlReader = PDFUrlReader()
-    markdown_reader: MarkdownReader = MarkdownReader()
-    url_reader: URLReader = URLReader()
+    pdf_url_reader: PDFUrlReader = Field(default_factory=PDFUrlReader)
+    markdown_reader: MarkdownReader = Field(default_factory=MarkdownReader)
+    url_reader: URLReader = Field(default_factory=URLReader)
 
     @property
     def document_lists(self) -> Iterator[List[Document]]:
@@ -67,11 +68,13 @@ class LightRagKnowledgeBase(AgentKnowledge):
         """Process a single path (file or directory)."""
         if path.is_dir():
             for file_path in path.glob("**/*"):
-                if file_path.is_file():
+                if self._is_supported_path(file_path):
                     text_str = textract.process(str(file_path)).decode("utf-8")
                     yield [text_str]
         elif path.exists() and path.is_file():
-            if path.suffix == ".md":
+            if not self._is_supported_path(path):
+                return
+            if path.suffix.lower() == ".md":
                 documents = self.markdown_reader.read(file=path)
                 text_contents = [doc.content for doc in documents]
                 yield text_contents
@@ -101,7 +104,7 @@ class LightRagKnowledgeBase(AgentKnowledge):
         """Process URL with metadata configuration."""
         log_debug(f"Processing URL with metadata - URL: {url}, Config: {config}")
         if self._is_valid_url(url):
-            if url.endswith(".pdf"):
+            if urlparse(url).path.lower().endswith(".pdf"):
                 log_info(f"READING PDF URL: {url}")
                 documents = self.pdf_url_reader.read(url=url)
                 text_contents = [doc.content for doc in documents]
@@ -122,7 +125,7 @@ class LightRagKnowledgeBase(AgentKnowledge):
         log_info(f"Processing simple URL: {url}")
         if self._is_valid_url(url):
             log_info(f"Simple URL is valid, reading documents from: {url}")
-            if url.endswith(".pdf"):
+            if urlparse(url).path.lower().endswith(".pdf"):
                 documents = self.pdf_url_reader.read(url=url)
                 text_contents = [doc.content for doc in documents]
                 yield text_contents
@@ -206,10 +209,15 @@ class LightRagKnowledgeBase(AgentKnowledge):
 
     def _is_valid_url(self, url: str) -> bool:
         """Helper to check if URL is valid."""
-        if not any(url.endswith(ext) for ext in self.SUPPORTED_EXTENSIONS):
+        path = urlparse(url).path.lower()
+        if not any(path.endswith(ext) for ext in self.SUPPORTED_EXTENSIONS):
             logger.error(f"Unsupported URL: {url}. Supported file types: {', '.join(self.SUPPORTED_EXTENSIONS)}")
             return False
         return True
+
+    def _is_supported_path(self, path: Path) -> bool:
+        """Return whether a path is a readable supported file."""
+        return path.is_file() and path.suffix.lower() in self.SUPPORTED_EXTENSIONS
 
 
 async def lightrag_retriever(

@@ -156,7 +156,7 @@ class StepInput:
             import json
 
             previous_step_content_str = json.dumps(self.previous_step_content, indent=2, default=str)
-        elif self.previous_step_content:
+        elif self.previous_step_content is not None:
             previous_step_content_str = str(self.previous_step_content)
 
         # Convert previous_step_outputs to serializable format (keep existing logic)
@@ -220,6 +220,10 @@ class StepOutput:
                 content_dict = str(self.content)
 
         return {
+            "step_name": self.step_name,
+            "step_id": self.step_id,
+            "executor_type": self.executor_type,
+            "executor_name": self.executor_name,
             "content": content_dict,
             "response": self.response.to_dict() if self.response else None,
             "images": [img.to_dict() for img in self.images] if self.images else None,
@@ -261,6 +265,10 @@ class StepOutput:
             audio = [AudioArtifact.model_validate(aud) for aud in audio]
 
         return cls(
+            step_name=data.get("step_name"),
+            step_id=data.get("step_id"),
+            executor_type=data.get("executor_type"),
+            executor_name=data.get("executor_name"),
             content=data.get("content"),
             response=response,
             images=images,

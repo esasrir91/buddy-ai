@@ -1,15 +1,19 @@
+from __future__ import annotations
+
 from dataclasses import asdict, dataclass, field
 from enum import Enum
 from time import time
-from typing import Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel
 
 from buddy.media import AudioArtifact, AudioResponse, ImageArtifact, VideoArtifact
-from buddy.models.message import Citations, Message
-from buddy.models.response import ToolExecution
 from buddy.run.base import BaseRunResponseEvent, RunResponseExtraData, RunStatus
 from buddy.utils.log import logger
+
+if TYPE_CHECKING:
+    from buddy.models.message import Citations, Message
+    from buddy.models.response import ToolExecution
 
 
 class RunEvent(str, Enum):
@@ -293,6 +297,8 @@ class RunResponse:
     response_audio: Optional[AudioResponse] = None  # Model audio response
     citations: Optional[Citations] = None
     extra_data: Optional[RunResponseExtraData] = None
+    advisor_feedback: Optional[str] = None
+    judge_result: Optional[Dict[str, Any]] = None
     created_at: int = field(default_factory=lambda: int(time()))
 
     events: Optional[List[RunResponseEvent]] = None
@@ -320,6 +326,9 @@ class RunResponse:
         return [t for t in self.tools if t.external_execution_required] if self.tools else []
 
     def to_dict(self) -> Dict[str, Any]:
+        from buddy.models.message import Citations
+        from buddy.models.response import ToolExecution
+
         _dict = {
             k: v
             for k, v in asdict(self).items()
@@ -414,6 +423,10 @@ class RunResponse:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "RunResponse":
+        from buddy.models.message import Citations, Message
+        from buddy.models.response import ToolExecution
+
+        data = data.copy()
         events = data.pop("events", None)
         events = [run_response_event_from_dict(event) for event in events] if events else None
 

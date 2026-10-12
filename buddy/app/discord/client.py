@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from os import getenv
 from textwrap import dedent
 from typing import Optional, Union
@@ -13,7 +15,7 @@ try:
     import discord
 
 except (ImportError, ModuleNotFoundError):
-    print("`discord.py` not installed. Please install using `pip install discord.py`")
+    raise ImportError("Discord integration requires `discord.py`. Install it with `pip install discord.py`.")
 
 
 class RequiresConfirmationView(discord.ui.View):
@@ -83,17 +85,19 @@ class DiscordClient:
                 media = message.attachments[0]
                 media_type = media.content_type
                 media_url = media.url
-                if media_type.startswith("image/"):
+                if media_type and media_type.startswith("image/"):
                     message_image = media_url
-                elif media_type.startswith("video/"):
-                    req = requests.get(media_url)
+                elif media_type and media_type.startswith("video/"):
+                    req = requests.get(media_url, timeout=30)
+                    req.raise_for_status()
                     video = req.content
                     message_video = video
-                elif media_type.startswith("application/"):
-                    req = requests.get(media_url)
+                elif media_type and media_type.startswith("application/"):
+                    req = requests.get(media_url, timeout=30)
+                    req.raise_for_status()
                     document = req.content
                     message_file = document
-                elif media_type.startswith("audio/"):
+                elif media_type and media_type.startswith("audio/"):
                     message_audio = media_url
 
             log_info(f"processing message:{message_text} \n with media: {media_url} \n url:{message_url}")

@@ -162,13 +162,18 @@ class PerformanceResult:
             results_table.add_column("Memory (MiB)", style="yellow")
 
         # Add rows
-        for i in range(len(self.run_times) or len(self.memory_usages)):
+        run_count = max(len(self.run_times), len(self.memory_usages))
+        for i in range(run_count):
             if measure_runtime and measure_memory:
-                results_table.add_row(str(i + 1), f"{self.run_times[i]:.6f}", f"{self.memory_usages[i]:.6f}")
+                runtime = f"{self.run_times[i]:.6f}" if i < len(self.run_times) else "N/A"
+                memory = f"{self.memory_usages[i]:.6f}" if i < len(self.memory_usages) else "N/A"
+                results_table.add_row(str(i + 1), runtime, memory)
             elif measure_runtime:
-                results_table.add_row(str(i + 1), f"{self.run_times[i]:.6f}")
+                runtime = f"{self.run_times[i]:.6f}" if i < len(self.run_times) else "N/A"
+                results_table.add_row(str(i + 1), runtime)
             elif measure_memory:
-                results_table.add_row(str(i + 1), f"{self.memory_usages[i]:.6f}")
+                memory = f"{self.memory_usages[i]:.6f}" if i < len(self.memory_usages) else "N/A"
+                results_table.add_row(str(i + 1), memory)
             else:
                 results_table.add_row(str(i + 1))
 
@@ -216,6 +221,9 @@ class PerformanceEval:
     debug_mode: bool = getenv("BUDDY_DEBUG", "false").lower() == "true"
     # Log the results to the Buddy platform. On by default.
     monitoring: bool = getenv("BUDDY_MONITOR", "true").lower() == "true"
+
+    def _func_name(self) -> str:
+        return getattr(self.func, "__name__", type(self.func).__name__)
 
     def _measure_time(self) -> float:
         """Measure execution time for a single run."""
@@ -576,7 +584,7 @@ class PerformanceEval:
                 run_data=self._parse_eval_run_data(),
                 eval_type=EvalType.PERFORMANCE,
                 name=self.name if self.name is not None else None,
-                evaluated_entity_name=self.func.__name__,
+                evaluated_entity_name=self._func_name(),
             )
 
         log_debug(f"*********** Evaluation End: {self.eval_id} ***********")
@@ -598,7 +606,7 @@ class PerformanceEval:
         # Validate the function to evaluate is async.
         if not asyncio.iscoroutinefunction(self.func):
             raise ValueError(
-                f"The provided function ({self.func.__name__}) is not async. Use the run() method for sync functions."
+                f"The provided function ({self._func_name()}) is not async. Use the run() method for sync functions."
             )
 
         from rich.console import Console
@@ -698,7 +706,7 @@ class PerformanceEval:
                 run_data=self._parse_eval_run_data(),
                 eval_type=EvalType.PERFORMANCE,
                 name=self.name if self.name is not None else None,
-                evaluated_entity_name=self.func.__name__,
+                evaluated_entity_name=self._func_name(),
             )
 
         log_debug(f"*********** Evaluation End: {self.eval_id} ***********")

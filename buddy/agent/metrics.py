@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Optional, Union
 
 from buddy.models.message import MessageMetrics
@@ -28,6 +28,11 @@ class SessionMetrics:
     time_to_first_token: Optional[float] = None
 
     timer: Optional[Timer] = None
+
+    def to_dict(self) -> dict:
+        metrics_dict = asdict(self)
+        metrics_dict.pop("timer", None)
+        return metrics_dict
 
     def start_timer(self):
         if self.timer is None:
@@ -97,7 +102,10 @@ class SessionMetrics:
             result.time = other.time
 
         # Handle time_to_first_token (take the first non-None value)
-        result.time_to_first_token = self.time_to_first_token or other.time_to_first_token
+        if self.time_to_first_token is not None:
+            result.time_to_first_token = self.time_to_first_token
+        else:
+            result.time_to_first_token = other.time_to_first_token
 
         return result
 

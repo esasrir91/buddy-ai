@@ -66,6 +66,10 @@ class JsonStorage(Storage):
                             self.mode == "workflow" and data["workflow_id"] == entity_id and data["user_id"] == user_id
                         ):
                             session_ids.append(data["session_id"])
+                        elif (
+                            self.mode == "workflow_v2" and data["workflow_id"] == entity_id and data["user_id"] == user_id
+                        ):
+                            session_ids.append(data["session_id"])
                     elif user_id and data["user_id"] == user_id:
                         session_ids.append(data["session_id"])
                     elif entity_id:
@@ -100,6 +104,10 @@ class JsonStorage(Storage):
                             self.mode == "workflow" and data["workflow_id"] == entity_id and data["user_id"] == user_id
                         ):
                             _session = WorkflowSession.from_dict(data)
+                        elif (
+                            self.mode == "workflow_v2" and data["workflow_id"] == entity_id and data["user_id"] == user_id
+                        ):
+                            _session = WorkflowSessionV2.from_dict(data)
                     elif user_id and data["user_id"] == user_id:
                         if self.mode == "agent":
                             _session = AgentSession.from_dict(data)
@@ -107,6 +115,8 @@ class JsonStorage(Storage):
                             _session = TeamSession.from_dict(data)
                         elif self.mode == "workflow":
                             _session = WorkflowSession.from_dict(data)
+                        elif self.mode == "workflow_v2":
+                            _session = WorkflowSessionV2.from_dict(data)
                     elif entity_id:
                         if self.mode == "agent" and data["agent_id"] == entity_id:
                             _session = AgentSession.from_dict(data)

@@ -238,7 +238,7 @@ class TokenBudgetManager:
             cost = count_message_tokens(msg, self.config.count_method, self.model_id)
             messages.pop(idx)
             # Adjust remaining indices
-            history_indices = [j - 1 if j > idx else j for j in history_indices]
+            history_indices = [j - 1 if j > idx else j for j in history_indices if j != idx]
             current_estimate -= cost
             tokens_trimmed += cost
             turns_dropped += 1

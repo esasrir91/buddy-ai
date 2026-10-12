@@ -61,6 +61,10 @@ class SeleniumTools(Toolkit):
             raise ImportError("Selenium is not installed. Install with: pip install selenium")
 
         self.browser = browser.lower()
+        if self.browser not in {"chrome", "firefox", "edge", "safari"}:
+            raise ValueError("browser must be one of: chrome, firefox, edge, safari")
+        if implicit_wait < 0 or page_load_timeout < 0:
+            raise ValueError("implicit_wait and page_load_timeout must be nonnegative")
         self.headless = headless
         self.implicit_wait = implicit_wait
         self.page_load_timeout = page_load_timeout

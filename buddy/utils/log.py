@@ -1,6 +1,6 @@
 import logging
 from os import getenv
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
 from rich.logging import RichHandler
 from rich.text import Text
@@ -27,7 +27,7 @@ LOG_STYLES = {
 
 
 class ColoredRichHandler(RichHandler):
-    def __init__(self, *args, source_type: Optional[str] = None, **kwargs):
+    def __init__(self, *args, source_type: str | None = None, **kwargs):
         super().__init__(*args, **kwargs)
         self.source_type = source_type
 
@@ -63,7 +63,7 @@ class BuddyLogger(logging.Logger):
         super().info(msg, *args, **kwargs)
 
 
-def build_logger(logger_name: str, source_type: Optional[str] = None) -> Any:
+def build_logger(logger_name: str, source_type: str | None = None) -> Any:
     # Set the custom logger class as the default for this logger
     logging.setLoggerClass(BuddyLogger)
 
@@ -78,7 +78,7 @@ def build_logger(logger_name: str, source_type: Optional[str] = None) -> Any:
     rich_handler = ColoredRichHandler(
         show_time=False,
         rich_tracebacks=False,
-        show_path=True if getenv("BUDDY_API_RUNTIME") == "dev" else False,
+        show_path=getenv("BUDDY_API_RUNTIME") == "dev",
         tracebacks_show_locals=False,
         source_type=source_type or "agent",
     )
@@ -106,7 +106,7 @@ debug_on: bool = False
 debug_level: Literal[1, 2] = 1
 
 
-def set_log_level_to_debug(source_type: Optional[str] = None, level: Literal[1, 2] = 1):
+def set_log_level_to_debug(source_type: str | None = None, level: Literal[1, 2] = 1):
     if source_type is None:
         use_agent_logger()
 
@@ -120,7 +120,7 @@ def set_log_level_to_debug(source_type: Optional[str] = None, level: Literal[1, 
     debug_level = level
 
 
-def set_log_level_to_info(source_type: Optional[str] = None):
+def set_log_level_to_info(source_type: str | None = None):
     _logger = logging.getLogger(LOGGER_NAME if source_type is None else f"{LOGGER_NAME}-{source_type}")
     _logger.setLevel(logging.INFO)
 
@@ -128,7 +128,7 @@ def set_log_level_to_info(source_type: Optional[str] = None):
     debug_on = False
 
 
-def set_log_level_to_warning(source_type: Optional[str] = None):
+def set_log_level_to_warning(source_type: str | None = None):
     _logger = logging.getLogger(LOGGER_NAME if source_type is None else f"{LOGGER_NAME}-{source_type}")
     _logger.setLevel(logging.WARNING)
 
@@ -136,7 +136,7 @@ def set_log_level_to_warning(source_type: Optional[str] = None):
     debug_on = False
 
 
-def set_log_level_to_error(source_type: Optional[str] = None):
+def set_log_level_to_error(source_type: str | None = None):
     _logger = logging.getLogger(LOGGER_NAME if source_type is None else f"{LOGGER_NAME}-{source_type}")
     _logger.setLevel(logging.ERROR)
 
@@ -149,7 +149,7 @@ def center_header(message: str, symbol: str = "*") -> str:
         import shutil
 
         terminal_width = shutil.get_terminal_size().columns
-    except Exception:
+    except OSError:
         terminal_width = 80  # fallback width
 
     header = f" {message} "
@@ -175,30 +175,21 @@ def use_workflow_logger():
 
 
 def log_debug(msg, center: bool = False, symbol: str = "*", log_level: Literal[1, 2] = 1, *args, **kwargs):
-    global logger
-    global debug_on
-    global debug_level
-
-    if debug_on:
-        if debug_level >= log_level:
-            logger.debug(msg, center, symbol, *args, **kwargs)
+    if debug_on and debug_level >= log_level:
+        logger.debug(msg, center, symbol, *args, **kwargs)
 
 
 def log_info(msg, center: bool = False, symbol: str = "*", *args, **kwargs):
-    global logger
     logger.info(msg, center, symbol, *args, **kwargs)
 
 
 def log_warning(msg, *args, **kwargs):
-    global logger
     logger.warning(msg, *args, **kwargs)
 
 
 def log_error(msg, *args, **kwargs):
-    global logger
     logger.error(msg, *args, **kwargs)
 
 
 def log_exception(msg, *args, **kwargs):
-    global logger
     logger.exception(msg, *args, **kwargs)

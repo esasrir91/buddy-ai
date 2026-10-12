@@ -1,3 +1,5 @@
+import ast
+import json
 from pathlib import Path
 from typing import List, Optional
 
@@ -124,7 +126,12 @@ class SqliteMemoryDb(MemoryDb):
 
                 result = session.execute(stmt)
                 for row in result:
-                    memories.append(MemoryRow(id=row.id, user_id=row.user_id, memory=eval(row.memory)))
+                    row_data = dict(row._mapping)
+                    try:
+                        row_data["memory"] = json.loads(row_data["memory"])
+                    except json.JSONDecodeError:
+                        row_data["memory"] = ast.literal_eval(row_data["memory"])
+                    memories.append(MemoryRow.model_validate(row_data))
         except SQLAlchemyError as e:
             log_debug(f"Exception reading from table: {e}")
             log_debug(f"Table does not exist: {self.table_name}")
@@ -143,11 +150,19 @@ class SqliteMemoryDb(MemoryDb):
                     stmt = (
                         self.table.update()
                         .where(self.table.c.id == memory.id)
-                        .values(user_id=memory.user_id, memory=str(memory.memory), updated_at=text("CURRENT_TIMESTAMP"))
+                        .values(
+                            user_id=memory.user_id,
+                            memory=json.dumps(memory.memory),
+                            updated_at=text("CURRENT_TIMESTAMP"),
+                        )
                     )
                 else:
                     # Insert new memory
-                    stmt = self.table.insert().values(id=memory.id, user_id=memory.user_id, memory=str(memory.memory))  # type: ignore
+                    stmt = self.table.insert().values(
+                        id=memory.id,
+                        user_id=memory.user_id,
+                        memory=json.dumps(memory.memory),
+                    )  # type: ignore
 
                 session.execute(stmt)
                 session.commit()

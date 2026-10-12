@@ -20,32 +20,30 @@ class PlaygroundSettings(BaseSettings):
 
     secret_key: Optional[str] = None
 
-    # Cors origin list to allow requests from.
-    # This list is set using the set_cors_origin_list validator
-    cors_origin_list: Optional[List[str]] = Field(None, validate_default=True)
+    # CORS origin list to allow requests from.
+    cors_origin_list: List[str] = Field(default_factory=list, validate_default=True)
 
     @field_validator("env", mode="before")
-    def validate_playground_env(cls, env):
+    def validate_playground_env(cls, env: str) -> str:
         """Validate playground_env."""
 
         valid_runtime_envs = ["dev", "stg", "prd"]
+        env = env.strip().lower()
         if env not in valid_runtime_envs:
             raise ValueError(f"Invalid Playground Env: {env}")
         return env
 
     @field_validator("cors_origin_list", mode="before")
-    def set_cors_origin_list(cls, cors_origin_list):
-        valid_cors = cors_origin_list or []
+    def set_cors_origin_list(cls, cors_origin_list: Optional[List[str]]) -> List[str]:
+        valid_cors = list(cors_origin_list or [])
 
         # Add Buddy domains to cors origin list
-        valid_cors.extend(
-            [
-                "http://localhost:3000",
-                "https://buddy.com",
-                "https://www.buddy.com",
-                "https://app.buddy.com",
-                "https://app-stg.buddy.com",
-            ]
-        )
+        valid_cors.extend([
+            "http://localhost:3000",
+            "https://buddy.com",
+            "https://www.buddy.com",
+            "https://app.buddy.com",
+            "https://app-stg.buddy.com",
+        ])
 
-        return valid_cors
+        return list(dict.fromkeys(origin.strip() for origin in valid_cors if origin.strip()))

@@ -107,6 +107,9 @@ class JiraTools(Toolkit):
         :return: A JSON string containing a list of dictionaries with issue details.
         """
         try:
+            if max_results <= 0:
+                return json.dumps({"error": "max_results must be greater than 0"})
+
             issues = self.jira.search_issues(jql_str, maxResults=max_results)
             results = []
             for issue in issues:

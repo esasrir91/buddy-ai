@@ -1,3 +1,4 @@
+import json
 from os import getenv
 from typing import Any, List, Optional, Union
 from uuid import uuid4
@@ -38,7 +39,7 @@ class DesiVocalTools(Toolkit):
         """
         try:
             url = "https://prod-api2.desivocal.com/dv/api/v0/tts_api/voices"
-            response = requests.get(url)
+            response = requests.get(url, timeout=30)
             response.raise_for_status()
 
             voices_data = response.json()
@@ -58,7 +59,7 @@ class DesiVocalTools(Toolkit):
                     }
                 )
 
-            return str(responses)
+            return json.dumps(responses)
         except Exception as e:
             logger.error(f"Failed to get voices: {e}")
             return f"Error: {e}"
@@ -84,7 +85,7 @@ class DesiVocalTools(Toolkit):
                 "Content-Type": "application/json",
             }
 
-            response = requests.post(url, headers=headers, json=payload)
+            response = requests.post(url, headers=headers, json=payload, timeout=30)
 
             response.raise_for_status()
 

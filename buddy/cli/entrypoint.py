@@ -29,14 +29,9 @@ Usage:
 
 
 def _get_app_version() -> str:
-    try:
-        from importlib.metadata import version
+    from buddy import __version__
 
-        return version("buddy-ai")
-    except Exception:
-        from buddy import __version__
-
-        return __version__
+    return __version__
 
 
 def _version_callback(value: bool) -> None:
@@ -423,7 +418,6 @@ def patch(
     ),
     env_filter: Optional[str] = typer.Option(None, "-e", "--env", metavar="", help="Filter the environment to deploy"),
     infra_filter: Optional[str] = typer.Option(None, "-i", "--infra", metavar="", help="Filter the infra to deploy."),
-    config_filter: Optional[str] = typer.Option(None, "-c", "--config", metavar="", help="Filter the config to deploy"),
     group_filter: Optional[str] = typer.Option(
         None, "-g", "--group", metavar="", help="Filter resources using group name."
     ),
@@ -605,14 +599,14 @@ try:
     from buddy.cli.simple_train_cli import app as train_cli
 
     BUDDY_cli.add_typer(train_cli, name="train")
-except Exception:
+except ImportError:
     pass
 
 try:
     from buddy.cli.pulse_cli import pulse_app
 
     BUDDY_cli.add_typer(pulse_app, name="pulse")
-except Exception:
+except ImportError:
     pass
 
 

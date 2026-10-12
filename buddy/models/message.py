@@ -151,7 +151,10 @@ class MessageMetrics:
             result.time = other.time
 
         # Handle time_to_first_token (take the first non-None value)
-        result.time_to_first_token = self.time_to_first_token or other.time_to_first_token
+        if self.time_to_first_token is not None:
+            result.time_to_first_token = self.time_to_first_token
+        else:
+            result.time_to_first_token = other.time_to_first_token
 
         return result
 
@@ -397,5 +400,9 @@ class Message(BaseModel):
     def content_is_valid(self) -> bool:
         """Check if the message content is valid."""
 
-        return self.content is not None and len(self.content) > 0
+        if self.content is None:
+            return False
+        if isinstance(self.content, str):
+            return bool(self.content.strip())
+        return len(self.content) > 0
 

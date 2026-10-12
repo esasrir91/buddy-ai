@@ -16,10 +16,10 @@ from .security import validate_webhook_signature
 
 
 def get_sync_router(agent: Optional[Agent] = None, team: Optional[Team] = None) -> APIRouter:
-    router = APIRouter()
+    if (agent is None and team is None) or (agent is not None and team is not None):
+        raise ValueError("One of 'agent' or 'team' must be provided.")
 
-    if agent is None and team is None:
-        raise ValueError("Either agent or team must be provided.")
+    router = APIRouter()
 
     @router.get("/status")
     def status():
@@ -44,11 +44,11 @@ def get_sync_router(agent: Optional[Agent] = None, team: Optional[Team] = None) 
         raise HTTPException(status_code=403, detail="Invalid verify token or mode")
 
     @router.post("/webhook")
-    def webhook(request: Request, background_tasks: BackgroundTasks):
+    async def webhook(request: Request, background_tasks: BackgroundTasks):
         """Handle incoming WhatsApp messages"""
         try:
             # Get raw payload for signature validation
-            payload = cast(bytes, request.body())
+            payload = await request.body()
             signature = request.headers.get("X-Hub-Signature-256")
 
             # Validate webhook signature
@@ -56,7 +56,7 @@ def get_sync_router(agent: Optional[Agent] = None, team: Optional[Team] = None) 
                 log_warning("Invalid webhook signature")
                 raise HTTPException(status_code=403, detail="Invalid signature")
 
-            body = cast(dict, request.json())
+            body = await request.json()
 
             # Validate webhook data
             if body.get("object") != "whatsapp_business_account":
@@ -71,11 +71,13 @@ def get_sync_router(agent: Optional[Agent] = None, team: Optional[Team] = None) 
                     if not messages:
                         continue
 
-                    message = messages[0]
-                    background_tasks.add_task(process_message, message, agent, team)
+                    for message in messages:
+                        background_tasks.add_task(process_message, message, agent, team)
 
             return {"status": "processing"}
 
+        except HTTPException:
+            raise
         except Exception as e:
             log_error(f"Error processing webhook: {str(e)}")
             raise HTTPException(status_code=500, detail=str(e))
@@ -83,6 +85,7 @@ def get_sync_router(agent: Optional[Agent] = None, team: Optional[Team] = None) 
     def process_message(message: dict, agent: Optional[Agent], team: Optional[Team]):
         """Process a single WhatsApp message in the background"""
         try:
+            phone_number = message.get("from", "")
             message_image = None
             message_video = None
             message_audio = None
@@ -114,7 +117,6 @@ def get_sync_router(agent: Optional[Agent] = None, team: Optional[Team] = None) 
             else:
                 return
 
-            phone_number = message.get("from", "")
             log_debug(f"Processing message from {phone_number}: {message_text}")
 
             # Generate and send response
@@ -144,7 +146,7 @@ def get_sync_router(agent: Optional[Agent] = None, team: Optional[Team] = None) 
                 number_of_images = len(response.images)
                 log_info(f"images generated: f{number_of_images}")
                 for i in range(number_of_images):
-                    image_content = response.images[0].content
+                    image_content = response.images[i].content
                     image_bytes = None
                     if isinstance(image_content, bytes):
                         try:
@@ -173,6 +175,8 @@ def get_sync_router(agent: Optional[Agent] = None, team: Optional[Team] = None) 
             log_error(f"Error processing message: {str(e)}")
             # Optionally send an error message to the user
             try:
+                if not phone_number:
+                    return
                 _send_whatsapp_message(
                     phone_number, "Sorry, there was an error processing your message. Please try again later."
                 )
@@ -180,6 +184,7 @@ def get_sync_router(agent: Optional[Agent] = None, team: Optional[Team] = None) 
                 log_error(f"Error sending error message: {str(send_error)}")
 
     def _send_whatsapp_message(recipient: str, message: str, italics: bool = False):
+        message = str(message or "")
         if len(message) <= 4096:
             WhatsAppTools().send_text_message_sync(recipient=recipient, text=f"_{message}_" if italics else message)
             return

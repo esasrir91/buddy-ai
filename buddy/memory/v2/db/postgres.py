@@ -53,7 +53,7 @@ class PostgresMemoryDb(MemoryDb):
         self.Session: scoped_session = scoped_session(sessionmaker(bind=self.db_engine))
         self.table: Table = self.get_table()
 
-    def __dict__(self) -> Dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         return {
             "name": "PostgresMemoryDb",
             "table_name": self.table_name,
@@ -112,7 +112,7 @@ class PostgresMemoryDb(MemoryDb):
                 rows = sess.execute(stmt).fetchall()
                 for row in rows:
                     if row is not None:
-                        memories.append(MemoryRow.model_validate(row))
+                        memories.append(MemoryRow.model_validate(row._mapping))
         except Exception as e:
             log_debug(f"Exception reading from table: {e}")
             log_debug(f"Table does not exist: {self.table.name}")
@@ -198,11 +198,11 @@ class PostgresMemoryDb(MemoryDb):
 
         # Deep copy attributes
 
-        for k, v in self.__dict__().items():
+        for k, v in self.__dict__.items():
             if k in {"metadata", "table"}:
                 continue
             # Reuse db_engine and Session without copying
-            elif k in {"db_engine", "Session"}:
+            elif k in {"db_engine", "Session", "inspector"}:
                 setattr(copied_obj, k, v)
             else:
                 setattr(copied_obj, k, deepcopy(v, memo))

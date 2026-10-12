@@ -346,14 +346,20 @@ class ElasticsearchTools(Toolkit):
             str: Search results
         """
         try:
+            if size <= 0:
+                return json.dumps({"error": "Failed to search documents: size must be greater than 0"})
+            if from_ < 0:
+                return json.dumps({"error": "Failed to search documents: from_ must be greater than or equal to 0"})
+
             log_debug(f"Searching in index: {index_name}")
 
             result = self.es_client.search(index=index_name, body={"query": query}, size=size, from_=from_)
 
             hits = result["hits"]
+            total_hits = hits["total"].get("value", 0) if isinstance(hits["total"], dict) else hits["total"]
             return json.dumps(
                 {
-                    "total_hits": hits["total"]["value"],
+                    "total_hits": total_hits,
                     "max_score": hits.get("max_score"),
                     "documents": [
                         {"id": hit["_id"], "score": hit["_score"], "source": hit["_source"]} for hit in hits["hits"]

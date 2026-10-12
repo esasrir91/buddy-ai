@@ -52,6 +52,8 @@ class SerpApiTools(Toolkit):
                 return "Please provide an API key"
             if not query:
                 return "Please provide a query to search for"
+            if num_results <= 0:
+                return "num_results must be greater than 0"
 
             log_info(f"Searching Google for: {query}")
 

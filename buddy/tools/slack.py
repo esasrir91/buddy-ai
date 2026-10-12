@@ -103,7 +103,10 @@ class SlackTools(Toolkit):
             str: A JSON string containing the channel's message history.
         """
         try:
+            if limit <= 0:
+                return json.dumps({"error": "limit must be greater than 0"})
             response = self.client.conversations_history(channel=channel, limit=limit)
+            response_data = response.data if hasattr(response, "data") else response
             messages: List[Dict[str, Any]] = [  # type: ignore
                 {
                     "text": msg.get("text", ""),
@@ -112,7 +115,7 @@ class SlackTools(Toolkit):
                     "sub_type": msg.get("subtype", "unknown"),
                     "attachments": msg.get("attachments", []) if msg.get("subtype") == "bot_message" else "n/a",
                 }
-                for msg in response.get("messages", [])
+                for msg in response_data.get("messages", [])
             ]
             return json.dumps(messages)
         except SlackApiError as e:

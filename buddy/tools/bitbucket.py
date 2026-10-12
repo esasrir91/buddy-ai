@@ -19,6 +19,7 @@ class BitbucketTools(Toolkit):
         workspace: Optional[str] = None,
         repo_slug: Optional[str] = None,
         api_version: str = "2.0",
+        timeout: float = 30.0,
         **kwargs,
     ):
         self.username = username or os.getenv("BITBUCKET_USERNAME")
@@ -27,6 +28,7 @@ class BitbucketTools(Toolkit):
         self.auth_password = self.token or self.password
         self.server_url = server_url or "api.bitbucket.org"
         self.api_version = api_version or "2.0"
+        self.timeout = timeout
         self.base_url = (
             f"https://{self.server_url}/{api_version}"
             if not self.server_url.startswith(("http://", "https://"))
@@ -74,10 +76,10 @@ class BitbucketTools(Toolkit):
         data: Optional[Dict[str, Any]] = None,
     ) -> Union[str, Dict[str, Any]]:
         url = f"{self.base_url}{endpoint}"
-        response = requests.request(method, url, headers=self.headers, json=data, params=params)
+        response = requests.request(method, url, headers=self.headers, json=data, params=params, timeout=self.timeout)
         response.raise_for_status()
-        encoding_type = response.headers.get("Content-Type", "application/json")
-        if encoding_type.startswith("application/json"):
+        encoding_type = response.headers.get("Content-Type", "application/json").split(";", 1)[0].strip().lower()
+        if encoding_type == "application/json":
             return response.json() if response.text else {}
         elif encoding_type == "text/plain":
             return response.text
